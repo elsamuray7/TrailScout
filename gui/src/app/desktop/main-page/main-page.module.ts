@@ -1,6 +1,7 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MainPageComponent } from './main-page.component';
+import { NavigationModule } from '../navigation/navigation.module';
 
 
 
@@ -9,7 +10,8 @@ import { MainPageComponent } from './main-page.component';
     MainPageComponent
   ],
   imports: [
-    CommonModule
+    CommonModule,
+    NavigationModule
   ]
 })
 export class MainPageModule { }
