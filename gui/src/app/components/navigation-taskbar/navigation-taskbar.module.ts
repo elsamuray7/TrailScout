@@ -1,7 +1,6 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NavigationTaskbarComponent } from './navigation-taskbar.component';
-import { ButtonsModule } from 'ngx-foundation';
 
 
 
@@ -10,8 +9,7 @@ import { ButtonsModule } from 'ngx-foundation';
     NavigationTaskbarComponent
   ],
   imports: [
-    CommonModule,
-    ButtonsModule
+    CommonModule
   ],
   exports: [
     NavigationTaskbarComponent
