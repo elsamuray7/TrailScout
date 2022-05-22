@@ -1,18 +1,23 @@
 .taskbar {
     background-color: #636975;
-    height: 92vh;
+    height: 90vh;
+}
+#setting-btn {
+    width: 90%;
+    margin: auto;
 }
 
 .btn {
     border: none;
     background-color: inherit;
-    padding: 14px 28px;
-    font-size: 16px;
+    padding: 30px 0px;
+    font-size: 18px;
     cursor: pointer;
-    display: inline-block;
   }
   
   /* On mouse-over */
-  .btn:hover {background: #eee;}
+  .btn:hover {
+      background: #eee;
+    }
 
   .default {color: black;}

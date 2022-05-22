@@ -11,7 +11,7 @@ export class MapContainerComponent implements AfterViewInit {
 
   @Input() initLat = 48.7758459;
   @Input() initLng = 9.1829321;
-  @Input() initZoom = 18;
+  @Input() initZoom = 10;
 
   constructor() { 
   }
