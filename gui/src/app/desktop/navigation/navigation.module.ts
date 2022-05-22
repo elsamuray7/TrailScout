@@ -1,7 +1,7 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NavigationComponent } from './navigation.component';
-import { NavigationTaskbarModule } from 'src/app/components/navigation-taskbar/navigation-taskbar.module';
+import { ComponentsModule } from 'src/app/components/components.module';
 
 
 
@@ -11,7 +11,7 @@ import { NavigationTaskbarModule } from 'src/app/components/navigation-taskbar/n
   ],
   imports: [
     CommonModule,
-    NavigationTaskbarModule
+    ComponentsModule
   ],
   exports: [
     NavigationComponent

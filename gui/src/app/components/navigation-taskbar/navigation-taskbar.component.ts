@@ -1,5 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 
 @Component({
   selector: 'app-navigation-taskbar',
@@ -9,18 +8,20 @@ import { Router } from '@angular/router';
 export class NavigationTaskbarComponent implements OnInit {
 
   @Input() height: number = 200;
+  @Output() startEvent = new EventEmitter;
+  @Output() mainEvent = new EventEmitter;
 
-  constructor(private route: Router) { }
+  constructor() { }
 
   ngOnInit(): void {
   }
 
-  startPage() {
-    this.route.navigate(['start']);
+  startButtonClick() {
+    this.startEvent.emit();
   }
 
-  mainPage() {
-    this.route.navigate(['main']);
+  mainButtonClick() {
+    this.mainEvent.emit();
   }
 
 }
