@@ -1,3 +1,5 @@
 /* You can add global styles to this file, and also import other style files */
 @import '~bootstrap/dist/css/bootstrap-grid.min.css';
 html { background-color: #3f434a; }
+/* Importing Bootstrap SCSS file. */
+@import '~bootstrap/scss/bootstrap';

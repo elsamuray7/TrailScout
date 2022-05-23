@@ -9,6 +9,9 @@ export class SettingsTaskbarComponent implements OnInit {
 
   @Input() width: number = 200;
 
+  calculationAllowed = false;
+  radius: number = 30;
+
   constructor() { }
 
   ngOnInit(): void {
