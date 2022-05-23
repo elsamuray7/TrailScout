@@ -1,6 +1,17 @@
 <div class="taskbar">
     <div class="row">
-        <button class="btn default" type="button" id="setting-btn">Radius</button>
-        <button class="btn default" type="button" id="setting-btn">Laufzeit</button>
+        <button [ngClass]="calculationAllowed ? 'btn default' : 'disabled'" type="button" id="setting-btn" [disabled]="!calculationAllowed" >Calculate</button>
+        <form>
+            <ngb-accordion #acc="ngbAccordion">
+                <ngb-panel title="Distance" class="inputs">
+                    <ng-template class="row" ngbPanelContent>
+                        <input id="radius-input" mbdInput type="number" placeholder="'Enter radius in km...'" class="form-control" [(ngModel)]="radius"/>
+                    </ng-template>
+                </ngb-panel>
+
+            </ngb-accordion>
+            
+        </form>
+        
     </div>
 </div>
