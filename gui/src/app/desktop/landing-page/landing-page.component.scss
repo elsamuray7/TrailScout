@@ -1,29 +1,12 @@
-.flex-vert {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  color: #eeeeee;
-  font-family: var(--bs-font-sans-serif);
-}
-
 .introduction {
   background-color: #636975;
-  flex-grow: 1;
+  color: #eeeeee;
   text-align: center;
+  padding: 10px;
 }
 
 .description {
   background-color: #9299a6;
   text-align: center;
   padding: 10px;
-}
-
-.flex-hori {
-  display: flex;
-  gap: 10px;
-}
-
-p {
-  margin: auto;
-  width: 60%;
 }
