@@ -4,7 +4,8 @@ import { NavigationTaskbarComponent } from './navigation-taskbar/navigation-task
 import { SettingsTaskbarComponent } from './settings-taskbar/settings-taskbar.component';
 import { MapContainerComponent } from './map-container/map-container.component';
 import { FormsModule } from '@angular/forms';
-import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
+import { NgbModule, NgbTimepickerModule } from '@ng-bootstrap/ng-bootstrap';
+import { SettingsTaskbarTagItemComponent } from './settings-taskbar/settings-taskbar-tag-item/settings-taskbar-tag-item.component';
 
 
 
@@ -12,7 +13,8 @@ import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
   declarations: [
     NavigationTaskbarComponent,
     SettingsTaskbarComponent,
-    MapContainerComponent
+    MapContainerComponent,
+    SettingsTaskbarTagItemComponent
   ],
   imports: [
     CommonModule,
