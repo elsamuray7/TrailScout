@@ -2,10 +2,12 @@ use std::any::Any;
 use std::collections::BTreeMap;
 use std::fmt::Formatter;
 use std::fs::File;
+use std::io;
 use std::io::{BufRead, BufReader, LineWriter, Write};
 use std::num::{ParseFloatError, ParseIntError};
 use osmpbf::{ElementReader, Element};
 
+/*
 #[derive(Debug)]
 enum ParseError {
     IO(std::io::Error),
@@ -51,6 +53,8 @@ impl From<ParseFloatError> for ParseError {
     }
 }
 
+ */
+
 /// An undirected graph edge between two nodes a and b
 struct Edge {
     a: usize,
@@ -64,42 +68,50 @@ struct Edge {
 struct Node {
     id: usize,
     tags: Vec<(String, String)>,
-    lat: String,
-    lon: String,
+    lat: f64,
+    lon: f64,
     info: String,
 }
 
 /// An undirected graph with nodes and edges
 struct Graph {
-    meta: String,
+    //meta: String,
     nodes: Vec<Node>,
     edges: Vec<Edge>,
-    new_edges: Vec<(usize, usize, usize, String, String)>,
     num_nodes: usize,
     num_edges: usize,
-    new_num_edges: usize,
 }
 
 impl Graph {
-    fn parse_graph (&mut self, graph_file_path: &str) -> Result<(), ParseError> {
+    fn new() -> Self {
+        Self {
+            nodes: Vec::new(),
+            edges: Vec::new(),
+            //offsets: Vec::new(),
+            num_nodes: 0,
+            num_edges: 0,
+        }
+    }
+
+    fn parse_graph (&mut self, graph_file_path: &str) -> Result<(), io::Error> {
         let reader = ElementReader::from_path(graph_file_path)?;
 
         reader.for_each(|element| {
             if let Element::Node(n) = element {
                 let mut node = Node {
-                    id: element.id(),
+                    id: n.id() as usize,
                     tags: vec![],
-                    lat: element.lat(),
-                    lon: element.lon(),
-                    info: element.info()
+                    lat: n.lat(),
+                    lon: n.lon(),
+                    info: "".to_string()
                 };
-                for (key, value) in element.tags() {
-                    node.tags.push((key, value));
+                for (key, value) in n.tags() {
+                    node.tags.push((key.parse().unwrap(), value.parse().unwrap()));
                 }
                 self.nodes.push(node);
+                self.num_nodes += 1;
             }
-            /*
-            if let Element::Way(_) = element {
+            /*else if let Element::Way(_) = element {
                 let edge = Edge {
                     a: split.next()
                         .expect(&format!("Unexpected EOL while parsing edge source in line {}",
@@ -123,9 +135,11 @@ impl Graph {
                         .to_string(),
                 };
                 self.edges.push(edge);
-            } else
+            }
+
              */
         })?;
+
         Ok(())
     }
 
@@ -139,8 +153,8 @@ impl Graph {
 
         for node in &self.nodes {
             file.write((format!("{} {} {} {}", node.id, node.lat, node.lon, node.info)).as_bytes())?;
-            for (key, value) in node.tags() {
-                file.write((format!("{} {}\n", key, value)).as_bytes())?;
+            for (key, value) in &node.tags {
+                file.write((format!(" {} {}\n", key, value)).as_bytes())?;
             }
         }
 /*
@@ -152,21 +166,13 @@ impl Graph {
     }
 }
 
-fn main() -> Result<(), ParseError> {
+fn main() -> Result<(), io::Error> {
     let in_graph = "C:/Users/Acer/Documents/EnProFMI2022/backend/graph_creator_osm/osm_graphs/bremen-latest.osm.pbf";
     let out_graph = "C:/Users/Acer/Documents/EnProFMI2022/backend/graph_creator_osm/osm_graphs/bremen-latest.fmi";
 
-    let mut graph = Graph {
-        meta: "".to_string(),
-        nodes: vec![],
-        edges: vec![],
-        new_edges: Default::default(),
-        num_nodes: 0,
-        num_edges: 0,
-        new_num_edges: 0
-    };
-    graph.parse_graph(&in_graph)?;
-    graph.write_graph(&out_graph)?;
+    let mut graph = Graph::new();
+    Graph::parse_graph(&mut graph, &in_graph);
+    Graph::write_graph(&mut graph, &out_graph);
 
     Ok(())
 }
