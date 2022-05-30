@@ -4,7 +4,7 @@
 }
 
 #setting-btn {
-  margin-top: 10px !important;
+  margin-top: 20px !important;
   width: 90%;
   margin: auto;
 }
@@ -38,5 +38,11 @@
 .inputs {
   width: 90%;
   margin: auto;
-  margin-top: 3vh;
+  margin-top: 5vh;
 }
+
+::ng-deep .accordion .accordion-item {
+    max-height: 45vh !important;
+    overflow: auto !important;
+}
+

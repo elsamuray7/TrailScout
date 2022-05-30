@@ -1,6 +1,6 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { NgbTimeStruct } from '@ng-bootstrap/ng-bootstrap';
-import { Tag, TagCheckboxResponse } from 'src/app/types.utils';
+import { Settings, Tag, TagCheckboxResponse } from 'src/app/types.utils';
 
 @Component({
   selector: 'app-settings-taskbar',
@@ -12,7 +12,10 @@ export class SettingsTaskbarComponent implements OnInit {
   @Input() width: number = 200;
   @Input() tags: Tag[] = [];
 
-  radius?: number;
+  @Output() settings = new EventEmitter;
+  @Output() radiusChange = new EventEmitter;
+
+  private _radius!: number;
   private _startTime: NgbTimeStruct;
   private _walkTime?: NgbTimeStruct;
   private _endTime?: NgbTimeStruct;
@@ -25,6 +28,15 @@ export class SettingsTaskbarComponent implements OnInit {
    }
 
   ngOnInit(): void {
+  }
+
+  set radius(r: number) {
+    this._radius = r;
+    this.radiusChange.emit(r);
+  }
+
+  get radius() {
+    return this._radius;
   }
 
   set startTime(time: NgbTimeStruct) {
@@ -67,10 +79,20 @@ export class SettingsTaskbarComponent implements OnInit {
   }
 
   calculate(){
-    this.startTime = {hour: this.currentDate.getHours(), minute: this.currentDate.getMinutes(), second: 0};
+    const result: Settings = {
+      radius: this.radius,
+      startTime: this.startTime,
+      walkTime: this.walkTime,
+      endTime: this.endTime,
+      tags: this.selectedTags
+    }
+    this.settings.emit(result)
   }
 
   ngbTimeStructToMinutes(time: NgbTimeStruct) {
+    if (!time) {
+      return 0;
+    }
     return time.minute + time.hour * 60;
   }
 
@@ -85,7 +107,6 @@ export class SettingsTaskbarComponent implements OnInit {
         this.selectedTags.splice(index, 1)
       }
     }
-    console.log(this.selectedTags);
   }
 
 }

@@ -11,7 +11,7 @@
             </ngb-accordion>
             <br>
             <ngb-accordion #acc="ngbAccordion">
-                <ngb-panel [title]="walkTime ? 'Hike duration: ' + ngbTimeStructToMinutes(walkTime) + 'mins' : 'Hike duration'">
+                <ngb-panel [title]="walkTime ? 'Hike duration: ' + ngbTimeStructToMinutes(walkTime) + 'mins' : 'Hike duration'" >
                     <ng-template class="row" ngbPanelContent>
                         <div>
                             <h4>Start Time</h4>
@@ -31,7 +31,7 @@
                 </ngb-panel>
             </ngb-accordion>
             <br>
-            <ngb-accordion #acc="ngbAccordion">
+            <ngb-accordion #acc="ngbAccordion" [destroyOnHide]="false">
                 <ngb-panel [title]="'Tags'">
                     <ng-template class="row" ngbPanelContent>
                         <div *ngFor="let tag of tags">

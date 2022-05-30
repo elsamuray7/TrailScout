@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { Tag } from 'src/app/types.utils';
+import { Settings, Tag } from 'src/app/types.utils';
 
 @Component({
   selector: 'app-main-page',
@@ -15,9 +15,18 @@ export class MainPageComponent implements OnInit {
     {name: 'Statue'}
   ]
 
+  radius?: number;
   constructor() { }
 
   ngOnInit(): void {
+  }
+
+  getSettings(result: Settings) {
+    console.log(result);
+  }
+
+  radiusChange(radius: number) {
+    this.radius = radius;
   }
 
 }
