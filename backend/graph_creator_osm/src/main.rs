@@ -169,8 +169,8 @@ impl Graph {
 }
 
 fn main() -> Result<(), io::Error> {
-    let in_graph = "C:/Users/Acer/Documents/EnProFMI2022/backend/graph_creator_osm/osm_graphs/bremen-latest.osm.pbf";
-    let out_graph = "C:/Users/Acer/Documents/EnProFMI2022/backend/graph_creator_osm/osm_graphs/bremen-latest.fmi";
+    let in_graph = "./osm_graphs/bremen-latest.osm.pbf";
+    let out_graph = "./osm_graphs/bremen-latest.fmi";
 
     let mut graph = Graph::new();
     Graph::parse_graph(&mut graph, &in_graph);
