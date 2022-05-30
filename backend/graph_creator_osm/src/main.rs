@@ -96,8 +96,35 @@ impl Graph {
     fn parse_graph (&mut self, graph_file_path: &str) -> Result<(), io::Error> {
         let reader = ElementReader::from_path(graph_file_path)?;
 
+        let mut node_count = 0;
+        let mut way_count = 0;
+        let mut dense_count = 0;
+        let mut relation_count = 0;
+
         reader.for_each(|element| {
-            if let Element::Node(n) = element {
+            if let Element::Node(_) = element {
+
+                node_count += 1;
+                /*
+                let mut node = Node {
+                    id: n.id() as usize,
+                    tags: vec![],
+                    lat: n.lat(),
+                    lon: n.lon(),
+                    info: "".to_string()
+                };
+                for (key, value) in n.tags() {
+                    node.tags.push((key.parse().unwrap(), value.parse().unwrap()));
+                }
+                println!("Node with id {} lat {} lon {}",
+                            n.id(), n.lat(), n.lon());
+                self.nodes.push(node);
+                self.num_nodes += 1;
+                 */
+            } else if let Element::Way(_) = element {
+                way_count += 1;
+            } else if let Element::DenseNode(n) = element {
+                dense_count += 1;
                 let mut node = Node {
                     id: n.id() as usize,
                     tags: vec![],
@@ -109,37 +136,12 @@ impl Graph {
                     node.tags.push((key.parse().unwrap(), value.parse().unwrap()));
                 }
                 self.nodes.push(node);
-                self.num_nodes += 1;
+            } else if let Element::Relation(_) = element {
+                relation_count += 1;
             }
-            /*else if let Element::Way(_) = element {
-                let edge = Edge {
-                    a: split.next()
-                        .expect(&format!("Unexpected EOL while parsing edge source in line {}",
-                                         line_no))
-                        .parse()?,
-                    b: split.next()
-                        .expect(&format!("Unexpected EOL while parsing edge target in line {}",
-                                         line_no))
-                        .parse()?,
-                    dist: split.next()
-                        .expect(&format!("Unexpected EOL while parsing edge weight in line {}",
-                                         line_no))
-                        .parse()?,
-                    edge_type: split.next()
-                        .expect(&format!("Unexpected EOL while parsing edge weight in line {}",
-                                         line_no))
-                        .to_string(),
-                    maxspeed: split.next()
-                        .expect(&format!("Unexpected EOL while parsing edge weight in line {}",
-                                         line_no))
-                        .to_string(),
-                };
-                self.edges.push(edge);
-            }
-
-             */
         })?;
 
+        println!("nodes {} ways {} denses {} relations {}", node_count, way_count, dense_count, relation_count);
         Ok(())
     }
 
@@ -152,9 +154,9 @@ impl Graph {
         //file.write((format!("{}\n", self.new_num_edges)).as_bytes())?;
 
         for node in &self.nodes {
-            file.write((format!("{} {} {} {}", node.id, node.lat, node.lon, node.info)).as_bytes())?;
+            file.write((format!("node lat lon info \n{} {} {} {}\ntags\n", node.id, node.lat, node.lon, node.info)).as_bytes())?;
             for (key, value) in &node.tags {
-                file.write((format!(" {} {}\n", key, value)).as_bytes())?;
+                file.write((format!("key:{} value:{}\n\n", key, value)).as_bytes())?;
             }
         }
 /*
