@@ -1,4 +1,3 @@
-<app-navigation></app-navigation>
 <div class="row" style="width: 100%;">
     <div class="col" id="settings">
         <app-settings-taskbar [tags]="tags" (settings)="getSettings($event)" (radiusChange)="radiusChange($event)"></app-settings-taskbar>
@@ -6,5 +5,5 @@
     <div class="col-10" id="map">
         <app-map-container [circleRadius]="radius"></app-map-container>
     </div>
-    
+
 </div>
