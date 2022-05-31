@@ -1,5 +1,5 @@
 [package]
-name = "algorithm"
+name = "algorithm_api"
 version = "0.1.0"
 edition = "2021"
 

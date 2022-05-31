@@ -3,5 +3,5 @@
 version = 3
 
 [[package]]
-name = "algorithm"
+name = "algorithm_api"
 version = "0.1.0"
