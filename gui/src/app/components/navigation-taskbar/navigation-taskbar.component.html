@@ -1,7 +1,9 @@
-<div [style.height]="height + 'px'" class="taskbar">
-    <div>
+<div [style.height]="height + 'px'" class="taskbar container-fluid row">
+    <div class='col'>
         <button class="btn default" type="button" (click)="startButtonClick()" id="start">Start</button>
         <button class="btn default" type="button" (click)="mainButtonClick()" id="main">Main</button>
-      <button type="submit" class="btn btn-primary"><span class="bi-github"></span></button>
+    </div>
+    <div class='d-flex justify-content-end col'>
+      <button class='btn default' type='button' onclick="location.href = 'https://github.tik.uni-stuttgart.de/st149207/EnProFMI2022';" style='padding: 0 14px; font-size: 25px'><i class="bi bi-github"></i></button>
     </div>
 </div>
