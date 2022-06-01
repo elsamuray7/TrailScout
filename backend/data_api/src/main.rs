@@ -1,3 +1,5 @@
+mod creator;
+
 use std::any::Any;
 use std::collections::BTreeMap;
 use std::fmt::Formatter;
@@ -6,7 +8,9 @@ use std::io;
 use std::io::{BufRead, BufReader, LineWriter, Write};
 use std::num::{ParseFloatError, ParseIntError};
 use osmpbf::{ElementReader, Element};
-use lib::api;
+use data_api::api;
+
+use creator::osm_graph_creator;
 
 /*
 #[derive(Debug)]
