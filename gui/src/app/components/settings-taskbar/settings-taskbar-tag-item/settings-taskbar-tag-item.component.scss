@@ -1,0 +1,28 @@
+.star {
+    font-size: 1.7rem;
+    color: #b0c4de;
+  }
+  .filled {
+    color: #1e90ff;
+  }
+  .middle {
+    color: #f7f5b7
+  }
+  .low {
+    color: #deb0b0;
+  }
+  .filled.low {
+    color: #ff1e1e;
+  }
+  .filled.middle {
+      color: #f0ea30
+  }
+.item {
+    margin: auto;
+    padding: 3px;
+    font-size: x-large;
+}
+
+.rating {
+    text-align: right;
+}

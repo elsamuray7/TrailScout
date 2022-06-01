@@ -9,15 +9,19 @@ import { Tag, TagCheckboxResponse } from 'src/app/types.utils';
 export class SettingsTaskbarTagItemComponent implements OnInit {
 
   @Input() tag!: Tag;
-  @Output() checked = new EventEmitter;
+  @Output('checked') checkedEvent = new EventEmitter;
+
+  checked = false;
+  prio: number = 0;
   constructor() { }
 
   ngOnInit(): void {
   }
 
   checkedTag(tag: Tag, checked: any) {
+    this.checked = checked;
     const response: TagCheckboxResponse = {checked: checked, tag: tag}
-    this.checked.emit(response);
+    this.checkedEvent.emit(response);
   }
 
 }
