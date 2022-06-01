@@ -14,17 +14,17 @@
                 <ngb-panel [title]="walkTime ? 'Hike duration: ' + ngbTimeStructToMinutes(walkTime) + 'mins' : 'Hike duration'" >
                     <ng-template class="row" ngbPanelContent>
                         <div>
-                            <h4>Start Time</h4>
+                            <div class="title">Start Time</div>
                             <ngb-timepicker mbdInput placeholder="Enter starting time..." class="form-control" [(ngModel)]="startTime"></ngb-timepicker>
                         </div>
                         <br>
                         <div>
-                            <h4>Walking Time</h4>
+                            <div class="title">Walking Time</div>
                             <ngb-timepicker mbdInput placeholder="Enter starting time..." class="form-control" [(ngModel)]="walkTime"></ngb-timepicker>
                         </div>
                         <br>
                         <div>
-                            <h4>End Time</h4>
+                            <div class="title">End Time</div>
                             <ngb-timepicker mbdInput placeholder="Enter starting time..." class="form-control" [(ngModel)]="endTime" [disabled]="true"></ngb-timepicker> 
                         </div>
                     </ng-template>
