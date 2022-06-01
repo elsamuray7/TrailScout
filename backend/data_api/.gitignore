@@ -1,2 +1,4 @@
-/osm_graphs
 /target
+
+# Ignore the directory containing osm graph files
+/osm_graphs
