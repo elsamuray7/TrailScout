@@ -16,8 +16,12 @@ pub fn default() -> Box<dyn Algorithm> {
     Box::new(GreedyAlgorithm::new())
 }
 
+/// Type alias for a mapping from node id's to scores, where the nodes represent sights / tourist
+/// attractions
+type Scores = HashMap<usize, usize>;
+
 /// Default implementation for computing scores for tourist attractions based on user preferences
 /// for categories or specific tourist attractions, respectively
-fn compute_scores() -> HashMap<usize, usize> {
+fn compute_scores() -> Scores {
     todo!()
 }
