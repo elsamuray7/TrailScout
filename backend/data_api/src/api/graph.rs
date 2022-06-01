@@ -51,6 +51,14 @@ impl From<ParseFloatError> for ParseError {
     }
 }
 
+/// Struct to hold Bounding Box of a circuit around coordinates
+pub struct BoundingBox {
+    pub min_lat: f64,
+    pub max_lat: f64,
+    pub min_lon: f64,
+    pub max_lon: f64,
+}
+
 /// A graph node with id, tags, latitude, longitude and info
 pub struct Node {
     id: usize,
@@ -60,22 +68,30 @@ pub struct Node {
     info: String,
 }
 
-/// A directed graph edge with source and target
-#[derive(Debug, Serialize, Default)]
+/// An directed graph edge with source, target and distance
 pub struct Edge {
     pub src: usize,
     pub tgt: usize,
     pub dist: usize,
 }
 
-/// A directed graph with nodes, edges and node offsets
-#[derive(Debug, Serialize, Default)]
+/// A graph sight node with nearest node id, latitude, longitude, tags and info
+pub struct Sight {
+    id: usize,
+    lat: f64,
+    lon: f64,
+    tags: Vec<(String, String)>,
+    info: String,
+}
+
+/// A directed graph with nodes, edges, offsets and sights
 pub struct Graph {
-    pub nodes: Vec<Node>,
-    pub edges: Vec<Edge>,
-    pub offsets: Vec<usize>,
-    pub num_nodes: usize,
-    pub num_edges: usize,
+    nodes: Vec<Node>,
+    edges: Vec<Edge>,
+    offsets: Vec<usize>, // TODO check if pub needed or pub (crate)
+    num_nodes: usize,
+    num_edges: usize,
+    sights: Vec<Sight>,
 }
 
 impl Graph {
@@ -87,13 +103,25 @@ impl Graph {
             offsets: Vec::new(),
             num_nodes: 0,
             num_edges: 0,
+            sights: Vec::new()
         }
     }
 
-    /// Parse node and edge data from a file into a directed graph
+    /// Parse graph data (nodes, edges, ...) from a file into a directed graph
     fn parse_graph(&mut self, graph_file_path: &str) -> Result<(), ParseError> {
-        // TODO
+        todo!(parse osm graph creator output into a graph);
         Ok(());
+    }
+
+    /// Create a graph from a file that contains graph data (nodes, edges, ...)
+    pub fn from_file(file_path: &str) -> Self {
+        let mut graph = Graph::new();
+        match graph.parse_graph(file_path) {
+            Ok(_) => (),
+            Err(err) => panic!("Failed to create graph from files at {}: {}", file_path,
+                               err.to_string())
+        }
+        graph
     }
 
     /// Get the number of outgoing edges of the node with id `node_id`
@@ -101,15 +129,23 @@ impl Graph {
         self.offsets[node_id + 1] - self.offsets[node_id]
     }
 
-    pub fn get_graph(minLat: f64, maxLat:f64, minLon: f64, maxLon:f64) -> Graph {
-        let graph = self::Graph;
-        return graph;
-        // TODO
+    /// Get the nearest node to specific coordinates (lat / lon)
+    pub fn get_nearest_node(&self, lat: f64, lon: f64) -> usize {
+        todo!(return nearest node to these cooridnates)
     }
 
-    pub fn osmIDtoNodeID(&self, osm_id: usize) -> usize {
-        return 0;
-        // TODO
+    /// Get outgoing edges from a node
+    pub fn get_outgoing_edges(&self, node_id: usize) -> &[Edge] {
+        &self.edges[self.offsets[node_id]..self.offsets[node_id+1]]
+    }
+
+    /// Get all sights within a radius around coordinates (lat/lon)
+    pub fn get_sights_from(&self, lat: f64, lon: f64, radius: f64) -> Vec<Sight> {
+        todo!(get min/max lat/lon from cooridnates and radius, then sort sights by lat, get slice, sort by lon, get slice, return slice)
     }
 }
 
+/// Get the minimum and maximum latitude and longitude from given coordinates and a radius around it
+fn get_bounding_box(lat: f64, lon: f64, radius: f64) -> BoundingBox {
+    todo!(calculate the bounding box of a circle)
+}
