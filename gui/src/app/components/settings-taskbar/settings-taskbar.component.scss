@@ -1,6 +1,8 @@
 .taskbar {
   background-color: #636975;
   height: 90vh;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 #setting-btn {
@@ -39,6 +41,7 @@
   width: 90%;
   margin: auto;
   margin-top: 5vh;
+  max-height: 100%;
 }
 
 ::ng-deep .accordion .accordion-item {

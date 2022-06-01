@@ -1,5 +1,5 @@
 <div class="taskbar">
-    <div class="row">
+    <div class="row" >
         <button [ngClass]="calculationAllowed() ? 'btn default' : 'disabled'" type="button" id="setting-btn" (click)="calculate()" [disabled]="!calculationAllowed()" >Calculate</button>
         <div class="inputs">
             <ngb-accordion #acc="ngbAccordion">
