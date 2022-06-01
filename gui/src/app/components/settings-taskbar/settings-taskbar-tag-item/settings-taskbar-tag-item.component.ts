@@ -18,9 +18,9 @@ export class SettingsTaskbarTagItemComponent implements OnInit {
   ngOnInit(): void {
   }
 
-  checkedTag(tag: Tag, checked: any) {
-    this.checked = checked;
-    const response: TagCheckboxResponse = {checked: checked, tag: tag}
+  checkedTag(tag: Tag) {
+    this.checked = !this.checked;
+    const response: TagCheckboxResponse = {checked: this.checked, tag: tag}
     this.checkedEvent.emit(response);
   }
 

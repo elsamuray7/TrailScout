@@ -1,5 +1,5 @@
 .star {
-    font-size: 1.7rem;
+    font-size: 2rem;
     color: #b0c4de;
   }
   .filled {
@@ -17,12 +17,29 @@
   .filled.middle {
       color: #f0ea30
   }
-.item {
+.tag {
     margin: auto;
     padding: 3px;
-    font-size: 1vw;
+    float: left;
 }
 
 .rating {
     text-align: right;
+    margin: auto;
 }
+
+.btn {
+    border: none;
+    background-color: inherit;
+    color: #868a8f;
+    padding: 14px 28px;
+    font-size: 1vw;
+    cursor: pointer;
+    display: inline-block;
+  }
+  
+  /* On mouse-over */
+  .btn:hover {background: #eee;}
+  .clicked {
+      color: #1e90ff;
+  }

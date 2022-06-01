@@ -12,7 +12,9 @@ export class MainPageComponent implements OnInit {
   tags: Tag[] = [
     {name: 'Aussichtspunkt'},
     {name: 'Baum'},
-    {name: 'Statue'}
+    {name: 'Statue'},
+    {name: 'Park'},
+    {name: 'Restaurant'}
   ]
 
   radius?: number;

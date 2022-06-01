@@ -1,9 +1,9 @@
-<div class="row">
-    <div class="col item">
+<div class="row item">
+    <!-- <div class="col-1 item">
         <input type="checkbox"(change)="checkedTag(tag, $event.target.checked)">
-    </div>
-    <div class="col item">
-        {{tag.name}}
+    </div> -->
+    <div class="col tag">
+        <button class="btn" [class.clicked]="checked"(click)="checkedTag(tag)">{{tag.name}}</button>
     </div>
     <div [hidden]="!checked" class="col rating">
         <ngb-rating [(rate)]="prio" [max]="3">
