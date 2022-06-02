@@ -20,7 +20,7 @@ export class SettingsTaskbarTagItemComponent implements OnInit {
 
   checkedTag(tag: Tag) {
     this.checked = !this.checked;
-    const response: TagCheckboxResponse = {checked: this.checked, tag: tag}
+    const response: TagCheckboxResponse = {checked: this.checked, tag: tag};
     this.checkedEvent.emit(response);
   }
 

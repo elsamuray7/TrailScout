@@ -68,7 +68,7 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
     this.marker = new L.Marker(latlng);
     this.marker.addTo(map);
     this.addCircle(latlng);
-    
+    this.markerLocation.emit(latlng)
   }
 
   addCircle(latlng: L.LatLng) {

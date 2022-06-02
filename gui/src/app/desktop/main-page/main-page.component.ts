@@ -17,6 +17,8 @@ export class MainPageComponent implements OnInit {
     {name: 'Restaurant'}
   ]
 
+  marker = false;
+
   radius?: number;
   constructor() { }
 
@@ -29,6 +31,10 @@ export class MainPageComponent implements OnInit {
 
   radiusChange(radius: number) {
     this.radius = radius;
+  }
+
+  markerSet(latlng: L.LatLng) {
+    this.marker = true;
   }
 
 }

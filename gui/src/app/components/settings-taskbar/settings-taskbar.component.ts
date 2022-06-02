@@ -11,6 +11,7 @@ export class SettingsTaskbarComponent implements OnInit {
 
   @Input() width: number = 200;
   @Input() tags: Tag[] = [];
+  @Input() startPointSet = false;
 
   @Output() settings = new EventEmitter;
   @Output() radiusChange = new EventEmitter;
@@ -72,7 +73,7 @@ export class SettingsTaskbarComponent implements OnInit {
   }
 
   calculationAllowed() {
-    if (this.radius || this.walkTime) {
+    if ((this.radius || this.walkTime) && this.startPointSet) {
       return true;
     }
     return false;
