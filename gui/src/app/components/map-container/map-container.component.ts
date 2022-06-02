@@ -1,5 +1,6 @@
 import { AfterViewInit, Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
 import * as L from 'leaflet';
+import { GeoSearchControl, OpenStreetMapProvider } from 'leaflet-geosearch';
 
 const iconRetinaUrl = 'assets/marker-icon-2x.png';
 const iconUrl = 'assets/marker-icon.png';
@@ -43,6 +44,27 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
   ngAfterViewInit(): void {
     this.loadMap();
     this.map.on('click', event => this.onClick(event, this.map));
+
+    const searchControl = GeoSearchControl({
+      provider: new OpenStreetMapProvider(),
+      style: 'bar',
+      position: 'topleft',
+          showMarker: false,
+          marker: {
+            draggable: true,
+          },
+          maxMarker: 1,
+          autoClose: true,
+          autoComplete: true,
+          retainZoomLevel: true,
+          maxSuggestions: 5,
+          keepResult: true,
+          resultFormat: function(t:any) {
+            return "" + t.result.label;
+          },
+          updateMap: !0
+    });
+    this.map.addControl(searchControl);
   }
 
   loadMap() {
