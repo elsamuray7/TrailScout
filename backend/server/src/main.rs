@@ -40,7 +40,7 @@ pub struct RouteRequest {
 
 //Default service: sends all not differently handled requests to angular index.html
 async fn index() -> Result<actix_files::NamedFile> {
-    let path: PathBuf = "../gui/dist/index.html".parse().unwrap();
+    let path: PathBuf = "../../gui/dist/index.html".parse().unwrap();
     Ok(actix_files::NamedFile::open(path)?)
 }
 
@@ -62,16 +62,15 @@ async fn post_route(request: web::Json<RouteRequest>) -> Result<impl Responder> 
 
 //server main
 #[actix_web::main]
-async fn main() -> std::io::Result<()> {
-
+async fn main() -> std::io::Result<()> { 
     let config: Config = get_config();
 
     HttpServer::new(|| {
         App::new()
             .service(get_sights)
             .service(post_route)
-            .service(actix_files::Files::new("/static", "../gui/dist/").show_files_listing())
-            .service(actix_files::Files::new("/assets", "../gui/dist/assets").show_files_listing())
+            .service(actix_files::Files::new("/static", "../../gui/dist/").show_files_listing())
+            .service(actix_files::Files::new("/assets", "../../gui/dist/assets").show_files_listing())
             .default_service(web::get().to(index))
     })
     .bind((config.ip, config.port))?
