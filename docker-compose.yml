@@ -1,0 +1,39 @@
+version: '3.9'
+
+services:
+  # Frontend
+  trailscout-frontend:
+    container_name: trailscout-frontend
+    hostname: localhost
+    build:
+      context: ./gui/
+      dockerfile: Dockerfile
+    image: trailscout-frontend:latest
+    ports:
+      - 80:80
+      - 443:443
+    command: [nginx, '-g', 'daemon off;']
+    restart: always
+    networks:
+      - ts
+
+  # Backend
+  trailscout-backend:
+    container_name: trailscout-backend
+    build:
+      context: ./backend/server/
+      dockerfile: Dockerfile
+    image: trailscout-backend:latest
+    ports:
+      - 8080:8080
+    restart: always
+    volumes:
+      - ./graphs:/app/data
+    networks:
+      - ts
+
+volumes:
+  graphs:
+networks:
+  ts:
+    name: trailscout
