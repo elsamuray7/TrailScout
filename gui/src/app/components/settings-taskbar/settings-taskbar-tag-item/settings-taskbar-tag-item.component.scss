@@ -1,0 +1,45 @@
+.star {
+    font-size: 2rem;
+    color: #b0c4de;
+  }
+  .filled {
+    color: #1e90ff;
+  }
+  .middle {
+    color: #f7f5b7
+  }
+  .low {
+    color: #deb0b0;
+  }
+  .filled.low {
+    color: #ff1e1e;
+  }
+  .filled.middle {
+      color: #f0ea30
+  }
+.tag {
+    margin: auto;
+    padding: 3px;
+    float: left;
+}
+
+.rating {
+    text-align: right;
+    margin: auto;
+}
+
+.btn {
+    border: none;
+    background-color: inherit;
+    color: #868a8f;
+    padding: 14px 28px;
+    font-size: 1vw;
+    cursor: pointer;
+    display: inline-block;
+  }
+  
+  /* On mouse-over */
+  .btn:hover {background: #eee;}
+  .clicked {
+      color: #1e90ff;
+  }

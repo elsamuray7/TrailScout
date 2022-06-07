@@ -1,0 +1,49 @@
+<div class="taskbar">
+    <div class="row" >
+        <button [ngClass]="calculationAllowed() ? 'btn default' : 'disabled'" type="button" id="setting-btn" (click)="calculate()" [disabled]="!calculationAllowed()" >Calculate</button>
+        <div class="inputs">
+            <ngb-accordion #acc="ngbAccordion">
+                <ngb-panel [title]="radius ? 'Radius: ' + radius + 'km' : 'Radius'">
+                    <ng-template class="row" ngbPanelContent>
+                        <input mbdInput type="number" placeholder="Enter radius in km..." class="form-control" [(ngModel)]="radius"/> 
+                    </ng-template>S
+                </ngb-panel>
+            </ngb-accordion>
+            <br>
+            <ngb-accordion #acc="ngbAccordion">
+                <ngb-panel [title]="walkTime ? 'Hike duration: ' + ngbTimeStructToMinutes(walkTime) + 'mins' : 'Hike duration'" >
+                    <ng-template class="row" ngbPanelContent>
+                        <div>
+                            <div class="title">Start Time</div>
+                            <ngb-timepicker mbdInput placeholder="Enter starting time..." class="form-control" [(ngModel)]="startTime"></ngb-timepicker>
+                        </div>
+                        <br>
+                        <div>
+                            <div class="title">Walking Time</div>
+                            <ngb-timepicker mbdInput placeholder="Enter starting time..." class="form-control" [(ngModel)]="walkTime"></ngb-timepicker>
+                        </div>
+                        <br>
+                        <div>
+                            <div class="title">End Time</div>
+                            <ngb-timepicker mbdInput placeholder="Enter starting time..." class="form-control" [(ngModel)]="endTime" [disabled]="true"></ngb-timepicker> 
+                        </div>
+                    </ng-template>
+                </ngb-panel>
+            </ngb-accordion>
+            <br>
+            <ngb-accordion #acc="ngbAccordion" [destroyOnHide]="false">
+                <ngb-panel [title]="'Tags'">
+                    <ng-template class="row" ngbPanelContent>
+                        <div *ngFor="let tag of tags">
+                            <app-settings-taskbar-tag-item [tag]="tag" (checked)="checkedTag($event)"></app-settings-taskbar-tag-item>
+                        </div>
+                        
+                    </ng-template>
+                </ngb-panel>
+
+            </ngb-accordion>
+            
+        </div>
+        
+    </div>
+</div>

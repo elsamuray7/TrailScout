@@ -1,0 +1,55 @@
+.taskbar {
+  background-color: #636975;
+  height: 90vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+#setting-btn {
+  margin-top: 20px !important;
+  width: 90%;
+  margin: auto;
+}
+
+.btn {
+  border: none;
+  background-color: greenyellow;
+  padding: 30px 0px;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+/* On mouse-over */
+.btn:hover {
+  background: #eee;
+}
+
+.default {
+  color: black;
+}
+
+.disabled {
+  border: none;
+  background-color: inherit;
+  padding: 30px 0px;
+  font-size: 18px;
+  cursor: not-allowed;
+  color: gray
+}
+
+.inputs {
+  width: 90%;
+  margin: auto;
+  margin-top: 5vh;
+  max-height: 100%;
+}
+
+::ng-deep .accordion .accordion-item {
+    max-height: 45vh !important;
+    overflow: auto !important;
+}
+
+.title {
+  font-size: 1.3vw;
+  font-style: bold;
+}

@@ -1,0 +1,13 @@
+<div class="row item">
+    <div class="col tag">
+        <button class="btn" [class.clicked]="checked"(click)="checkedTag(tag)">{{tag.name}}</button>
+    </div>
+    <div [hidden]="!checked" class="col rating">
+        <ngb-rating [(rate)]="prio" [max]="3">
+            <ng-template let-fill="fill" let-index="index">
+              <span class="star" [class.filled]="fill === 100" [class.low]="index < 1" [class.middle]="index === 1">&#9733;</span>
+            </ng-template>
+          </ngb-rating>
+    </div>
+</div>
+<hr>
