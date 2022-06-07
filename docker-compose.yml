@@ -27,13 +27,13 @@ services:
     ports:
       - 8080:8080
     restart: always
-    volumes:
-      - ./graphs:/app/data
+#    volumes:
+#      - ./graphs:/app/data
     networks:
       - ts
 
-volumes:
-  graphs:
+#volumes:
+#  graphs:
 networks:
   ts:
     name: trailscout
