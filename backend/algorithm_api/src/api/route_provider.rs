@@ -21,7 +21,16 @@ pub(in crate::api) struct RouteProviderReqUserPrefs {
 }
 
 #[derive(Deserialize)]
+pub (in crate::api) struct RouteProviderReqRoot {
+    lat: f64,
+    lon: f64,
+}
+
+#[derive(Deserialize)]
 pub struct RouteProviderReq {
+    start: String,
+    end: String,
+    root: RouteProviderReqRoot,
     user_prefs: RouteProviderReqUserPrefs,
 }
 
