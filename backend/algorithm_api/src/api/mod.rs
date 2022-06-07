@@ -2,7 +2,7 @@ mod greedy;
 
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
-use lib::api::graph::Graph;
+use data_api::api::graph::Graph;
 use crate::api::greedy::GreedyAlgorithm;
 
 type Coordinate = (f64, f64);

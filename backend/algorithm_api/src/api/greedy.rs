@@ -1,5 +1,5 @@
 use std::sync::{Arc, RwLock};
-use lib::api::graph::Graph;
+use data_api::api::graph::Graph;
 use crate::api::{Algorithm, Coordinate};
 
 pub struct GreedyAlgorithm {
