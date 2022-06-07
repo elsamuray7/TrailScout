@@ -1,6 +1,8 @@
 mod greedy;
 
 use std::collections::HashMap;
+use std::sync::{Arc, RwLock};
+use lib::api::graph::Graph;
 use crate::api::greedy::GreedyAlgorithm;
 
 type Coordinate = (f64, f64);
@@ -12,8 +14,8 @@ pub trait Algorithm {
 }
 
 /// Creates a new instance of the default algorithm
-pub fn default() -> Box<dyn Algorithm> {
-    Box::new(GreedyAlgorithm::new())
+pub fn default(graph: Arc<RwLock<Graph>>) -> Box<dyn Algorithm> {
+    Box::new(GreedyAlgorithm::new(graph))
 }
 
 /// Type alias for a mapping from node id's to scores, where the nodes represent sights / tourist

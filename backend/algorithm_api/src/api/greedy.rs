@@ -1,13 +1,17 @@
+use std::sync::{Arc, RwLock};
+use lib::api::graph::Graph;
 use crate::api::{Algorithm, Coordinate};
 
 pub struct GreedyAlgorithm {
-
+    graph: Arc<RwLock<Graph>>,
 }
 
 impl GreedyAlgorithm {
     /// Creates a new instance of `GreedyAlgorithm`
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(graph: Arc<RwLock<Graph>>) -> Self {
+        Self {
+            graph,
+        }
     }
 }
 
