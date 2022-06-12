@@ -1,12 +1,11 @@
 import { NgbTimeStruct } from "@ng-bootstrap/ng-bootstrap";
 
-export interface Tag {
-    name: string;
-}
+
 
 export interface TagCheckboxResponse {
-    tag: Tag;
+    sight: Sight;
     checked: boolean;
+    prio: number;
 }
 
 export interface Settings {
@@ -14,5 +13,15 @@ export interface Settings {
     startTime?: NgbTimeStruct;
     walkTime?: NgbTimeStruct;
     endTime?: NgbTimeStruct;
-    tags: Tag[];
+    sights: Map<string, number>;
+}
+
+export interface SightsPrios {
+    sightWithPrio: Map<string, number>;
+}
+
+export interface Sight {
+    id: string;
+    name: string;
+    description?: string;
 }

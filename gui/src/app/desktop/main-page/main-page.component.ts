@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
-import { Settings, Tag } from 'src/app/types.utils';
+import { CookieHandlerService } from 'src/app/services/cookie-handler.service';
+import { Settings, Sight, SightsPrios } from 'src/app/types.utils';
 
 @Component({
   selector: 'app-main-page',
@@ -9,24 +10,27 @@ import { Settings, Tag } from 'src/app/types.utils';
 export class MainPageComponent implements OnInit {
 
   //TEST DATA
-  tags: Tag[] = [
-    {name: 'Aussichtspunkt'},
-    {name: 'Baum'},
-    {name: 'Statue'},
-    {name: 'Park'},
-    {name: 'Restaurant'}
+  sights: Sight[] = [
+    {name: 'Aussichtspunkt', id : '1'},
+    {name: 'Baum', id : '2'},
+    {name: 'Statue', id : '3'},
+    {name: 'Park', id : '4'},
+    {name: 'Restaurant', id : '5'}
   ]
 
   marker = false;
 
   radius?: number;
-  constructor() { }
+  constructor(private cookieService: CookieHandlerService) { }
 
   ngOnInit(): void {
+    const cookies = this.cookieService.getPriosCookies();
+    console.log(cookies);
   }
 
   getSettings(result: Settings) {
-    console.log(result);
+    const sightsWithPrios: SightsPrios = {sightWithPrio: result.sights};
+    this.cookieService.setPriosCookie(sightsWithPrios)
   }
 
   radiusChange(radius: number) {

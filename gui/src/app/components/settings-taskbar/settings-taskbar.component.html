@@ -34,8 +34,8 @@
             <ngb-accordion #acc="ngbAccordion" [destroyOnHide]="false">
                 <ngb-panel [title]="'Tags'">
                     <ng-template class="row" ngbPanelContent>
-                        <div *ngFor="let tag of tags">
-                            <app-settings-taskbar-tag-item [tag]="tag" (checked)="checkedTag($event)"></app-settings-taskbar-tag-item>
+                        <div *ngFor="let sight of sights">
+                            <app-settings-taskbar-tag-item [sight]="sight" (checked)="checkedTag($event)"></app-settings-taskbar-tag-item>
                         </div>
                         
                     </ng-template>
