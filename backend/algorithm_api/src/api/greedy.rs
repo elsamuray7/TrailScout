@@ -2,13 +2,14 @@ use std::sync::{Arc, RwLock};
 use chrono::{DateTime, Utc};
 use data_api::api::graph::{Graph, Sight};
 use pathfinding::prelude::*;
-use crate::api::{Algorithm, Area, Route, ScoreMap, Scores, UserPreferences};
+use crate::api::{Algorithm, Area, Coordinate, Route, ScoreMap, Scores, UserPreferences};
 
 pub struct GreedyAlgorithm {
     graph_ref: Arc<RwLock<Graph>>,
     start_time: DateTime<Utc>,
     end_time: DateTime<Utc>,
     sights: Vec<Sight>,
+    root: Coordinate,
     user_prefs: UserPreferences,
 }
 
@@ -44,6 +45,7 @@ impl Algorithm for GreedyAlgorithm {
             start_time,
             end_time,
             sights,
+            root: Coordinate { lat: area.lat, lon: area.lon },
             user_prefs,
         }
     }
@@ -51,6 +53,30 @@ impl Algorithm for GreedyAlgorithm {
     fn compute_route(&self) -> Route {
         let graph = self.graph_ref.read().unwrap();
         let scores = self.compute_scores();
+        let mut route: Vec<Sight> = Vec::new();
+        let root_id = graph.get_nearest_node(self.root.lat, self.root.lon);
+        loop {
+            let mut unvisited_sights: Vec<_> = self.sights.iter()
+                .map(|sight| sight.node_id)
+                .collect();
+            let result = dijkstra(&graph.nodes[root_id],
+                                  |node| graph.get_outgoing_edges(node.id)
+                                      .into_iter()
+                                      .map(|edge| (&graph.nodes[edge.tgt], edge.dist))
+                                      .collect(),
+                                  |node| {
+                                            unvisited_sights.retain(|&sight_id| sight_id != node.id);
+                                            unvisited_sights.is_empty()
+                                        });
+            match result {
+                Some(result) => {
+
+                }
+                None => {
+                    // TODO handle error
+                }
+            }
+        }
         todo!()
     }
 }

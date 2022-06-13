@@ -1,5 +1,6 @@
 use std::fmt::Formatter;
 use std::fs::File;
+use std::hash::{Hash, Hasher};
 use std::io::{BufRead, BufReader};
 use std::num::{ParseFloatError, ParseIntError};
 
@@ -66,10 +67,25 @@ impl BoundingBox {
 }
 
 /// A graph node located at a specific coordinate
+#[derive(Clone)]
 pub struct Node {
     pub id: usize,
     pub lat: f64,
     pub lon: f64,
+}
+
+impl PartialEq<Self> for Node {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
+impl Eq for Node {}
+
+impl Hash for Node {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+    }
 }
 
 /// A directed and weighted graph edge
@@ -124,7 +140,7 @@ impl Graph {
     }
 
     /// Get the nearest node to a given coordinate (latitude / longitude)
-    fn get_nearest_node(&self, lat: f64, lon: f64) -> usize {
+    pub fn get_nearest_node(&self, lat: f64, lon: f64) -> usize {
         // TODO compute nearest node to given coordinate
         todo!()
     }
