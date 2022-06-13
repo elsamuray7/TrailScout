@@ -28,5 +28,5 @@ export interface Sight {
 
 export interface Cookie {
     key: string;
-    value: number;
+    value: any;
 }

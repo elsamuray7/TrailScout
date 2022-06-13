@@ -23,6 +23,16 @@ export class CookieHandlerService {
       prioCookies.push({key: res[0], value: res[1] as any})
     });
     return prioCookies;
+  }
 
+  setLocationCookie(latlng: L.LatLng) {
+    const latlngString: string = latlng.toString();
+    this.cookieService.set(environment.cookieLocation, latlngString)
+  }
+
+  getLocationCookie(): Cookie {
+    const result = this.cookieService.get(environment.cookieLocation);
+    const cookie: Cookie = {key: environment.cookieLocation, value: result}
+    return cookie;
   }
 }

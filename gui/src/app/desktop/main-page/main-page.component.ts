@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import * as L from 'leaflet';
 import { CookieHandlerService } from 'src/app/services/cookie-handler.service';
 import { Settings, Sight, SightsPrios } from 'src/app/types.utils';
 
@@ -19,6 +20,7 @@ export class MainPageComponent implements OnInit {
   ]
 
   marker = false;
+  markerCoords?: L.LatLng;
   sightsWithPrio?: SightsPrios;
 
   radius?: number;
@@ -29,6 +31,12 @@ export class MainPageComponent implements OnInit {
       for (const cookie of prioCookies) {
         this.sightsWithPrio.sightWithPrio.set(cookie.key, cookie.value)
       }
+    }
+    const startCookie = this.cookieService.getLocationCookie();
+    if (startCookie) {
+      const val = startCookie.value as string;
+      const coords = val.substring(val.indexOf('(') + 1, val.indexOf(')')).split(',');
+      this.markerSet(new L.LatLng(coords[0] as any, coords[1] as any))
     }
   }
 
@@ -47,6 +55,8 @@ export class MainPageComponent implements OnInit {
 
   markerSet(latlng: L.LatLng) {
     this.marker = true;
+    this.markerCoords = latlng;
+    this.cookieService.setLocationCookie(latlng);
   }
 
 }

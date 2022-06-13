@@ -28,7 +28,8 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
   @Input() initLat = 48.7758459;
   @Input() initLng = 9.1829321;
   @Input() initZoom = 10;
-  @Input() circleRadius?: number; 
+  @Input() circleRadius?: number;
+  @Input() startPoint?: L.LatLng;
 
   @Output() markerLocation = new EventEmitter;
   private marker?: L.Marker;
@@ -37,7 +38,7 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
   constructor() { 
   }
   ngOnChanges(changes: SimpleChanges): void {
-    this.circleRadius = changes["circleRadius"].currentValue;
+    this.circleRadius = changes["circleRadius"]?.currentValue;
     this.addCircle(this.marker?.getLatLng()!);
   }
 
@@ -65,6 +66,13 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
           updateMap: !0
     });
     this.map.addControl(searchControl);
+
+    if (this.startPoint) {
+      this.marker = new L.Marker(this.startPoint);
+      this.marker.addTo(this.map);
+      this.addCircle(this.startPoint);
+      this.markerLocation.emit(this.startPoint)
+    }
   }
 
   loadMap() {
