@@ -3,7 +3,12 @@
         <app-settings-taskbar [sights]="sights" [sightsWithPrio]="sightsWithPrio" [startRadius]="radius" (settings)="getSettings($event)" (radiusChange)="radiusChange($event)" [startPointSet]="marker"></app-settings-taskbar>
     </div>
     <div style="width: 80%; float: left" id="map">
-        <app-map-container [circleRadius]="radius" [startPoint]="markerCoords"  (markerLocation)="markerSet($event)"></app-map-container>
+        <app-map-container 
+        [circleRadius]="radius" 
+        [startPoint]="markerCoords"  
+        [initLat]="markerCoords?.lat ?? 48.7758459"
+        [initLng]="markerCoords?.lng ?? 9.1829321"
+        (markerLocation)="markerSet($event)"></app-map-container>
     </div>
 
 </div>
