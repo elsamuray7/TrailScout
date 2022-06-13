@@ -1,45 +1,15 @@
 use serde::{Serialize, Deserialize};
-
-#[derive(Deserialize)]
-pub(in crate::api) struct RouteProviderReqCategory {
-    pub (in crate::api) name: String,
-    pub (in crate::api) pref: usize,
-}
-
-#[derive(Deserialize)]
-pub(in crate::api) struct RouteProviderReqSight {
-    pub (in crate::api) id: usize,
-    pub (in crate::api) category: String,
-    pub (in crate::api) pref: usize,
-}
-
-#[derive(Deserialize)]
-pub(in crate::api) struct RouteProviderReqUserPrefs {
-    pub (in crate::api) categories: Vec<RouteProviderReqCategory>,
-    pub (in crate::api) sights: Vec<RouteProviderReqSight>,
-}
-
-#[derive(Deserialize)]
-pub(in crate::api) struct RouteProviderReqRoot {
-    pub (in crate::api) lat: f64,
-    pub (in crate::api) lon: f64,
-}
+use crate::api::{Area, Route, UserPreferences};
 
 #[derive(Deserialize)]
 pub struct RouteProviderReq {
-    pub (in crate::api) start: String,
-    pub (in crate::api) end: String,
-    pub (in crate::api) root: RouteProviderReqRoot,
-    pub (in crate::api) user_prefs: RouteProviderReqUserPrefs,
-}
-
-#[derive(Serialize)]
-pub(in crate::api) struct RouteProviderResCoordinate {
-    pub (in crate::api) lat: f64,
-    pub (in crate::api) lon: f64,
+    pub(crate) start: String,
+    pub(crate) end: String,
+    pub(crate) area: Area,
+    pub(crate) user_prefs: UserPreferences,
 }
 
 #[derive(Serialize)]
 pub struct RouteProviderRes {
-    route: Vec<RouteProviderResCoordinate>,
+    route: Route,
 }
