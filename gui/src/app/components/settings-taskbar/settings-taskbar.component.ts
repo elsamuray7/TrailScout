@@ -34,7 +34,7 @@ export class SettingsTaskbarComponent implements OnInit {
     //Temp fix as angular throws expressionChangedAfterChecked error
     setTimeout(()=> {
       if (this.startRadius) {
-        this.radius = 5;
+        this.radius = this.startRadius;
       }
   }, 0);
     
