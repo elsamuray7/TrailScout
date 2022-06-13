@@ -35,4 +35,14 @@ export class CookieHandlerService {
     const cookie: Cookie = {key: environment.cookieLocation, value: result}
     return cookie;
   }
+
+  setRadiusCookie(radius: number) {
+    this.cookieService.set(environment.cookieRadius, radius.toString());
+  }
+
+  getRadiusCookie(): Cookie {
+    const result = this.cookieService.get(environment.cookieRadius);
+    const cookie: Cookie = {key: environment.cookieRadius, value: result};
+    return cookie;
+  }
 }

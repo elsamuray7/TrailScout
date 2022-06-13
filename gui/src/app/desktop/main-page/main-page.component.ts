@@ -38,6 +38,11 @@ export class MainPageComponent implements OnInit {
       const coords = val.substring(val.indexOf('(') + 1, val.indexOf(')')).split(',');
       this.markerSet(new L.LatLng(coords[0] as any, coords[1] as any))
     }
+
+    const radiusCookie = this.cookieService.getRadiusCookie();
+    if (radiusCookie && !this.radius) {
+      this.radiusChange(radiusCookie.value as number);
+    }
   }
 
   ngOnInit(): void {
@@ -51,6 +56,7 @@ export class MainPageComponent implements OnInit {
 
   radiusChange(radius: number) {
     this.radius = radius;
+    this.cookieService.setRadiusCookie(radius);
   }
 
   markerSet(latlng: L.LatLng) {

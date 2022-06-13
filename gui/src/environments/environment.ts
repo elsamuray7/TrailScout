@@ -4,7 +4,8 @@
 
 export const environment = {
   production: false,
-  cookieLocation: 'location'
+  cookieLocation: 'location',
+  cookieRadius: 'radius'
 };
 
 /*

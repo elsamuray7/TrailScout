@@ -13,6 +13,7 @@ export class SettingsTaskbarComponent implements OnInit {
   @Input() sights: Sight[] = [];
   @Input() sightsWithPrio?: SightsPrios;
   @Input() startPointSet = false;
+  @Input() startRadius? :number;
 
   @Output() settings = new EventEmitter;
   @Output() radiusChange = new EventEmitter;
@@ -27,10 +28,16 @@ export class SettingsTaskbarComponent implements OnInit {
   constructor() {
     this.currentDate = new Date();
     this._startTime = {hour: this.currentDate.getHours(), minute: this.currentDate.getMinutes(), second: 0};
-    
    }
 
   ngOnInit(): void {
+    //Temp fix as angular throws expressionChangedAfterChecked error
+    setTimeout(()=> {
+      if (this.startRadius) {
+        this.radius = 5;
+      }
+  }, 0);
+    
   }
 
   set radius(r: number) {
