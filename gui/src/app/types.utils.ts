@@ -25,3 +25,8 @@ export interface Sight {
     name: string;
     description?: string;
 }
+
+export interface Cookie {
+    key: string;
+    value: number;
+}

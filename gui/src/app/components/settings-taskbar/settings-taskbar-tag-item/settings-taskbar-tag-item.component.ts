@@ -1,5 +1,5 @@
 import { Component, Input, OnInit, Output, EventEmitter } from '@angular/core';
-import { Sight, TagCheckboxResponse } from 'src/app/types.utils';
+import { Sight, SightsPrios, TagCheckboxResponse } from 'src/app/types.utils';
 
 @Component({
   selector: 'app-settings-taskbar-tag-item',
@@ -9,13 +9,21 @@ import { Sight, TagCheckboxResponse } from 'src/app/types.utils';
 export class SettingsTaskbarTagItemComponent implements OnInit {
 
   @Input() sight!: Sight;
+  @Input() cookiePrio?: number
   @Output('checked') checkedEvent = new EventEmitter;
 
   checked = false;
   prio: number = 0;
-  constructor() { }
+  constructor() {
+    
+   }
 
   ngOnInit(): void {
+    if (this.cookiePrio) {
+      this.prio = this.cookiePrio;
+      this.checked = true;
+      this.prioChanged();
+    }
   }
 
   checkedTag() {

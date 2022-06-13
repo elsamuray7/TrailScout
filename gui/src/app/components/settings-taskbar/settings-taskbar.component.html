@@ -35,7 +35,7 @@
                 <ngb-panel [title]="'Tags'">
                     <ng-template class="row" ngbPanelContent>
                         <div *ngFor="let sight of sights">
-                            <app-settings-taskbar-tag-item [sight]="sight" (checked)="checkedTag($event)"></app-settings-taskbar-tag-item>
+                            <app-settings-taskbar-tag-item [sight]="sight" [cookiePrio]="sightsWithPrio?.sightWithPrio?.get(sight.id)" (checked)="checkedTag($event)"></app-settings-taskbar-tag-item>
                         </div>
                         
                     </ng-template>

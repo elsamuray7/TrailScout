@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { CookieService } from 'ngx-cookie-service';
-import { SightsPrios } from '../types.utils';
+import { Cookie, SightsPrios } from '../types.utils';
 import { environment } from 'src/environments/environment';
 
 @Injectable({
@@ -16,7 +16,13 @@ export class CookieHandlerService {
       this.cookieService.set(cookie, prio[1].toString());
     }
   }
-  getPriosCookies() {
-    return this.cookieService.getAll();
+  getPriosCookies(): Cookie[] {
+    const result =  this.cookieService.getAll();
+    const prioCookies: Cookie[] = [];
+    Object.entries(result).forEach(res => {
+      prioCookies.push({key: res[0], value: res[1] as any})
+    });
+    return prioCookies;
+
   }
 }

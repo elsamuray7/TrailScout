@@ -11,6 +11,7 @@ export class SettingsTaskbarComponent implements OnInit {
 
   @Input() width: number = 200;
   @Input() sights: Sight[] = [];
+  @Input() sightsWithPrio?: SightsPrios;
   @Input() startPointSet = false;
 
   @Output() settings = new EventEmitter;
@@ -26,6 +27,7 @@ export class SettingsTaskbarComponent implements OnInit {
   constructor() {
     this.currentDate = new Date();
     this._startTime = {hour: this.currentDate.getHours(), minute: this.currentDate.getMinutes(), second: 0};
+    
    }
 
   ngOnInit(): void {

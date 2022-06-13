@@ -19,13 +19,21 @@ export class MainPageComponent implements OnInit {
   ]
 
   marker = false;
+  sightsWithPrio?: SightsPrios;
 
   radius?: number;
-  constructor(private cookieService: CookieHandlerService) { }
+  constructor(private cookieService: CookieHandlerService) { 
+    const prioCookies = this.cookieService.getPriosCookies();
+    if (prioCookies) {
+      this.sightsWithPrio = {sightWithPrio: new Map<string, number>()};
+      for (const cookie of prioCookies) {
+        this.sightsWithPrio.sightWithPrio.set(cookie.key, cookie.value)
+      }
+    }
+  }
 
   ngOnInit(): void {
-    const cookies = this.cookieService.getPriosCookies();
-    console.log(cookies);
+    
   }
 
   getSettings(result: Settings) {
