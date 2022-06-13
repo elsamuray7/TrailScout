@@ -1,9 +1,14 @@
 <div class="row" style="width: 100%;">
     <div id="settings" style="width: 20%; float: left">
-        <app-settings-taskbar [tags]="tags" (settings)="getSettings($event)" (radiusChange)="radiusChange($event)" [startPointSet]="marker"></app-settings-taskbar>
+        <app-settings-taskbar [sights]="sights" [sightsWithPrio]="sightsWithPrio" [startRadius]="radius" (settings)="getSettings($event)" (radiusChange)="radiusChange($event)" [startPointSet]="marker"></app-settings-taskbar>
     </div>
     <div style="width: 80%; float: left" id="map">
-        <app-map-container [circleRadius]="radius" (markerLocation)="markerSet($event)"></app-map-container>
+        <app-map-container 
+        [circleRadius]="radius" 
+        [startPoint]="markerCoords"  
+        [initLat]="markerCoords?.lat ?? 48.7758459"
+        [initLng]="markerCoords?.lng ?? 9.1829321"
+        (markerLocation)="markerSet($event)"></app-map-container>
     </div>
 
 </div>
