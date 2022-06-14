@@ -27,6 +27,7 @@ impl BoundingBox {
 
 /// A graph node located at a specific coordinate
 pub struct Node {
+    pub osm_id: usize,
     pub id: usize,
     pub lat: f64,
     pub lon: f64,
@@ -35,7 +36,9 @@ pub struct Node {
 
 /// A directed and weighted (dist) graph edge between a source (src) and a target (tgt) node
 pub struct Edge {
-    pub(crate) id: usize, // TODO delete later!
+    pub(crate) osm_id: usize, // TODO delete later!
+    pub osm_src: usize,
+    pub osm_tgt: usize,
     pub src: usize,
     pub tgt: usize,
     pub dist: usize,
@@ -242,9 +245,9 @@ impl Graph {
     }
 }
 
-/// Calculates the distance between two given coordinates (latitude / longitude) in metres. TODO make it changeable later?
-pub(crate) fn calc_dist(lat1: f64, lon1: f64, lat2: f64, lon2: f64) {
-
+/// Calculates the distance between two given coordinates (latitude / longitude) in metres. TODO make metre changeable later?
+pub(crate) fn calc_dist(lat1: &f64, lon1: &f64, lat2: &f64, lon2: &f64) -> usize {
+    0
 }
 
 #[derive(Debug)]
