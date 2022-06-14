@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fmt::Formatter;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
@@ -156,7 +157,7 @@ impl Graph {
 
     /// Get all sights within a circular area, specified by `radius`, around a given coordinate
     /// (latitude / longitude)
-    pub fn get_sights_in_area(&self, lat: f64, lon: f64, radius: f64) -> Vec<Sight> {
+    pub fn get_sights_in_area(&self, lat: f64, lon: f64, radius: f64) -> HashMap<usize, Sight> {
         /*
         TODO
             - get bbox of area around coordinate

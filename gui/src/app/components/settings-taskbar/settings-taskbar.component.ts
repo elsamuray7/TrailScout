@@ -1,6 +1,6 @@
 import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { NgbTimeStruct } from '@ng-bootstrap/ng-bootstrap';
-import { Settings, Tag, TagCheckboxResponse } from 'src/app/types.utils';
+import { Settings, Sight, SightsPrios, TagCheckboxResponse } from 'src/app/types.utils';
 
 @Component({
   selector: 'app-settings-taskbar',
@@ -10,8 +10,10 @@ import { Settings, Tag, TagCheckboxResponse } from 'src/app/types.utils';
 export class SettingsTaskbarComponent implements OnInit {
 
   @Input() width: number = 200;
-  @Input() tags: Tag[] = [];
+  @Input() sights: Sight[] = [];
+  @Input() sightsWithPrio?: SightsPrios;
   @Input() startPointSet = false;
+  @Input() startRadius? :number;
 
   @Output() settings = new EventEmitter;
   @Output() radiusChange = new EventEmitter;
@@ -21,7 +23,7 @@ export class SettingsTaskbarComponent implements OnInit {
   private _walkTime?: NgbTimeStruct;
   private _endTime?: NgbTimeStruct;
   private currentDate: Date;
-  private selectedTags: Tag[] = [];
+  private selectedSights: Map<string, number> = new Map<string, number>();
 
   constructor() {
     this.currentDate = new Date();
@@ -29,6 +31,13 @@ export class SettingsTaskbarComponent implements OnInit {
    }
 
   ngOnInit(): void {
+    //Temp fix as angular throws expressionChangedAfterChecked error
+    setTimeout(()=> {
+      if (this.startRadius) {
+        this.radius = this.startRadius;
+      }
+  }, 0);
+    
   }
 
   set radius(r: number) {
@@ -85,7 +94,7 @@ export class SettingsTaskbarComponent implements OnInit {
       startTime: this.startTime,
       walkTime: this.walkTime,
       endTime: this.endTime,
-      tags: this.selectedTags
+      sights: this.selectedSights
     }
     this.settings.emit(result)
   }
@@ -99,14 +108,9 @@ export class SettingsTaskbarComponent implements OnInit {
 
   checkedTag(response: TagCheckboxResponse) {
     if (response.checked) {
-      if (!this.selectedTags.includes(response.tag)) {
-        this.selectedTags.push(response.tag);
-      }
+      this.selectedSights.set(response.sight.id, response.prio);
     } else {
-      const index = this.selectedTags.indexOf(response.tag);
-      if (index > -1) {
-        this.selectedTags.splice(index, 1)
-      }
+      this.selectedSights.delete(response.sight.id);
     }
   }
 
