@@ -1,7 +1,9 @@
+use std::collections::HashMap;
 use std::fmt::Formatter;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::num::{ParseFloatError, ParseIntError};
+use serde::{Serialize, Deserialize};
 
 #[derive(Debug)]
 pub enum ParseError {
@@ -48,6 +50,21 @@ impl From<ParseFloatError> for ParseError {
     }
 }
 
+/// Geographic coordinate
+#[derive(Serialize)]
+pub struct Coordinate {
+    lat: f64,
+    lon: f64,
+}
+
+/// Circular area around a coordinate
+#[derive(Deserialize)]
+pub struct Area {
+    lat: f64,
+    lon: f64,
+    radius: f64,
+}
+
 /// Bounding box of a circular area around a coordinate
 struct BoundingBox {
     min_lat: f64,
@@ -57,9 +74,8 @@ struct BoundingBox {
 }
 
 impl BoundingBox {
-    /// Create the bounding box of a circular area, specified by `radius`, around a given
-    /// coordinate
-    fn from_coordinate_and_radius(lat: f64, lon: f64, radius: f64) -> Self {
+    /// Create the bounding box of a circular area
+    fn from_area(area: &Area) -> Self {
         // TODO compute bounding box of circular area
         todo!()
     }
@@ -139,9 +155,8 @@ impl Graph {
         &self.edges[self.offsets[node_id]..self.offsets[node_id+1]]
     }
 
-    /// Get all sights within a circular area, specified by `radius`, around a given coordinate
-    /// (latitude / longitude)
-    pub fn get_sights_in_area(&self, lat: f64, lon: f64, radius: f64) -> Vec<Sight> {
+    /// Get all sights within a circular area
+    pub fn get_sights_in_area(&self, area: &Area) -> HashMap<usize, Sight> {
         /*
         TODO
             - get bbox of area around coordinate
@@ -151,7 +166,7 @@ impl Graph {
             - create mutable vector with fetched sights
             - sort sights by longitude
             - get slice of sights within min/max longitude of bbox, e.g. with binary search
-            - return new vector with fetched sights
+            - return map with node id's as keys and fetched sights as values
          */
         todo!()
     }
