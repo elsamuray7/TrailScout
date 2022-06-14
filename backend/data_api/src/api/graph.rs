@@ -67,7 +67,6 @@ impl BoundingBox {
 }
 
 /// A graph node located at a specific coordinate
-#[derive(Clone)]
 pub struct Node {
     pub id: usize,
     pub lat: f64,

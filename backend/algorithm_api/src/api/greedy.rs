@@ -1,6 +1,7 @@
+use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use chrono::{DateTime, Utc};
-use data_api::api::graph::{Graph, Sight};
+use data_api::api::graph::{Graph, Node, Sight};
 use pathfinding::prelude::*;
 use crate::api::{Algorithm, Area, Coordinate, Route, ScoreMap, Scores, UserPreferences};
 
@@ -55,27 +56,21 @@ impl Algorithm for GreedyAlgorithm {
         let scores = self.compute_scores();
         let mut route: Vec<Sight> = Vec::new();
         let root_id = graph.get_nearest_node(self.root.lat, self.root.lon);
+        let mut curr_node = &&graph.nodes[root_id];
         loop {
             let mut unvisited_sights: Vec<_> = self.sights.iter()
                 .map(|sight| sight.node_id)
                 .collect();
-            let result = dijkstra(&graph.nodes[root_id],
-                                  |node| graph.get_outgoing_edges(node.id)
-                                      .into_iter()
-                                      .map(|edge| (&graph.nodes[edge.tgt], edge.dist))
-                                      .collect(),
-                                  |node| {
-                                            unvisited_sights.retain(|&sight_id| sight_id != node.id);
-                                            unvisited_sights.is_empty()
-                                        });
-            match result {
-                Some(result) => {
+            let result: (HashMap<&Node, (&Node, usize)>, Option<&Node>) = dijkstra_partial(curr_node,
+                                                               |&node| graph.get_outgoing_edges(node.id)
+                                                                   .into_iter()
+                                                                   .map(|edge| (&graph.nodes[edge.tgt], edge.dist))
+                                                                   .collect::<Vec<(&Node, usize)>>(),
+                                                               |&node| {
+                                                                    unvisited_sights.retain(|&sight_id| sight_id != node.id);
+                                                                    unvisited_sights.is_empty()
+                                                                });
 
-                }
-                None => {
-                    // TODO handle error
-                }
-            }
         }
         todo!()
     }
