@@ -1,7 +1,17 @@
 /* You can add global styles to this file, and also import other style files */
 @import '~bootstrap/dist/css/bootstrap-grid.min.css';
-@import '~bootstrap/dist/css/bootstrap.min.css';
 @import "~bootstrap-icons/font/bootstrap-icons.css";
 body { background-color: #3f434a !important; }
-/* Importing Bootstrap SCSS file. */
-@import '~bootstrap/scss/bootstrap';
+
+// Your variable overrides can go here, e.g.:
+$theme: "vapor";
+// $h1-font-size: 3rem;
+@function getTheme($theme) {
+  @return $theme;
+}
+
+
+@import url("~bootswatch/dist/#{$theme}/variables");
+
+@import "~bootstrap/scss/bootstrap";
+@import url("~bootswatch/dist/#{$theme}/bootswatch");

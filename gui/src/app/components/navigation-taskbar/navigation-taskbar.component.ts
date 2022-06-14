@@ -11,6 +11,11 @@ export class NavigationTaskbarComponent implements OnInit {
   @Output() startEvent = new EventEmitter;
   @Output() mainEvent = new EventEmitter;
 
+  themes: String[] = [
+    "Cyborg",
+    "Cosmo",
+    "Flatly"
+  ]
   constructor() { }
 
   ngOnInit(): void {
@@ -24,4 +29,8 @@ export class NavigationTaskbarComponent implements OnInit {
     this.mainEvent.emit();
   }
 
+  changeTheme(theme: String) {
+    console.log('changing theme to:' + theme);
+
+  }
 }
