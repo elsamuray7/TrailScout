@@ -11,7 +11,7 @@ path = "src/lib.rs"
 
 [[bin]]
 name = "creator"
-path = "src/main.rs"
+path = "src/creator/osm_graph_creator.rs"
 
 [dependencies]
 osmpbf = "0.2"

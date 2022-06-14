@@ -1,1 +1,1 @@
-pub(crate) mod osm_graph_creator;
+pub mod osm_graph_creator;
