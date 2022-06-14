@@ -9,8 +9,8 @@ pub struct GreedyAlgorithm {
     graph_ref: Arc<RwLock<Graph>>,
     start_time: DateTime<Utc>,
     end_time: DateTime<Utc>,
-    sights: Vec<Sight>,
-    root: Coordinate,
+    sights: HashMap<usize, Sight>,
+    root_id: usize,
     user_prefs: UserPreferences,
 }
 
@@ -37,16 +37,18 @@ impl Algorithm for GreedyAlgorithm {
            area: Area,
            user_prefs: UserPreferences) -> Self {
         let sights;
+        let root_id;
         {
             let graph = graph_ref.read().unwrap();
             sights = graph.get_sights_in_area(area.lat, area.lon, area.radius);
+            root_id = graph.get_nearest_node(area.lat, area.lon);
         }
         Self {
             graph_ref,
             start_time,
             end_time,
             sights,
-            root: Coordinate { lat: area.lat, lon: area.lon },
+            root_id,
             user_prefs,
         }
     }
@@ -55,13 +57,12 @@ impl Algorithm for GreedyAlgorithm {
         let graph = self.graph_ref.read().unwrap();
         let scores = self.compute_scores();
         let mut route: Vec<Sight> = Vec::new();
-        let root_id = graph.get_nearest_node(self.root.lat, self.root.lon);
-        let mut curr_node = &&graph.nodes[root_id];
+        let mut curr_node = &&graph.nodes[self.root_id];
         loop {
-            let mut unvisited_sights: Vec<_> = self.sights.iter()
-                .map(|sight| sight.node_id)
+            let mut unvisited_sights: Vec<_> = self.sights.keys()
+                .map(|sight_id| *sight_id)
                 .collect();
-            let result: (HashMap<&Node, (&Node, usize)>, Option<&Node>) = dijkstra_partial(curr_node,
+            let (mut dist_map, _): (HashMap<&Node, (&Node, usize)>, Option<&Node>) = dijkstra_partial(curr_node,
                                                                |&node| graph.get_outgoing_edges(node.id)
                                                                    .into_iter()
                                                                    .map(|edge| (&graph.nodes[edge.tgt], edge.dist))
@@ -70,7 +71,6 @@ impl Algorithm for GreedyAlgorithm {
                                                                     unvisited_sights.retain(|&sight_id| sight_id != node.id);
                                                                     unvisited_sights.is_empty()
                                                                 });
-
         }
         todo!()
     }
