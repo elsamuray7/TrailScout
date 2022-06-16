@@ -5,14 +5,23 @@ use std::{path::PathBuf};
 use std::str;
 use std::fs;
 use serde_json;
+use data_api::api::{graph};
+use algorithm_api::api::{route_provider};
+use data_api::api::graph::Graph;
+
 
 const CONFIG_PATH :&str = "src/config.json";
+
+//ToDo Placeholder graph
+const graph : graph::Graph =graph::Graph();
+
 
 //Deserialization of config
 #[derive(Deserialize)]
 struct Config {
     ip: String,
     port: u16,
+
 }
 
 //read config at CONFIG_PATH and return it
@@ -33,29 +42,30 @@ pub struct SightsRequest {
    radius: u64,
 }
 
-#[derive(Debug, Deserialize)]
-pub struct RouteRequest {
-   node_list: Vec<String>,
-}
-
 //Default service: sends all not differently handled requests to angular index.html
 async fn index() -> Result<actix_files::NamedFile> {
     let path: PathBuf = "../../gui/dist/index.html".parse().unwrap();
     Ok(actix_files::NamedFile::open(path)?)
 }
 
-//Get Request to handle sights
-#[get("/sights")]
-async fn get_sights(request:  web::Query<SightsRequest>) -> Result<impl Responder> {
+//Post Request to handle sights
+#[post("/sights")]
+async fn post_sights(request:  web::Json<SightsRequest>) -> Result<impl Responder> {
     //Placeholder => get sights by parameter and radius?
     let response =  format!("Placeholder Sights Request for lat={}, lon={} and radius={}.", request.lat, request.lon, request.radius);
+
     Ok(web::Json(response))
 }
 
 //Post Request to handle route request
 #[post("/route")]
-async fn post_route(request: web::Json<RouteRequest>) -> Result<impl Responder> {
-    let response =  format!("Placeholder Route Request for lat={}", request.node_list.len());
+async fn post_route(request: web::Json<route_provider::RouteProviderReq>) -> Result<impl Responder> {
+
+    //ToDo: send Request to algo - get algo answer - send algo answer back
+
+    //ToDo create answer
+
+    let response =  format!("Placeholder Route Request");
     Ok(web::Json(response))
 }
 
@@ -65,9 +75,11 @@ async fn post_route(request: web::Json<RouteRequest>) -> Result<impl Responder> 
 async fn main() -> std::io::Result<()> { 
     let config: Config = get_config();
 
+    //ToDo get and hold graph graph object
+
     HttpServer::new(|| {
         App::new()
-            .service(get_sights)
+            .service(post_sights)
             .service(post_route)
             .service(actix_files::Files::new("/static", "../../gui/dist/").show_files_listing())
             .service(actix_files::Files::new("/assets", "../../gui/dist/assets").show_files_listing())
