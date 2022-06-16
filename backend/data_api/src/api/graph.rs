@@ -110,7 +110,7 @@ pub struct Sight {
 /// A directed graph. In addition to nodes and edges, the definition also contains a set of sights
 /// mapped on their nearest nodes, respectively.
 pub struct Graph {
-    pub nodes: Vec<Node>,
+    nodes: Vec<Node>,
     // TODO check if pub needed or pub (crate)
     edges: Vec<Edge>,
     offsets: Vec<usize>,
@@ -139,6 +139,16 @@ impl Graph {
         todo!()
     }
 
+    /// Returns a reference to the vector containing all nodes in this graph
+    pub fn nodes(&self) -> &Vec<Node> {
+        &self.nodes
+    }
+
+    /// Get the node with id `node_id`
+    pub fn get_node(&self, node_id: usize) -> &Node {
+        &self.nodes[node_id]
+    }
+
     /// Get the nearest node to a given coordinate (latitude / longitude)
     pub fn get_nearest_node(&self, lat: f64, lon: f64) -> usize {
         // TODO compute nearest node to given coordinate
@@ -153,6 +163,18 @@ impl Graph {
     /// Get all outgoing edges of a particular node
     pub fn get_outgoing_edges(&self, node_id: usize) -> &[Edge] {
         &self.edges[self.offsets[node_id]..self.offsets[node_id+1]]
+    }
+
+    /// Get all outgoing edges of a particular node where the edge target lies within given area
+    pub fn get_outgoing_edges_in_area(&self, node_id: usize, lat: f64, lon: f64, radius: f64) -> Vec<&Edge> {
+        let out_edges = self.get_outgoing_edges(node_id);
+        out_edges.iter()
+            .filter(|&edge| {
+                let tgt_node = self.get_node(edge.tgt);
+                // TODO check whether target node lies in area
+                todo!()
+            })
+            .collect()
     }
 
     /// Get all sights within a circular area, specified by `radius`, around a given coordinate
