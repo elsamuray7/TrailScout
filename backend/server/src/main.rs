@@ -1,3 +1,5 @@
+mod route_provider;
+
 use actix_web::{web, App, HttpServer, Result,Responder, get, post};
 use actix_files;
 use serde::Deserialize;
