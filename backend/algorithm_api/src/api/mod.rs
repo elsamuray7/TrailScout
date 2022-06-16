@@ -1,4 +1,3 @@
-pub mod route_provider;
 pub mod greedy;
 
 use std::collections::HashMap;
@@ -10,28 +9,6 @@ use serde::{Serialize, Deserialize};
 /// Type alias for a mapping from node id's to scores, where the nodes represent sights / tourist
 /// attractions
 type ScoreMap = HashMap<usize, usize>;
-
-/// Immutable data structure to access scores for sights / tourist attractions
-struct Scores {
-    score_map: ScoreMap,
-}
-
-impl Scores {
-    /// Create a `Scores` instance from a score map
-    fn from_map(score_map: ScoreMap) -> Self {
-        Self {
-            score_map,
-        }
-    }
-
-    /// Get the score of the node with id `node_id`
-    fn get_score(&self, node_id: &usize) -> Option<usize> {
-        match self.score_map.get(node_id) {
-            Some(&score) => Some(score),
-            _ => None,
-        }
-    }
-}
 
 /// Geographic coordinate
 #[derive(Serialize)]
@@ -76,9 +53,19 @@ pub type Route = Vec<Coordinate>;
 /// Algorithm trait to be implemented by concrete algorithm implementations
 trait Algorithm {
     /// Create a new algorithm instance
+    ///
+    /// # Arguments
+    /// * `graph_ref` - A readable/writable atomic reference to the graph on which to run the
+    /// algorithm
+    /// * `start_time` - The intended start time of the walk
+    /// * `end_time` - The intended end time of the walk
+    /// * `walking_speed_mps` - The walking speed in meters per second
+    /// * `area` - The area in which the walking route should lie
+    /// * `user_prefs` - The users preferences for sight categories and sights, respectively
     fn new(graph_ref: Arc<RwLock<Graph>>,
            start_time: DateTime<Utc>,
            end_time: DateTime<Utc>,
+           walking_speed_mps: f64,
            area: Area,
            user_prefs: UserPreferences) -> Self;
 
