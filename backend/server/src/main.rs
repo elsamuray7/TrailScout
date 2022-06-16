@@ -4,16 +4,18 @@ use serde::Deserialize;
 use std::{path::PathBuf};
 use std::str;
 use std::fs;
+use actix_web::web::Data;
 use serde_json;
-use data_api::api::{graph};
 use algorithm_api::api::{route_provider};
-use data_api::api::graph::Graph;
+use data_api::api::graph::{Graph, ParseError};
 
 
 const CONFIG_PATH :&str = "src/config.json";
 
-//ToDo Placeholder graph
-const graph : graph::Graph =graph::Graph();
+// This struct represents state
+struct AppState {
+    state_graph: Graph,
+}
 
 
 //Deserialization of config
@@ -21,6 +23,7 @@ const graph : graph::Graph =graph::Graph();
 struct Config {
     ip: String,
     port: u16,
+    graph_file_path : String,
 
 }
 
@@ -70,20 +73,28 @@ async fn post_route(request: web::Json<route_provider::RouteProviderReq>) -> Res
 }
 
 
+
 //server main
 #[actix_web::main]
 async fn main() -> std::io::Result<()> { 
     let config: Config = get_config();
 
-    //ToDo get and hold graph graph object
+    //Try to parse graph from file to set as state
+    //TODO fix state - needs to Clone?
+    let graph_result: Result<Graph, ParseError> = Graph::parse_from_file(&config.graph_file_path);
+    let currentGraph = graph_result.expect("Error parsing graph from file");
+    let app_data = Data::new(currentGraph);
 
-    HttpServer::new(|| {
+
+    HttpServer::new(move|| {
         App::new()
             .service(post_sights)
             .service(post_route)
             .service(actix_files::Files::new("/static", "../../gui/dist/").show_files_listing())
             .service(actix_files::Files::new("/assets", "../../gui/dist/assets").show_files_listing())
             .default_service(web::get().to(index))
+            .app_data(Data::clone(&app_data))
+
     })
     .bind((config.ip, config.port))?
     .run()
