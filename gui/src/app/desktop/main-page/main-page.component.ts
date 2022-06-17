@@ -22,6 +22,7 @@ export class MainPageComponent implements OnInit {
   marker = false;
   markerCoords?: L.LatLng;
   sightsWithPrio?: SightsPrios;
+  isCollapsed = false;
 
   radius?: number;
   constructor(private cookieService: CookieHandlerService) { 
@@ -33,7 +34,7 @@ export class MainPageComponent implements OnInit {
       }
     }
     const startCookie = this.cookieService.getLocationCookie();
-    if (startCookie) {
+    if (startCookie.value !== '') {
       const val = startCookie.value as string;
       const coords = val.substring(val.indexOf('(') + 1, val.indexOf(')')).split(',');
       this.markerSet(new L.LatLng(coords[0] as any, coords[1] as any))
