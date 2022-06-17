@@ -1,6 +1,6 @@
 <div class="taskbar">
     <div class="row" >
-        <button [ngClass]="calculationAllowed() ? 'btn default' : 'disabled'" type="button" id="setting-btn" (click)="calculate()" [disabled]="!calculationAllowed()" >Calculate</button>
+        <button [ngClass]="calculationAllowed() ? 'btn calc' : 'disabled'" type="button" id="setting-btn" (click)="calculate()" [disabled]="!calculationAllowed()" >Calculate</button>
         <div class="inputs">
             <ngb-accordion #acc="ngbAccordion">
                 <ngb-panel [title]="radius ? 'Radius: ' + radius + 'km' : 'Radius'">
@@ -42,6 +42,7 @@
                 </ngb-panel>
 
             </ngb-accordion>
+            <button type="button" class="btn btn-outline-dark close" (click)="close()">Close</button>
             
         </div>
         

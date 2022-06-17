@@ -1,3 +1,24 @@
 #map {
-    margin-top: 3px;
+    width: 100%;
+    position:absolute;
+    height: 92vh;
+    z-index: 0;
+}
+
+#settings {
+    position:absolute;
+    width: 15%;
+    height: inherit;
+    top: 98%;
+    bottom: 0;
+    left: 0;
+    z-index: 1;
+}
+
+#container {
+    position: relative;
+}
+
+.btn {
+    width: fit-content;
 }

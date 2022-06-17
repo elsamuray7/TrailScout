@@ -17,6 +17,7 @@ export class SettingsTaskbarComponent implements OnInit {
 
   @Output() settings = new EventEmitter;
   @Output() radiusChange = new EventEmitter;
+  @Output() closeButton = new EventEmitter;
 
   private _radius!: number;
   private _startTime: NgbTimeStruct;
@@ -112,6 +113,10 @@ export class SettingsTaskbarComponent implements OnInit {
     } else {
       this.selectedSights.delete(response.sight.id);
     }
+  }
+
+  close() {
+    this.closeButton.emit();
   }
 
 }

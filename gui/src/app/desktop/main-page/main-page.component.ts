@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { NgbOffcanvas } from '@ng-bootstrap/ng-bootstrap';
 import * as L from 'leaflet';
 import { CookieHandlerService } from 'src/app/services/cookie-handler.service';
 import { Settings, Sight, SightsPrios } from 'src/app/types.utils';
@@ -25,7 +26,8 @@ export class MainPageComponent implements OnInit {
   isCollapsed = false;
 
   radius?: number;
-  constructor(private cookieService: CookieHandlerService) { 
+  constructor(private cookieService: CookieHandlerService, private offcanvasService: NgbOffcanvas) { 
+
     const prioCookies = this.cookieService.getPriosCookies();
     if (prioCookies) {
       this.sightsWithPrio = {sightWithPrio: new Map<string, number>()};
@@ -66,4 +68,15 @@ export class MainPageComponent implements OnInit {
     this.cookieService.setLocationCookie(latlng);
   }
 
+  collapse() {
+    this.isCollapsed = !this.isCollapsed;
+  }
+
+  open(content: any) {
+    this.offcanvasService.open(content).result.then((result) => {
+      console.log(result);
+    }, (reason) => {
+      console.log(reason);
+    })
+  }
 }
