@@ -24,6 +24,7 @@ export interface Sight {
     id: string;
     name: string;
     description?: string;
+    pref?: number;
 }
 
 export interface Cookie {

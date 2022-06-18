@@ -38,7 +38,7 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
   constructor() { 
   }
   ngOnChanges(changes: SimpleChanges): void {
-    this.circleRadius = changes["circleRadius"]?.currentValue ?? this.circleRadius;
+    this.circleRadius = changes["circleRadius"]?.currentValue ?? 0;
     this.addCircle(this.marker?.getLatLng()!);
   }
 
@@ -102,11 +102,11 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
   }
 
   addCircle(latlng: L.LatLng) {
-    if (this.circleRadius) {
+    if (this.circleRadius || this.circleRadius === 0) {
       if (this.circle) {
         this.circle.removeFrom(this.map);
       }
-      if (latlng) {
+      if (latlng && this.circleRadius > 0) {
         this.circle = L.circle(latlng, this.circleRadius * 1000).addTo(this.map);
       }
     }

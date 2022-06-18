@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { NgbOffcanvas } from '@ng-bootstrap/ng-bootstrap';
 import * as L from 'leaflet';
 import { CookieHandlerService } from 'src/app/services/cookie-handler.service';
+import { JsonHandlerService } from 'src/app/services/json-handler.service';
 import { Settings, Sight, SightsPrios } from 'src/app/types.utils';
 
 @Component({
@@ -12,13 +13,7 @@ import { Settings, Sight, SightsPrios } from 'src/app/types.utils';
 export class MainPageComponent implements OnInit {
 
   //TEST DATA
-  sights: Sight[] = [
-    {name: 'Aussichtspunkt', id : '1'},
-    {name: 'Baum', id : '2'},
-    {name: 'Statue', id : '3'},
-    {name: 'Park', id : '4'},
-    {name: 'Restaurant', id : '5'}
-  ]
+  sights: Sight[] = [];
 
   marker = false;
   markerCoords?: L.LatLng;
@@ -26,7 +21,12 @@ export class MainPageComponent implements OnInit {
   isCollapsed = false;
 
   radius?: number;
-  constructor(private cookieService: CookieHandlerService, private offcanvasService: NgbOffcanvas) { 
+  constructor(
+    private cookieService: CookieHandlerService, 
+    private offcanvasService: NgbOffcanvas, 
+    private jsonHandlerService: JsonHandlerService) { 
+
+    this.sights = jsonHandlerService.getSights();
 
     const prioCookies = this.cookieService.getPriosCookies();
     if (prioCookies) {
@@ -59,7 +59,10 @@ export class MainPageComponent implements OnInit {
 
   radiusChange(radius: number) {
     this.radius = radius;
-    this.cookieService.setRadiusCookie(radius);
+    if (!this.radius) {
+      this.radius = 0;
+    }
+    this.cookieService.setRadiusCookie(this.radius);
   }
 
   markerSet(latlng: L.LatLng) {

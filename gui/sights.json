@@ -1,0 +1,54 @@
+{
+    "categories": [
+        {
+            "id": "0",
+            "name": "Tiere",
+            "pref": 0
+        },
+        {
+            "id": "1",
+            "name": "Gastronomie",
+            "pref": 0
+        },
+        {
+            "id": "2",
+            "name": "Aktivitäten",
+            "pref": 0
+        },
+        {
+            "id": "3",
+            "name": "Sehenswürdigkeiten",
+            "pref": 0
+        },
+        {
+            "id": "4",
+            "name": "Nachtleben",
+            "pref": 0
+        },
+        {
+            "id": "5",
+            "name": "Aussichtspunkte",
+            "pref": 0
+        },
+        {
+            "id": "6",
+            "name": "Läden",
+            "pref": 0
+        },
+        {
+            "id": "7",
+            "name": "Grill-/Picknickplätze",
+            "pref": 0
+        },
+        {
+            "id": "8",
+            "name": "Baden und Seen",
+            "pref": 0
+        },
+        {
+            "id": "9",
+            "name": "Kunst und Kultur",
+            "pref": 0
+        }
+    ]
+}

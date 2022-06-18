@@ -5,7 +5,8 @@
 export const environment = {
   production: false,
   cookieLocation: 'location',
-  cookieRadius: 'radius'
+  cookieRadius: 'radius',
+  pathToSightsJson: '../../sights.json'
 };
 
 /*
