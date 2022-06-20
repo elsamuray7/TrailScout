@@ -128,6 +128,7 @@ impl Algorithm for GreedyAlgorithm {
 
                             time_budget_left -= secs_total;
                             curr_node_id = sight_node.id;
+                            break;
                         }
                     }
                     None => continue // No path from sight to root found. Continue.
