@@ -72,19 +72,23 @@ impl Algorithm for GreedyAlgorithm {
 
     fn compute_route(&self) -> Route {
         let graph = self.graph_ref.read().unwrap();
+
         let scores = self.compute_scores();
-        let mut time_budget_left = (self.end_time.timestamp() - self.start_time.timestamp()) as usize;
+
         let mut route: Route = Vec::new();
+        let mut time_budget_left = (self.end_time.timestamp() - self.start_time.timestamp()) as usize;
+
         let mut curr_node_id = self.root_id;
+        let successors = |node: &Node|
+            graph.get_outgoing_edges_in_area(node.id, self.area.lat, self.area.lon, self.area.radius)
+                .into_iter()
+                .map(|edge| (graph.get_node(edge.tgt), edge.dist))
+                .collect::<Vec<(&Node, usize)>>();
         while {
             // calculate distances from curr_node to all sight nodes
             let dist_map: HashMap<&Node, (&Node, usize)> =
                 dijkstra_all(&graph.get_node(curr_node_id),
-                             |&node|
-                                 graph.get_outgoing_edges_in_area(node.id, self.area.lat, self.area.lon, self.area.radius)
-                                     .into_iter()
-                                     .map(|edge| (graph.get_node(edge.tgt), edge.dist))
-                                     .collect::<Vec<(&Node, usize)>>());
+                             |&node| successors(node));
 
             // sort sight nodes by their distance to curr_node
             let sorted_dist_vec: Vec<_> = dist_map.values()
@@ -102,11 +106,7 @@ impl Algorithm for GreedyAlgorithm {
                 let secs_needed_to_sight = dist as f64 / self.walking_speed_mps;
                 let result =
                     dijkstra(&graph.get_node(node.id),
-                            |&node|
-                                graph.get_outgoing_edges_in_area(node.id, self.area.lat, self.area.lon, self.area.radius)
-                                    .into_iter()
-                                    .map(|edge| (graph.get_node(edge.tgt), edge.dist))
-                                    .collect::<Vec<(&Node, usize)>>(),
+                            |&node| successors(node),
                             |&node| node.id == self.root_id);
                 match result {
                     Some((_, dist_sight_to_root)) => {
