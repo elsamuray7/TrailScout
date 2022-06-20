@@ -8,6 +8,7 @@ use std::fs;
 use std::ops::Deref;
 use actix_web::web::Data;
 use serde_json;
+use std::sync::{Arc, RwLock };
 use algorithm_api::api::{compute_route_greedy, route_provider};
 use data_api::api::graph::{Graph, ParseError, Sight};
 use algorithm_api::api::route_provider::RouteProviderReq;
@@ -18,7 +19,9 @@ const CONFIG_PATH :&str = "src/config.json";
 
 // This struct represents state
 struct AppState {
-    state_graph: Graph,
+
+    //ToDo Actix Web uses Arc<> underneath the shared application data. Removes the need to wrap with an Arc<>?
+    rw_lock_graph: Arc<RwLock<Graph>>
 }
 
 
@@ -62,20 +65,25 @@ async fn index() -> Result<actix_files::NamedFile> {
 async fn post_sights(request:  web::Json<SightsRequest>, data: web::Data<AppState>) -> Result<impl Responder> {
 
     println!("Placeholder Sights Request for lat={}, lon={} and radius={}.", request.lat, request.lon, request.radius);
-    sights : Vec<Sight> = data.state_graph.get_sights_in_area(request.lat, request.lon, request.radius);
+    //let sights : Vec<Sight> = data.state_graph.get_sights_in_area(request.lat, request.lon, request.radius);
 
-    Ok(web::Json(sights))
+    //Ok(web::Json(sights))
+    Ok(web::Json("sights"))
 }
+
+
 
 ///Responds to post request asking for routing
 #[post("/route")]
 async fn post_route(request:  web::Json<RouteProviderReq>, data: web::Data<AppState>) -> Result<impl Responder> {
 
-    let request_inner = request.into_inner();
+   // let request_inner = request.into_inner();
     println!("Placeholder Route Request");
     //ToDo: send Request to algo - get algo answer - send algo answer back
-    let response =  compute_route_greedy(data.state_graph, request_inner);
-    Ok(web::Json(response))
+    let test = Arc::clone(&data.rw_lock_graph);
+    let response =  compute_route_greedy(test, request.into_inner());
+
+    Ok(web::Json("response"))
 }
 
 
@@ -87,19 +95,23 @@ async fn main() -> std::io::Result<()> {
 
     //TODO fix state - Arc RWlock?
     //let graph_result: Result<Graph, ParseError> = Graph::parse_from_file(&config.graph_file_path);
-    let graph_result: Graph = Graph::new();
     //let currentGraph = graph_result.expect("Error parsing graph from file");
-    let app_data = Data::new(graph_result);
+    //let graph_result: Graph = Graph::new();
+    //let rw_lock_graph = Arc::new(RwLock::new(graph_result));
 
 
-    HttpServer::new(move|| {
+    //move
+    HttpServer::new(|| {
         App::new()
             .service(post_sights)
             .service(post_route)
             .service(actix_files::Files::new("/static", "../../gui/dist/").show_files_listing())
             .service(actix_files::Files::new("/assets", "../../gui/dist/assets").show_files_listing())
             .default_service(web::get().to(index))
-            .app_data(Data::clone(&app_data))
+            .app_data(web::Data::new(AppState {
+                //rw_lock_graph : Arc::new(RwLock::new(Graph::parse_from_file(&config.graph_file_path).expect("Error parsing graph from file"))),
+                rw_lock_graph : Arc::new(RwLock::new(Graph::new())),
+            }))
 
     })
     .bind((config.ip, config.port))?
