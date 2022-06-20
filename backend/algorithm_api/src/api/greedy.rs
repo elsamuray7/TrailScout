@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, RwLock};
 use chrono::{DateTime, Utc};
 use data_api::api::graph::{Graph, Node, Sight};
@@ -75,23 +75,24 @@ impl Algorithm for GreedyAlgorithm {
 
         let scores = self.compute_scores();
 
-        let mut route: Route = Vec::new();
-        let mut time_budget_left = (self.end_time.timestamp() - self.start_time.timestamp()) as usize;
-
         let mut curr_node_id = self.root_id;
         let successors = |node: &Node|
             graph.get_outgoing_edges_in_area(node.id, self.area.lat, self.area.lon, self.area.radius)
                 .into_iter()
                 .map(|edge| (graph.get_node(edge.tgt), edge.dist))
                 .collect::<Vec<(&Node, usize)>>();
-        while {
+
+        let root = graph.get_node(self.root_id);
+        let mut route: Route = vec![Coordinate { lat: root.lat, lon: root.lon }];
+        let mut time_budget_left = (self.end_time.timestamp() - self.start_time.timestamp()) as usize;
+        loop {
             // calculate distances from curr_node to all sight nodes
-            let dist_map: HashMap<&Node, (&Node, usize)> =
+            let result_to_sights: HashMap<&Node, (&Node, usize)> =
                 dijkstra_all(&graph.get_node(curr_node_id),
                              |&node| successors(node));
 
             // sort sight nodes by their distance to curr_node
-            let sorted_dist_vec: Vec<_> = dist_map.values()
+            let sorted_dist_vec: Vec<_> = result_to_sights.values()
                 .filter(|(node, _)| self.sights.contains_key(&node.id))
                 .sorted_unstable_by(|(node1, dist1), (node2, dist2)| {
                     let score1 = scores[&node1.id];
@@ -102,36 +103,51 @@ impl Algorithm for GreedyAlgorithm {
 
             // for each sight node, check whether sight can be included in route without violating time budget
             let len_route_before = route.len();
-            for &(node, dist) in sorted_dist_vec {
+            for &(sight_node, dist) in sorted_dist_vec {
                 let secs_needed_to_sight = dist as f64 / self.walking_speed_mps;
-                let result =
-                    dijkstra(&graph.get_node(node.id),
-                            |&node| successors(node),
-                            |&node| node.id == self.root_id);
-                match result {
+                let result_sight_to_root =
+                    dijkstra(&graph.get_node(sight_node.id),
+                             |&node| successors(node),
+                             |&node| node.id == self.root_id);
+                match result_sight_to_root {
                     Some((_, dist_sight_to_root)) => {
                         let secs_needed_sight_to_root = dist_sight_to_root as f64 / self.walking_speed_mps;
                         let secs_total = (secs_needed_to_sight + secs_needed_sight_to_root) as usize + 1;
                         if secs_total <= time_budget_left {
-                            // add sight to route
+                            // add sight and all intermediate nodes to route
+                            let mut new_route_tail =
+                                VecDeque::from([Coordinate {lat: sight_node.lat, lon: sight_node.lon}]);
+                            let mut curr_pred = sight_node;
+                            while curr_pred.id != curr_node_id {
+                                curr_pred = result_to_sights[&curr_pred].0;
+                                new_route_tail.push_front(Coordinate { lat: curr_pred.lat, lon: curr_pred.lon });
+                            }
+                            for coord in new_route_tail {
+                                route.push(coord);
+                            }
+
                             time_budget_left -= secs_total;
-                            curr_node_id = node.id;
-                            route.push(Coordinate { lat: node.lat, lon: node.lon });
+                            curr_node_id = sight_node.id;
                         }
                     }
-                    None => {
-                        // TODO handle error
-                    }
-                }
+                    None => continue // No path from sight to root found. Continue.
+                };
             }
 
-            // check whether any sight has been included in route
-            route.len() > len_route_before
-        } {}
-
-        // go back to root
-        let root = graph.get_node(self.root_id);
-        route.push(Coordinate { lat: root.lat, lon: root.lon });
+            // check whether any sight has been included in route and if not, go back to root
+            if route.len() == len_route_before {
+                let result_to_root =
+                    dijkstra(&graph.get_node(curr_node_id),
+                             |&node| successors(node),
+                             |&node| node.id == self.root_id)
+                        .expect("No path from last visited sight to root");
+                let (new_route_tail, _) = result_to_root;
+                for &elem in &new_route_tail[1..] {
+                    route.push(Coordinate { lat: elem.lat, lon: elem.lon });
+                }
+                break;
+            }
+        }
 
         route
     }
