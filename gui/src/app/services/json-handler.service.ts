@@ -16,7 +16,8 @@ export class JsonHandlerService {
         id: s.id,
         name: s.name,
         description: s.name,
-        pref: s.pref
+        pref: s.pref,
+        imagePath: s.image
       }
     });
 

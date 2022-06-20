@@ -38,7 +38,6 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
   constructor() { 
   }
   ngOnChanges(changes: SimpleChanges): void {
-    this.circleRadius = changes["circleRadius"]?.currentValue ?? 0;
     this.addCircle(this.marker?.getLatLng()!);
   }
 
