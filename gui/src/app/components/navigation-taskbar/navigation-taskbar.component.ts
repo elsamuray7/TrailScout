@@ -7,7 +7,6 @@ import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 })
 export class NavigationTaskbarComponent implements OnInit {
 
-  @Input() height: number = 50;
   @Output() startEvent = new EventEmitter;
   @Output() mainEvent = new EventEmitter;
 

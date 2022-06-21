@@ -3,15 +3,7 @@
 @import "~bootstrap-icons/font/bootstrap-icons.css";
 body { background-color: #3f434a !important; }
 
-// Your variable overrides can go here, e.g.:
-$theme: "vapor";
-// $h1-font-size: 3rem;
-@function getTheme($theme) {
-  @return $theme;
-}
-
-
-@import url("~bootswatch/dist/#{$theme}/variables");
+@import "~bootswatch/dist/vapor/variables";
 
 @import "~bootstrap/scss/bootstrap";
-@import url("~bootswatch/dist/#{$theme}/bootswatch");
+@import "~bootswatch/dist/vapor/bootswatch";
