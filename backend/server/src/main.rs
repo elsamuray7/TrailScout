@@ -5,16 +5,21 @@ use actix_files;
 use serde::Deserialize;
 use std::{path::PathBuf};
 use std::any::Any;
+use std::borrow::Borrow;
 use std::str;
 use std::fs;
 use std::ops::Deref;
 use actix_web::web::Data;
 use serde_json;
 use std::sync::{Arc, RwLock };
-use algorithm_api::api::{compute_route_greedy, route_provider};
-use data_api::api::graph::{Graph, ParseError, Sight};
-use algorithm_api::api::route_provider::RouteProviderReq;
+use algorithm_api::api::Algorithm;
+use algorithm_api::api::greedy::{GreedyAlgorithm};
+//use chrono::format::ParseError;
 
+use chrono::{DateTime, Utc, NaiveTime};
+
+
+use data_api::api::graph::{Graph, ParseError, Sight};
 //TODO cleanup imports
 
 const CONFIG_PATH :&str = "src/config.json";
@@ -61,31 +66,45 @@ async fn index() -> Result<actix_files::NamedFile> {
     Ok(actix_files::NamedFile::open(path)?)
 }
 
-//ToDo Test with graph
+
 ///Responds to post request asking for sights
 #[post("/sights")]
 async fn post_sights(request:  web::Json<SightsRequest>, data: web::Data<AppState>) -> Result<impl Responder> {
 
     println!("Placeholder Sights Request for lat={}, lon={} and radius={}.", request.lat, request.lon, request.radius);
-    //let sights : Vec<Sight> = data.state_graph.get_sights_in_area(request.lat, request.lon, request.radius);
 
-    //Ok(web::Json(sights))
-    Ok(web::Json("sights"))
+    let graph = data.rw_lock_graph.read().unwrap();
+    let sights = graph.get_sights_in_area(request.lat, request.lon, request.radius);
+
+    //TODO does this serialize correctly according to interface definition?
+    Ok(web::Json(sights))
 }
 
 
 
 ///Responds to post request asking for routing
 #[post("/route")]
-async fn post_route(request:  web::Json<RouteProviderReq>, data: web::Data<AppState>) -> Result<impl Responder> {
+async fn post_route(request:  web::Json<route_provider::RouteProviderReq>, data: web::Data<AppState>) -> Result<impl Responder> {
 
-   // let request_inner = request.into_inner();
     println!("Placeholder Route Request");
-    //ToDo: send Request to algo - get algo answer - send algo answer back
-    let test = Arc::clone(&data.rw_lock_graph);
-    let response =  compute_route_greedy(test, request.into_inner());
+    let graphAccess = Arc::clone(&data.rw_lock_graph);
 
-    Ok(web::Json("response"))
+    let route_request = request.into_inner();
+
+    //parse start and end from Iso 8601 (rfc3339)
+    let start = DateTime::parse_from_rfc3339(&route_request.start).expect("Timer Parse Error");
+    let end = DateTime::parse_from_rfc3339(&route_request.end).expect("Timer Parse Error");
+
+    //convert km/h to m/s
+    let speed_mps = route_request.walking_speed_kmh as f64 / 3.6;
+
+    let algo = GreedyAlgorithm::new(graphAccess, DateTime::from(start),
+                                   DateTime::from(end), speed_mps, route_request.area, route_request.user_prefs);
+
+    let route = algo.compute_route();
+    let response = route_provider::RouteProviderRes{route};
+
+    Ok(web::Json(response))
 }
 
 
@@ -96,6 +115,8 @@ async fn main() -> std::io::Result<()> {
     let config: Config = get_config();
 
     //TODO fix state - Arc RWlock?
+
+    //TODO probably remove
     //let graph_result: Result<Graph, ParseError> = Graph::parse_from_file(&config.graph_file_path);
     //let currentGraph = graph_result.expect("Error parsing graph from file");
     //let graph_result: Graph = Graph::new();
@@ -103,7 +124,7 @@ async fn main() -> std::io::Result<()> {
 
 
     //move
-    HttpServer::new(|| {
+    HttpServer::new(move|| {
         App::new()
             .service(post_sights)
             .service(post_route)
@@ -111,8 +132,8 @@ async fn main() -> std::io::Result<()> {
             .service(actix_files::Files::new("/assets", "../../gui/dist/assets").show_files_listing())
             .default_service(web::get().to(index))
             .app_data(web::Data::new(AppState {
-                //rw_lock_graph : Arc::new(RwLock::new(Graph::parse_from_file(&config.graph_file_path).expect("Error parsing graph from file"))),
-                rw_lock_graph : Arc::new(RwLock::new(Graph::new())),
+                rw_lock_graph : Arc::new(RwLock::new(Graph::parse_from_file(&config.graph_file_path).expect("Error parsing graph from file"))),
+                //rw_lock_graph : Arc::new(RwLock::new(Graph::new())),
             }))
 
     })

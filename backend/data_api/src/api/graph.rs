@@ -4,6 +4,7 @@ use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io::{BufRead, BufReader};
 use std::num::{ParseFloatError, ParseIntError};
+use serde::{Serialize};
 
 #[derive(Debug)]
 pub enum ParseError {
@@ -99,6 +100,7 @@ pub struct Edge {
 pub type Tags = Vec<(String, String)>;
 
 /// A sight node mapped on its nearest node
+#[derive(Serialize)]
 pub struct Sight {
     lat: f64,
     lon: f64,

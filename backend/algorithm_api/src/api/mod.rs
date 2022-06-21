@@ -51,7 +51,7 @@ pub struct UserPreferences {
 pub type Route = Vec<Coordinate>;
 
 /// Algorithm trait to be implemented by concrete algorithm implementations
-trait Algorithm {
+pub trait Algorithm {
     /// Create a new algorithm instance
     ///
     /// # Arguments
