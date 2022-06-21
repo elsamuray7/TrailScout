@@ -91,10 +91,18 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
 
                 osm_src = osm_tgt;
             }
+            /*
+            if(w.id() == 3999579) {
+                println!("way id 3999579:");
+                for val in w.refs() {
+                    println!("{}", val);
+                }
+            }
+            */
         } else if let Element::Relation(_) = element {
             relation_count += 1;
         }
-        println!("nodes {} ways {} denses {} relations {}", node_count, way_count, dense_count, relation_count);
+        //println!("nodes {} ways {} denses {} relations {}", node_count, way_count, dense_count, relation_count);
     })?;
     Ok(())
 }
@@ -102,6 +110,7 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
 pub fn write_graph_file(graph_file_path_out: &str, nodes: &mut Vec<GraphNode>, edges: &mut Vec<Edge>, sights: &mut Vec<Sight>) -> std::io::Result<()> {
     let file = File::create(graph_file_path_out)?;
     let mut file = LineWriter::new(file);
+    /*
     file.write((format!("Number of Nodes: {}\n", nodes.len())).as_bytes())?;
     file.write((format!("Number of Edges: {}\n", edges.len())).as_bytes())?;
     file.write((format!("osm_id node_id lat lon\n")).as_bytes())?;
@@ -112,6 +121,21 @@ pub fn write_graph_file(graph_file_path_out: &str, nodes: &mut Vec<GraphNode>, e
     file.write((format!("osm_id osm_src osm_tgt src tgt dist\n")).as_bytes())?;
     for edge in &*edges {
         file.write((format!("{} {} {} {} {} {}\n", edge.osm_id, edge.osm_src, edge.osm_tgt, edge.src, edge.tgt, edge.dist)).as_bytes())?;
+    }
+     */
+    file.write((format!("{}\n", nodes.len())).as_bytes())?;
+    file.write((format!("{}\n", sights.len())).as_bytes())?;
+    file.write((format!("{}\n", edges.len())).as_bytes())?;
+    for node in &*nodes {
+        file.write((format!("{} {} {}\n", node.id, node.lat, node.lon).as_bytes()))?;
+    }
+    /*
+    for sight in &*sights {
+        file.write((format!("{} {} {}\n", node.id, node.lat, node.lon).as_bytes()))?;
+    }
+     */
+    for edge in &*edges {
+        file.write((format!("{} {} {}\n", edge.src, edge.tgt, edge.dist)).as_bytes())?;
     }
     Ok(())
 }
