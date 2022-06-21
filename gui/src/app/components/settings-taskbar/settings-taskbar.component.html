@@ -1,16 +1,16 @@
 <div class="taskbar">
     <div class="row" >
         <div class="inputs">
-            <ngb-accordion #acc="ngbAccordion">
-                <ngb-panel [title]="radius ? 'Radius: ' + radius + 'km' : 'Radius'">
+            <ngb-accordion #acc="ngbAccordion" >
+                <ngb-panel [title]="radius > 0 ? 'Radius: ' + radius + 'km' : 'Radius'" [disabled]="!startPointSet" [class.disabled]="!startPointSet">
                     <ng-template class="row" ngbPanelContent>
                         <input mbdInput type="number" placeholder="Enter radius in km..." class="form-control" [(ngModel)]="radius"/> 
-                    </ng-template>S
+                    </ng-template>
                 </ngb-panel>
             </ngb-accordion>
             <br>
             <ngb-accordion #acc="ngbAccordion">
-                <ngb-panel [title]="walkTime ? 'Hike duration: ' + ngbTimeStructToMinutes(walkTime) + 'mins' : 'Hike duration'" >
+                <ngb-panel [title]="walkTime ? 'Hike duration: ' + ngbTimeStructToMinutes(walkTime) + 'mins' : 'Hike duration'" [disabled]="!startPointSet">
                     <ng-template class="row" ngbPanelContent>
                         <div>
                             <div class="title">Start Time</div>
@@ -31,7 +31,7 @@
             </ngb-accordion>
             <br>
             <ngb-accordion #acc="ngbAccordion" [destroyOnHide]="false">
-                <ngb-panel [title]="'Tags'">
+                <ngb-panel [title]="'Tags'"[disabled]="!startPointSet">
                     <ng-template class="row" ngbPanelContent>
                         <div *ngFor="let sight of sights">
                             <app-settings-taskbar-tag-item [sight]="sight" [cookiePrio]="sightsWithPrio?.sightWithPrio?.get(sight.id)" (checked)="checkedTag($event)"></app-settings-taskbar-tag-item>
@@ -42,7 +42,7 @@
 
             </ngb-accordion>
             <div class="row buttons">
-                <button class="col" [ngClass]="calculationAllowed() ? 'btn calc' : 'disabled'" type="button" id="setting-btn" (click)="calculate()" [disabled]="!calculationAllowed()" >Calculate</button>
+                <button class="col" [ngClass]="calculationAllowed() ? 'btn calc' : 'btndisabled'" type="button" id="setting-btn" (click)="calculate()" [disabled]="!calculationAllowed()" >Calculate</button>
                 <button type="button" class="btn btn-outline-dark close col" (click)="close()">Close</button>
             </div>
         </div>

@@ -76,6 +76,9 @@ export class MainPageComponent implements OnInit {
   }
 
   open(content: any) {
+    if (!this.markerCoords) {
+      return;
+    }
     this.offcanvasService.open(content).result.then((result) => {
       console.log(result);
     }, (reason) => {

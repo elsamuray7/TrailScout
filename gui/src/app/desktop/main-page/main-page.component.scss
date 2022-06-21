@@ -31,3 +31,10 @@
 .btn {
     width: fit-content;
 }
+.disabled {
+    color:gray;
+    cursor: not-allowed !important;
+    :hover {
+        background-color: whitesmoke !important;
+    }
+}

@@ -6,8 +6,6 @@ import { MapContainerComponent } from './map-container/map-container.component';
 import { FormsModule } from '@angular/forms';
 import { NgbModule, NgbTimepickerModule } from '@ng-bootstrap/ng-bootstrap';
 import { SettingsTaskbarTagItemComponent } from './settings-taskbar/settings-taskbar-tag-item/settings-taskbar-tag-item.component';
-import { TooltipComponent } from './tooltip/tooltip.component';
-
 
 
 @NgModule({
@@ -15,8 +13,7 @@ import { TooltipComponent } from './tooltip/tooltip.component';
     NavigationTaskbarComponent,
     SettingsTaskbarComponent,
     MapContainerComponent,
-    SettingsTaskbarTagItemComponent,
-    TooltipComponent
+    SettingsTaskbarTagItemComponent
   ],
   imports: [
     CommonModule,

@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MainPageComponent } from './main-page.component';
 import { NavigationModule } from '../navigation/navigation.module';
 import { ComponentsModule } from 'src/app/components/components.module';
-import { NgbCollapseModule } from '@ng-bootstrap/ng-bootstrap';
+import { NgbCollapseModule, NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 
 
 
@@ -15,7 +15,8 @@ import { NgbCollapseModule } from '@ng-bootstrap/ng-bootstrap';
     CommonModule,
     NavigationModule,
     ComponentsModule,
-    NgbCollapseModule
+    NgbCollapseModule,
+    NgbTooltipModule
   ]
 })
 export class MainPageModule { }
