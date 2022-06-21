@@ -32,11 +32,11 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
                 info: "".to_string()
             };
             for (key, value) in n.tags() {
-                node.info = "key: (".parse().unwrap();
-                node.info.push(key.parse().unwrap());
-                node.info.push(") value: (".parse().unwrap());
-                node.info.push(value.parse().unwrap());
-                node.info.push(")\n".parse().unwrap());
+                node.info.push_str("key: (");
+                node.info.push_str(key);
+                node.info.push_str(") value: (");
+                node.info.push_str(value);
+                node.info.push_str(")\n");
             }
 
             osm_id_to_node_id.entry(node.osm_id)
@@ -55,11 +55,11 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
                 info: "".to_string()
             };
             for (key, value) in n.tags() {
-                node.info = "key: (".parse().unwrap();
-                node.info.push(key.parse().unwrap());
-                node.info.push(") value: (".parse().unwrap());
-                node.info.push(value.parse().unwrap());
-                node.info.push(")\n".parse().unwrap());
+                node.info.push_str("key: (");
+                node.info.push_str(key);
+                node.info.push_str(") value: (");
+                node.info.push_str(value);
+                node.info.push_str(")\n");
             }
             osm_id_to_node_id.entry(node.osm_id)
                 .or_insert(num_nodes);
