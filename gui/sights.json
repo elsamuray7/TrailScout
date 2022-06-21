@@ -38,27 +38,27 @@
         },
         {
             "id": "6",
-            "name": "Läden",
+            "name": "Shops",
             "pref": 0,
-            "image": "animals"
+            "image": "shops.jpg"
         },
         {
             "id": "7",
             "name": "Grill-/Picknickplätze",
             "pref": 0,
-            "image": "animals"
+            "image": "grill.jpg"
         },
         {
             "id": "8",
             "name": "Baden und Seen",
             "pref": 0,
-            "image": "animals"
+            "image": "see.jpg"
         },
         {
             "id": "9",
             "name": "Kunst und Kultur",
             "pref": 0,
-            "image": "animals"
+            "image": "art.jpg"
         }
     ]
 }
