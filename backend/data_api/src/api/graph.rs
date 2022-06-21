@@ -1,5 +1,7 @@
+use std::collections::HashMap;
 use std::fmt::Formatter;
 use std::fs::File;
+use std::hash::{Hash, Hasher};
 use std::io::{BufRead, BufReader};
 use std::num::{ParseFloatError, ParseIntError};
 
@@ -72,6 +74,20 @@ pub struct Node {
     pub lon: f64,
 }
 
+impl PartialEq<Self> for Node {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
+impl Eq for Node {}
+
+impl Hash for Node {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+    }
+}
+
 /// A directed and weighted graph edge
 pub struct Edge {
     pub src: usize,
@@ -94,7 +110,7 @@ pub struct Sight {
 /// A directed graph. In addition to nodes and edges, the definition also contains a set of sights
 /// mapped on their nearest nodes, respectively.
 pub struct Graph {
-    pub nodes: Vec<Node>,
+    nodes: Vec<Node>,
     // TODO check if pub needed or pub (crate)
     edges: Vec<Edge>,
     offsets: Vec<usize>,
@@ -123,8 +139,18 @@ impl Graph {
         todo!()
     }
 
+    /// Returns a reference to the vector containing all nodes in this graph
+    pub fn nodes(&self) -> &Vec<Node> {
+        &self.nodes
+    }
+
+    /// Get the node with id `node_id`
+    pub fn get_node(&self, node_id: usize) -> &Node {
+        &self.nodes[node_id]
+    }
+
     /// Get the nearest node to a given coordinate (latitude / longitude)
-    fn get_nearest_node(&self, lat: f64, lon: f64) -> usize {
+    pub fn get_nearest_node(&self, lat: f64, lon: f64) -> usize {
         // TODO compute nearest node to given coordinate
         todo!()
     }
@@ -139,9 +165,21 @@ impl Graph {
         &self.edges[self.offsets[node_id]..self.offsets[node_id+1]]
     }
 
+    /// Get all outgoing edges of a particular node where the edge target lies within given area
+    pub fn get_outgoing_edges_in_area(&self, node_id: usize, lat: f64, lon: f64, radius: f64) -> Vec<&Edge> {
+        let out_edges = self.get_outgoing_edges(node_id);
+        out_edges.iter()
+            .filter(|&edge| {
+                let tgt_node = self.get_node(edge.tgt);
+                // TODO check whether target node lies in area
+                todo!()
+            })
+            .collect()
+    }
+
     /// Get all sights within a circular area, specified by `radius`, around a given coordinate
     /// (latitude / longitude)
-    pub fn get_sights_in_area(&self, lat: f64, lon: f64, radius: f64) -> Vec<Sight> {
+    pub fn get_sights_in_area(&self, lat: f64, lon: f64, radius: f64) -> HashMap<usize, Sight> {
         /*
         TODO
             - get bbox of area around coordinate
