@@ -7,9 +7,8 @@ use std::io::{BufRead, BufReader, LineWriter, Write};
 use std::num::{ParseFloatError, ParseIntError};
 use osmpbf::{ElementReader, Element, Node};
 use crate::api::graph::{calc_dist, Edge, Node as GraphNode, Sight};
-use crate::api::graph;
 
-fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges: &mut Vec<Edge>, sights: &mut Vec<Sight>) -> Result<(), io::Error> {
+pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges: &mut Vec<Edge>, sights: &mut Vec<Sight>) -> Result<(), io::Error> {
     let mut num_nodes: usize = 0;
     let mut num_edges: usize = 0;
     //let mut num_sights: usize = 0;
@@ -100,7 +99,7 @@ fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges: &m
     Ok(())
 }
 
-fn write_graph_file(graph_file_path_out: &str, nodes: &mut Vec<GraphNode>, edges: &mut Vec<Edge>, sights: &mut Vec<Sight>) -> std::io::Result<()> {
+pub fn write_graph_file(graph_file_path_out: &str, nodes: &mut Vec<GraphNode>, edges: &mut Vec<Edge>, sights: &mut Vec<Sight>) -> std::io::Result<()> {
     let file = File::create(graph_file_path_out)?;
     let mut file = LineWriter::new(file);
     file.write((format!("Number of Nodes: {}\n", nodes.len())).as_bytes())?;
@@ -114,16 +113,5 @@ fn write_graph_file(graph_file_path_out: &str, nodes: &mut Vec<GraphNode>, edges
     for edge in &*edges {
         file.write((format!("{} {} {} {} {} {}\n", edge.osm_id, edge.osm_src, edge.osm_tgt, edge.src, edge.tgt, edge.dist)).as_bytes())?;
     }
-    Ok(())
-}
-
-fn main() -> Result<(), io::Error> {
-    let in_graph = "./osm_graphs/bremen-latest.osm.pbf";
-    let out_graph = "./osm_graphs/bremen-latest.fmi";
-    let mut nodes : Vec<GraphNode> = Vec::new();
-    let mut edges : Vec<Edge> = Vec::new();
-    let mut sights : Vec<Sight> = Vec::new();
-    parse_osm_data(&in_graph, &mut nodes, &mut edges, &mut sights);
-    write_graph_file( &out_graph, &mut nodes, &mut edges, &mut sights);
     Ok(())
 }
