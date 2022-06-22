@@ -1,7 +1,6 @@
 pub mod greedy;
 
 use std::collections::HashMap;
-use std::sync::Arc;
 use chrono::{DateTime, Utc};
 use data_api::api::graph::Graph;
 use serde::{Serialize, Deserialize};
@@ -51,7 +50,7 @@ pub struct UserPreferences {
 pub type Route = Vec<Coordinate>;
 
 /// Algorithm trait to be implemented by concrete algorithm implementations
-pub trait Algorithm {
+pub trait Algorithm<'a> {
     /// Create a new algorithm instance
     ///
     /// # Arguments
@@ -61,7 +60,7 @@ pub trait Algorithm {
     /// * `walking_speed_mps` - The walking speed in meters per second
     /// * `area` - The area in which the walking route should lie
     /// * `user_prefs` - The users preferences for sight categories and sights, respectively
-    fn new(graph: Arc<Graph>,
+    fn new(graph: &'a Graph,
            start_time: DateTime<Utc>,
            end_time: DateTime<Utc>,
            walking_speed_mps: f64,

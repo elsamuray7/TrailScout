@@ -11,7 +11,6 @@ use std::fs;
 use std::ops::Deref;
 use actix_web::web::Data;
 use serde_json;
-use std::sync::Arc;
 use algorithm_api::api::Algorithm;
 use algorithm_api::api::greedy::{GreedyAlgorithm};
 //use chrono::format::ParseError;
@@ -26,9 +25,7 @@ const CONFIG_PATH :&str = "src/config.json";
 
 // This struct represents state
 struct AppState {
-
-    // Arc required because otherwise we would need to share AppState
-    graph: Arc<Graph>,
+    graph: Graph,
 }
 
 
@@ -95,7 +92,7 @@ async fn post_route(request:  web::Json<route_provider::RouteProviderReq>, data:
     //convert km/h to m/s
     let speed_mps = route_request.walking_speed_kmh as f64 / 3.6;
 
-    let algo = GreedyAlgorithm::new(data.graph.clone(), DateTime::from(start),
+    let algo = GreedyAlgorithm::new(&data.graph, DateTime::from(start),
                                    DateTime::from(end), speed_mps, route_request.area, route_request.user_prefs);
 
     let route = algo.compute_route();
@@ -129,7 +126,7 @@ async fn main() -> std::io::Result<()> {
             .service(actix_files::Files::new("/assets", "../../gui/dist/assets").show_files_listing())
             .default_service(web::get().to(index))
             .app_data(web::Data::new(AppState {
-                graph: Arc::new(Graph::parse_from_file(&config.graph_file_path).expect("Error parsing graph from file")),
+                graph: Graph::parse_from_file(&config.graph_file_path).expect("Error parsing graph from file"),
                 //rw_lock_graph : Arc::new(RwLock::new(Graph::new())),
             }))
 

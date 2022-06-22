@@ -1,13 +1,12 @@
 use std::collections::{HashMap, VecDeque};
-use std::sync::Arc;
 use chrono::{DateTime, Utc};
 use data_api::api::graph::{Graph, Node, Sight};
 use itertools::Itertools;
 use pathfinding::prelude::*;
 use crate::api::{Algorithm, Area, Coordinate, Route, ScoreMap, UserPreferences};
 
-pub struct GreedyAlgorithm {
-    graph: Arc<Graph>,
+pub struct GreedyAlgorithm<'a> {
+    graph: &'a Graph,
     start_time: DateTime<Utc>,
     end_time: DateTime<Utc>,
     /// Walking speed in meters per second
@@ -19,7 +18,7 @@ pub struct GreedyAlgorithm {
 }
 
 
-impl GreedyAlgorithm {
+impl GreedyAlgorithm<'_> {
     /// Compute scores for tourist attractions based on user preferences for categories or specific
     /// tourist attractions, respectively
      fn compute_scores(&self) -> ScoreMap {
@@ -43,9 +42,9 @@ impl GreedyAlgorithm {
 }
 
 
-impl Algorithm for GreedyAlgorithm {
+impl<'a> Algorithm<'a> for GreedyAlgorithm<'a> {
 
-    fn new(graph: Arc<Graph>,
+    fn new(graph: &'a Graph,
            start_time: DateTime<Utc>,
            end_time: DateTime<Utc>,
            walking_speed_mps: f64,
