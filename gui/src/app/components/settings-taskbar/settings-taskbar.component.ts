@@ -83,7 +83,7 @@ export class SettingsTaskbarComponent implements OnInit {
   }
 
   calculationAllowed() {
-    if ((this.radius || this.walkTime) && this.startPointSet) {
+    if ((this.radius > 0 || this.walkTime) && this.startPointSet) {
       return true;
     }
     return false;
