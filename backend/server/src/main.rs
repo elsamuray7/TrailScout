@@ -11,7 +11,7 @@ use std::fs;
 use std::ops::Deref;
 use actix_web::web::Data;
 use serde_json;
-use std::sync::{Arc, RwLock };
+use std::sync::Arc;
 use algorithm_api::api::Algorithm;
 use algorithm_api::api::greedy::{GreedyAlgorithm};
 //use chrono::format::ParseError;
@@ -27,8 +27,8 @@ const CONFIG_PATH :&str = "src/config.json";
 // This struct represents state
 struct AppState {
 
-    //ToDo Actix Web uses Arc<> underneath the shared application data. Removes the need to wrap with an Arc<>?
-    rw_lock_graph: Arc<RwLock<Graph>>
+    // Arc required because otherwise we would need to share AppState
+    graph: Arc<Graph>,
 }
 
 
@@ -73,8 +73,7 @@ async fn post_sights(request:  web::Json<SightsRequest>, data: web::Data<AppStat
 
     println!("Placeholder Sights Request for lat={}, lon={} and radius={}.", request.lat, request.lon, request.radius);
 
-    let graph = data.rw_lock_graph.read().unwrap();
-    let sights = graph.get_sights_in_area(request.lat, request.lon, request.radius);
+    let sights = data.graph.get_sights_in_area(request.lat, request.lon, request.radius);
 
     //TODO does this serialize correctly according to interface definition?
     Ok(web::Json(sights))
@@ -87,8 +86,6 @@ async fn post_sights(request:  web::Json<SightsRequest>, data: web::Data<AppStat
 async fn post_route(request:  web::Json<route_provider::RouteProviderReq>, data: web::Data<AppState>) -> Result<impl Responder> {
 
     println!("Placeholder Route Request");
-    let graphAccess = Arc::clone(&data.rw_lock_graph);
-
     let route_request = request.into_inner();
 
     //parse start and end from Iso 8601 (rfc3339)
@@ -98,7 +95,7 @@ async fn post_route(request:  web::Json<route_provider::RouteProviderReq>, data:
     //convert km/h to m/s
     let speed_mps = route_request.walking_speed_kmh as f64 / 3.6;
 
-    let algo = GreedyAlgorithm::new(graphAccess, DateTime::from(start),
+    let algo = GreedyAlgorithm::new(data.graph.clone(), DateTime::from(start),
                                    DateTime::from(end), speed_mps, route_request.area, route_request.user_prefs);
 
     let route = algo.compute_route();
@@ -132,7 +129,7 @@ async fn main() -> std::io::Result<()> {
             .service(actix_files::Files::new("/assets", "../../gui/dist/assets").show_files_listing())
             .default_service(web::get().to(index))
             .app_data(web::Data::new(AppState {
-                rw_lock_graph : Arc::new(RwLock::new(Graph::parse_from_file(&config.graph_file_path).expect("Error parsing graph from file"))),
+                graph: Arc::new(Graph::parse_from_file(&config.graph_file_path).expect("Error parsing graph from file")),
                 //rw_lock_graph : Arc::new(RwLock::new(Graph::new())),
             }))
 

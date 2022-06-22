@@ -1,5 +1,5 @@
 use std::collections::{HashMap, VecDeque};
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 use chrono::{DateTime, Utc};
 use data_api::api::graph::{Graph, Node, Sight};
 use itertools::Itertools;
@@ -7,7 +7,7 @@ use pathfinding::prelude::*;
 use crate::api::{Algorithm, Area, Coordinate, Route, ScoreMap, UserPreferences};
 
 pub struct GreedyAlgorithm {
-    graph_ref: Arc<RwLock<Graph>>,
+    graph: Arc<Graph>,
     start_time: DateTime<Utc>,
     end_time: DateTime<Utc>,
     /// Walking speed in meters per second
@@ -45,7 +45,7 @@ impl GreedyAlgorithm {
 
 impl Algorithm for GreedyAlgorithm {
 
-        fn new(graph_ref: Arc<RwLock<Graph>>,
+    fn new(graph: Arc<Graph>,
            start_time: DateTime<Utc>,
            end_time: DateTime<Utc>,
            walking_speed_mps: f64,
@@ -54,15 +54,11 @@ impl Algorithm for GreedyAlgorithm {
         if end_time < start_time {
             panic!("End time before start time");
         }
-        let sights;
-        let root_id;
-        {
-            let graph = graph_ref.read().unwrap();
-            sights = graph.get_sights_in_area(area.lat, area.lon, area.radius);
-            root_id = graph.get_nearest_node(area.lat, area.lon);
-        }
+
+        let sights = graph.get_sights_in_area(area.lat, area.lon, area.radius);
+        let root_id = graph.get_nearest_node(area.lat, area.lon);
         Self {
-            graph_ref,
+            graph,
             start_time,
             end_time,
             walking_speed_mps,
@@ -74,24 +70,22 @@ impl Algorithm for GreedyAlgorithm {
     }
 
      fn compute_route(&self) -> Route {
-        let graph = self.graph_ref.read().unwrap();
-
         let scores = self.compute_scores();
 
         let mut curr_node_id = self.root_id;
         let successors = |node: &Node|
-            graph.get_outgoing_edges_in_area(node.id, self.area.lat, self.area.lon, self.area.radius)
+            self.graph.get_outgoing_edges_in_area(node.id, self.area.lat, self.area.lon, self.area.radius)
                 .into_iter()
-                .map(|edge| (graph.get_node(edge.tgt), edge.dist))
+                .map(|edge| (self.graph.get_node(edge.tgt), edge.dist))
                 .collect::<Vec<(&Node, usize)>>();
 
-        let root = graph.get_node(self.root_id);
+        let root = self.graph.get_node(self.root_id);
         let mut route: Route = vec![Coordinate { lat: root.lat, lon: root.lon }];
         let mut time_budget_left = (self.end_time.timestamp() - self.start_time.timestamp()) as usize;
         loop {
             // calculate distances from curr_node to all sight nodes
             let result_to_sights: HashMap<&Node, (&Node, usize)> =
-                dijkstra_all(&graph.get_node(curr_node_id),
+                dijkstra_all(&self.graph.get_node(curr_node_id),
                              |&node| successors(node));
 
             // sort sight nodes by their distance to curr_node
@@ -109,7 +103,7 @@ impl Algorithm for GreedyAlgorithm {
             for &(sight_node, dist) in sorted_dist_vec {
                 let secs_needed_to_sight = dist as f64 / self.walking_speed_mps;
                 let result_sight_to_root =
-                    dijkstra(&graph.get_node(sight_node.id),
+                    dijkstra(&self.graph.get_node(sight_node.id),
                              |&node| successors(node),
                              |&node| node.id == self.root_id);
                 match result_sight_to_root {
@@ -141,7 +135,7 @@ impl Algorithm for GreedyAlgorithm {
             // check whether any sight has been included in route and if not, go back to root
             if route.len() == len_route_before {
                 let result_to_root =
-                    dijkstra(&graph.get_node(curr_node_id),
+                    dijkstra(&self.graph.get_node(curr_node_id),
                              |&node| successors(node),
                              |&node| node.id == self.root_id)
                         .expect("No path from last visited sight to root");

@@ -1,7 +1,7 @@
 pub mod greedy;
 
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 use chrono::{DateTime, Utc};
 use data_api::api::graph::Graph;
 use serde::{Serialize, Deserialize};
@@ -55,14 +55,13 @@ pub trait Algorithm {
     /// Create a new algorithm instance
     ///
     /// # Arguments
-    /// * `graph_ref` - A readable/writable atomic reference to the graph on which to run the
-    /// algorithm
+    /// * `graph` - A reference to the graph on which to run the algorithm
     /// * `start_time` - The intended start time of the walk
     /// * `end_time` - The intended end time of the walk
     /// * `walking_speed_mps` - The walking speed in meters per second
     /// * `area` - The area in which the walking route should lie
     /// * `user_prefs` - The users preferences for sight categories and sights, respectively
-    fn new(graph_ref: Arc<RwLock<Graph>>,
+    fn new(graph: Arc<Graph>,
            start_time: DateTime<Utc>,
            end_time: DateTime<Utc>,
            walking_speed_mps: f64,
