@@ -20,7 +20,7 @@
             (closeButton)="offcanvas.close('Save click')" ></app-settings-taskbar>
         </ng-template>
         <!-- <button class="btn btn-primary"  id="settings" (click)="open(content)">Open Settings</button> -->
-        <i class=" bi-chevron-right" [class.disabled]="!markerCoords" [class.bi]="markerCoords" id="settings" (click)="open(content)" ngbTooltip="Click on Map to select startpoint first" [disableTooltip]="!!markerCoords"></i>
+        <i class="btn btn-primary bi-chevron-right" [class.disabled]="!markerCoords" [class.bi]="markerCoords" id="settings" (click)="open(content)" ngbTooltip="Click on Map to select startpoint first" [disableTooltip]="!!markerCoords"></i>
     
     
 </div>
