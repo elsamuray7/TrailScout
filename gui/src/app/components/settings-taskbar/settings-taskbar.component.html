@@ -1,43 +1,37 @@
-<div class="taskbar">
+<div class="card text-white border-primary mb-3">
     <div class="row">
         <div class="inputs">
-            <ngb-accordion #acc="ngbAccordion">
-                <ngb-panel [title]="radius > 0 ? 'Radius: ' + radius + 'km' : 'Radius'" [disabled]="!startPointSet"
+            <ngb-accordion #acc="ngbAccordion" [closeOthers]="true" activeIds="radius">
+                <ngb-panel id="radius" [title]="radius > 0 ? 'Radius: ' + radius + 'km' : 'Radius'" [disabled]="!startPointSet" 
                     [class.disabled]="!startPointSet">
                     <ng-template class="row" ngbPanelContent>
                         <input mbdInput type="number" placeholder="Enter radius in km..." class="form-control"
                             [(ngModel)]="radius" />
                     </ng-template>
                 </ngb-panel>
-            </ngb-accordion>
-            <br>
-            <ngb-accordion #acc="ngbAccordion">
                 <ngb-panel
                     [title]="walkTime ? 'Hike duration: ' + ngbTimeStructToMinutes(walkTime) + 'mins' : 'Hike duration'"
                     [disabled]="!startPointSet">
                     <ng-template class="row" ngbPanelContent>
                         <div>
-                            <div class="title">Start Time</div>
+                            <h5>Start Time</h5>
                             <ngb-timepicker mbdInput placeholder="Enter starting time..." class="form-control"
                                 [(ngModel)]="startTime"></ngb-timepicker>
                         </div>
                         <br>
                         <div>
-                            <div class="title">Walking Time</div>
+                            <h5>Walking Time</h5>
                             <ngb-timepicker mbdInput placeholder="Enter starting time..." class="form-control"
                                 [(ngModel)]="walkTime"></ngb-timepicker>
                         </div>
                         <br>
                         <div>
-                            <div class="title">End Time</div>
+                            <h5>End Time</h5>
                             <ngb-timepicker mbdInput placeholder="Enter starting time..." class="form-control"
                                 [(ngModel)]="endTime" [disabled]="true"></ngb-timepicker>
                         </div>
                     </ng-template>
                 </ngb-panel>
-            </ngb-accordion>
-            <br>
-            <ngb-accordion #acc="ngbAccordion" [destroyOnHide]="false">
                 <ngb-panel [title]="'Tags'" [disabled]="!startPointSet">
                     <ng-template class="row" ngbPanelContent>
                         <div *ngFor="let sight of sights">
@@ -49,12 +43,12 @@
                     </ng-template>
                 </ngb-panel>
             </ngb-accordion>
-            <div class="row buttons">
-                <button class="col" [ngClass]="calculationAllowed() ? 'btn calc' : 'btndisabled'" type="button"
+            <div class="row justify-content-around">
+                <button class="btn-primary btn btn-lg col" type="button"
                     id="setting-btn" (click)="calculate()" [disabled]="!calculationAllowed()">
                     <span ngbTooltip="Type in radius or walking time to allow routing"
                         [disableTooltip]="calculationAllowed()">Calculate</span></button>
-                <button type="button" class="btn btn-outline-dark close col" (click)="close()">Close</button>
+                <button type="button" class="btn btn-secondary btn-lg close col" (click)="close()">Close</button>
             </div>
         </div>
 
