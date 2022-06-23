@@ -8,7 +8,6 @@ import { NgbModule, NgbTimepickerModule } from '@ng-bootstrap/ng-bootstrap';
 import { SettingsTaskbarTagItemComponent } from './settings-taskbar/settings-taskbar-tag-item/settings-taskbar-tag-item.component';
 
 
-
 @NgModule({
   declarations: [
     NavigationTaskbarComponent,

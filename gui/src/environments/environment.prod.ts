@@ -1,5 +1,6 @@
 export const environment = {
   production: true,
   cookieLocation: 'location',
-  cookieRadius: 'radius'
+  cookieRadius: 'radius',
+  pathToSightsJson: '../../sights.json'
 };

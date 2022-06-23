@@ -1,8 +1,6 @@
-<div class="row" style="width: 100%;">
-    <div id="settings" style="width: 20%; float: left">
-        <app-settings-taskbar [sights]="sights" [sightsWithPrio]="sightsWithPrio" [startRadius]="radius" (settings)="getSettings($event)" (radiusChange)="radiusChange($event)" [startPointSet]="marker"></app-settings-taskbar>
-    </div>
-    <div style="width: 80%; float: left" id="map">
+<div id="container">
+    <div id="map">
+        
         <app-map-container 
         [circleRadius]="radius" 
         [startPoint]="markerCoords"  
@@ -10,5 +8,19 @@
         [initLng]="markerCoords?.lng ?? 9.1829321"
         (markerLocation)="markerSet($event)"></app-map-container>
     </div>
-
+    
+        <ng-template #content let-offcanvas>
+            <app-settings-taskbar 
+            [sights]="sights" 
+            [sightsWithPrio]="sightsWithPrio" 
+            [startRadius]="radius" 
+            [startPointSet]="marker"
+            (settings)="getSettings($event)" 
+            (radiusChange)="radiusChange($event)"
+            (closeButton)="offcanvas.close('Save click')" ></app-settings-taskbar>
+        </ng-template>
+        <!-- <button class="btn btn-primary"  id="settings" (click)="open(content)">Open Settings</button> -->
+        <i class=" bi-chevron-right" [class.disabled]="!markerCoords" [class.bi]="markerCoords" id="settings" (click)="open(content)" ngbTooltip="Click on Map to select startpoint first" [disableTooltip]="!!markerCoords"></i>
+    
+    
 </div>

@@ -12,10 +12,11 @@ export class SettingsTaskbarTagItemComponent implements OnInit {
   @Input() cookiePrio?: number
   @Output('checked') checkedEvent = new EventEmitter;
 
+  imagePath?: string;
+
   checked = false;
   prio: number = 0;
   constructor() {
-    
    }
 
   ngOnInit(): void {
@@ -24,6 +25,7 @@ export class SettingsTaskbarTagItemComponent implements OnInit {
       this.checked = true;
       this.prioChanged();
     }
+    this.imagePath = this.sight.imagePath;
   }
 
   checkedTag() {
@@ -37,4 +39,8 @@ export class SettingsTaskbarTagItemComponent implements OnInit {
     this.checkedEvent.emit(response);
   }
 
+  getImage() {
+    const image = {'background-image' : 'url(assets/sights/' + this.imagePath + ')' };
+    return image;
+  }
 }
