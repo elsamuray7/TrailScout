@@ -2,7 +2,6 @@ import { Component, OnInit } from '@angular/core';
 import { NgbOffcanvas } from '@ng-bootstrap/ng-bootstrap';
 import * as L from 'leaflet';
 import { CookieHandlerService } from 'src/app/services/cookie-handler.service';
-import { JsonHandlerService } from 'src/app/services/json-handler.service';
 import { Settings, Sight, SightsPrios } from 'src/app/types.utils';
 
 @Component({
@@ -12,7 +11,72 @@ import { Settings, Sight, SightsPrios } from 'src/app/types.utils';
 })
 export class MainPageComponent implements OnInit {
 
-  //TEST DATA
+  //CATEGORIES
+  data = {
+    "categories": [
+        {
+            "id": "0",
+            "name": "Tiere",
+            "pref": 0,
+            "image": "animals.jpg"
+        },
+        {
+            "id": "1",
+            "name": "Gastronomie",
+            "pref": 0,
+            "image": "gastro.jpg"
+        },
+        {
+            "id": "2",
+            "name": "Aktivitäten",
+            "pref": 0,
+            "image": "activity.jpg"
+        },
+        {
+            "id": "3",
+            "name": "Sehenswürdigkeiten",
+            "pref": 0,
+            "image": "sights.jpg"
+        },
+        {
+            "id": "4",
+            "name": "Nachtleben",
+            "pref": 0,
+            "image": "nightlife.jpg"
+        },
+        {
+            "id": "5",
+            "name": "Aussichtspunkte",
+            "pref": 0,
+            "image": "viewpoint.jpg"
+        },
+        {
+            "id": "6",
+            "name": "Shops",
+            "pref": 0,
+            "image": "shops.jpg"
+        },
+        {
+            "id": "7",
+            "name": "Grill-/Picknickplätze",
+            "pref": 0,
+            "image": "grill.jpg"
+        },
+        {
+            "id": "8",
+            "name": "Baden und Seen",
+            "pref": 0,
+            "image": "see.jpg"
+        },
+        {
+            "id": "9",
+            "name": "Kunst und Kultur",
+            "pref": 0,
+            "image": "art.jpg"
+        }
+    ]
+}
+
   sights: Sight[] = [];
 
   marker = false;
@@ -23,10 +87,9 @@ export class MainPageComponent implements OnInit {
   radius?: number;
   constructor(
     private cookieService: CookieHandlerService, 
-    private offcanvasService: NgbOffcanvas, 
-    private jsonHandlerService: JsonHandlerService) { 
+    private offcanvasService: NgbOffcanvas) { 
 
-    this.sights = jsonHandlerService.getSights();
+    this.sights = this.mapData();
 
     const prioCookies = this.cookieService.getPriosCookies();
     if (prioCookies) {
@@ -83,6 +146,18 @@ export class MainPageComponent implements OnInit {
       console.log(result);
     }, (reason) => {
       console.log(reason);
+    })
+  }
+
+  mapData() {
+    return this.data.categories.map(s => {
+      return <Sight> {
+        id: s.id,
+        name: s.name,
+        description: s.name,
+        pref: s.pref,
+        imagePath: s.image
+      }
     })
   }
 }
