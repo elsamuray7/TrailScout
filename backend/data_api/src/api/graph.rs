@@ -1,9 +1,12 @@
+extern crate haversine;
+
 use std::collections::{BTreeMap, HashMap};
 use std::fmt::Formatter;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io::{BufRead, BufReader};
 use std::num::{ParseFloatError, ParseIntError};
+use haversine::{Location, Units};
 use serde::{Serialize};
 use serde_enum_str::{Deserialize_enum_str, Serialize_enum_str};
 use rand::Rng;
@@ -252,7 +255,16 @@ impl Graph {
     /// Get the nearest node to a given coordinate (latitude / longitude)
     pub fn get_nearest_node(&self, lat: f64, lon: f64) -> usize {
         // TODO compute nearest node to given coordinate
-        todo!()
+        let mut min_dist = usize::MAX;
+        let mut min_id = self.nodes[0].id;
+        for (id, node) in self.nodes.iter().enumerate() {
+            let dist = calc_dist(lat, lon, node.lat, node.lon);
+            if dist < min_dist {
+                min_dist = dist;
+                min_id = id;
+            }
+        }
+        min_id
     }
 
     /// Get the number of outgoing edges of the node with id `node_id`
@@ -279,7 +291,7 @@ impl Graph {
 
     /// Get all sights within a circular area, specified by `radius`, around a given coordinate
     /// (latitude / longitude)
-    pub fn get_sights_in_area(&self, lat: f64, lon: f64, radius: f64) -> HashMap<usize, Sight> {
+    pub fn get_sights_in_area(&self, lat: f64, lon: f64, radius: f64) -> HashMap<usize, &Sight> {
         /*
         TODO
             - get bbox of area around coordinate
@@ -291,14 +303,17 @@ impl Graph {
             - get slice of sights within min/max longitude of bbox, e.g. with binary search
             - return new vector with fetched sights
          */
-        todo!()
+        self.sights.iter()
+            .map(|sight| (sight.node_id, sight))
+            .collect()
     }
 }
 
 /// Calculates the distance between two given coordinates (latitude / longitude) in metres. TODO make metre changeable later?
 pub(crate) fn calc_dist(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> usize {
-    let mut rng = rand::thread_rng();
-    rng.gen_range(1..10)
+    let p1 = Location{latitude: lat1,longitude: lon1};
+    let p2 = Location{latitude: lat2,longitude: lon2};
+    haversine::distance(p1, p2, Units::Kilometers) as usize * 1000
 }
 
 #[derive(Debug)]

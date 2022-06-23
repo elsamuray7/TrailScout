@@ -1,8 +1,9 @@
 mod route_provider;
 
-use actix_web::{web, App, HttpServer, Result,Responder, get, post};
+use actix_web::{web, App, HttpServer, Result, Responder, get, post, HttpResponse};
 use actix_files;
 use serde::Deserialize;
+use serde_json::json;
 use std::{path::PathBuf};
 use std::any::Any;
 use std::borrow::Borrow;
@@ -66,14 +67,15 @@ async fn index() -> Result<actix_files::NamedFile> {
 
 ///Responds to post request asking for sights
 #[post("/sights")]
-async fn post_sights(request:  web::Json<SightsRequest>, data: web::Data<AppState>) -> Result<impl Responder> {
+async fn post_sights(request:  web::Json<SightsRequest>, data: web::Data<AppState>) -> impl Responder {
 
     println!("Placeholder Sights Request for lat={}, lon={} and radius={}.", request.lat, request.lon, request.radius);
 
     let sights = data.graph.get_sights_in_area(request.lat, request.lon, request.radius);
 
     //TODO does this serialize correctly according to interface definition?
-    Ok(web::Json(sights))
+    let mut res = HttpResponse::Ok();
+    res.json(json!(sights))
 }
 
 

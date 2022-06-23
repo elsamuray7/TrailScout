@@ -1,6 +1,6 @@
 use std::collections::{HashMap, VecDeque};
 use chrono::{DateTime, Utc};
-use data_api::api::graph::{Graph, Node, Sight};
+use data_api::api::graph::{Category, Graph, Node, Sight};
 use itertools::Itertools;
 use pathfinding::prelude::*;
 use crate::api::{Algorithm, Area, Coordinate, Route, ScoreMap, UserPreferences};
@@ -9,7 +9,7 @@ use crate::api::{Algorithm, Area, Coordinate, Route, ScoreMap, UserPreferences};
 /// tourist attractions, respectively
 ///
 /// TODO map user preference number to algorithm internal score number
-fn compute_scores(sights: &HashMap<usize, Sight>, user_prefs: UserPreferences) -> ScoreMap {
+fn compute_scores(sights: &HashMap<usize, &Sight>, user_prefs: UserPreferences) -> ScoreMap {
     let mut scores: ScoreMap = sights.iter()
         .map(|(&sight_id, _)| (sight_id, 0_usize))
         .collect();
@@ -18,9 +18,10 @@ fn compute_scores(sights: &HashMap<usize, Sight>, user_prefs: UserPreferences) -
         scores.insert(sight.id, sight.pref);
     }
     for category in &user_prefs.categories {
+        let category_enum = category.name.parse::<Category>()
+            .unwrap_or(Category::Other);
         sights.iter()
-            // TODO filter sights by category name and set score for all sights in category
-            .filter(|(_, sight)| false)
+            .filter(|(_, sight)| matches!(&sight.category, category_enum))
             .for_each(|(&sight_id, _)| {
                 scores.entry(sight_id).or_insert(category.pref);
             });
@@ -39,7 +40,7 @@ pub struct GreedyAlgorithm<'a> {
     /// Walking speed in meters per second
     walking_speed_mps: f64,
     area: Area,
-    sights: HashMap<usize, Sight>,
+    sights: HashMap<usize, &'a Sight>,
     root_id: usize,
     scores: ScoreMap,
 }
@@ -153,6 +154,6 @@ impl<'a> Algorithm<'a> for GreedyAlgorithm<'a> {
     }
 
     fn map_node_to_sight(&self, node: &Node) -> Option<&Sight> {
-        self.sights.get(&node.id)
+        todo!()
     }
 }
