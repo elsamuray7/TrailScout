@@ -1,11 +1,12 @@
-<div class="row item">
-    <div class="col tag">
-        <button class="btn" [class.clicked]="checked"(click)="checkedTag()">{{sight.name}}</button>
+<div class="row item" [ngStyle]="getImage()">
+    <div class="col-13 tag">
+        <button class="btn" [class.clicked]="checked"(click)="checkedTag()">
+          <span>{{sight.name}}</span></button>
     </div>
     <div [hidden]="!checked" class="col rating">
-        <ngb-rating [(rate)]="prio" [max]="3" (rateChange)="prioChanged()">
+        <ngb-rating [(rate)]="prio" [max]="5" (rateChange)="prioChanged()">
             <ng-template let-fill="fill" let-index="index">
-              <span class="star" [class.filled]="fill === 100" [class.low]="index < 1" [class.middle]="index === 1" >&#9733;</span>
+              <span class="star" [class.filled]="fill === 100" [class.xs]="index === 0" [class.s]="index === 1" [class.m]="index === 2" [class.l]="index === 3" >&#9733;</span>
             </ng-template>
           </ngb-rating>
     </div>

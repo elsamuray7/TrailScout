@@ -1,26 +1,31 @@
 .taskbar {
   background-color: #636975;
-  height: 90vh;
+  height: 100vh !important;
   overflow-y: auto;
   overflow-x: hidden;
 }
 
 #setting-btn {
-  margin-top: 20px !important;
-  width: 90%;
-  margin: auto;
+  margin: 30px !important;
 }
 
 .btn {
+  font-size: 1vw !important;
+  padding: 10px !important;
+}
+
+.buttons {
+  align-items: center;
+}
+
+.calc {
   border: none;
   background-color: greenyellow;
-  padding: 30px 0px;
-  font-size: 18px;
   cursor: pointer;
 }
 
 /* On mouse-over */
-.btn:hover {
+.calc:hover {
   background: #eee;
 }
 
@@ -28,13 +33,13 @@
   color: black;
 }
 
-.disabled {
+.btndisabled {
   border: none;
   background-color: inherit;
-  padding: 30px 0px;
-  font-size: 18px;
   cursor: not-allowed;
-  color: gray
+  color: gray;
+  font-size: 1vw !important;
+  padding: 10px !important;
 }
 
 .inputs {
@@ -45,7 +50,7 @@
 }
 
 ::ng-deep .accordion .accordion-item {
-    max-height: 45vh !important;
+    max-height: 70vh !important;
     overflow: auto !important;
 }
 
@@ -53,3 +58,9 @@
   font-size: 1.3vw;
   font-style: bold;
 }
+.close {
+  background-color: whitesmoke;
+  float: right;
+  margin: 30px;
+}
+
