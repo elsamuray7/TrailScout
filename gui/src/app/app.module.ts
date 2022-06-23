@@ -7,6 +7,7 @@ import { DesktopModule } from './desktop/desktop.module';
 import { NavigationModule } from './desktop/navigation/navigation.module';
 import { MobileModule } from './mobile/mobile.module';
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
+import { CookieService } from 'ngx-cookie-service';
 
 @NgModule({
   declarations: [
@@ -20,7 +21,7 @@ import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
     NavigationModule,
     NgbModule
   ],
-  providers: [],
+  providers: [CookieService],
   bootstrap: [AppComponent]
 })
 export class AppModule { }
