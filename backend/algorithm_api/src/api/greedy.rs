@@ -10,9 +10,9 @@ use crate::api::{Algorithm, Area, Coordinate, Route, ScoreMap, UserPreferences};
 ///
 /// TODO map user preference number to algorithm internal score number
 fn compute_scores(sights: &HashMap<usize, Sight>, user_prefs: UserPreferences) -> ScoreMap {
-    let mut scores = sights.iter()
+    let mut scores: ScoreMap = sights.iter()
         .map(|(&sight_id, _)| (sight_id, 0_usize))
-        .collect::<ScoreMap>();
+        .collect();
     for sight in &user_prefs.sights {
         // TODO implement check whether SightPref really corresponds to sight
         scores.insert(sight.id, sight.pref);
@@ -28,6 +28,10 @@ fn compute_scores(sights: &HashMap<usize, Sight>, user_prefs: UserPreferences) -
     scores
 }
 
+/// Greedy implementation of the `Algorithm` trait.
+///
+/// The greedy algorithm tries to find the best route by including sights into the route based on
+/// their score-distance ratio at that time until the time budget is used up.
 pub struct GreedyAlgorithm<'a> {
     graph: &'a Graph,
     start_time: DateTime<Utc>,
@@ -114,6 +118,7 @@ impl<'a> Algorithm<'a> for GreedyAlgorithm<'a> {
                                 curr_pred = result_to_sights[&curr_pred].0;
                                 new_route_tail.push_front(Coordinate { lat: curr_pred.lat, lon: curr_pred.lon });
                             }
+                            route.reserve(new_route_tail.len());
                             for coord in new_route_tail {
                                 route.push(coord);
                             }
@@ -135,7 +140,9 @@ impl<'a> Algorithm<'a> for GreedyAlgorithm<'a> {
                              |&node| node.id == self.root_id)
                         .expect("No path from last visited sight to root");
                 let (new_route_tail, _) = result_to_root;
-                for &elem in &new_route_tail[1..] {
+                let new_route_tail = &new_route_tail[1..];
+                route.reserve(new_route_tail.len());
+                for &elem in new_route_tail {
                     route.push(Coordinate { lat: elem.lat, lon: elem.lon });
                 }
                 break;
