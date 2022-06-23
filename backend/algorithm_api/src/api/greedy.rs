@@ -14,6 +14,7 @@ fn compute_scores(sights: &HashMap<usize, Sight>, user_prefs: UserPreferences) -
         .map(|(&sight_id, _)| (sight_id, 0_usize))
         .collect::<ScoreMap>();
     for sight in &user_prefs.sights {
+        // TODO implement check whether SightPref really corresponds to sight
         scores.insert(sight.id, sight.pref);
     }
     for category in &user_prefs.categories {
