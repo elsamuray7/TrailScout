@@ -5,6 +5,28 @@ use itertools::Itertools;
 use pathfinding::prelude::*;
 use crate::api::{Algorithm, Area, Coordinate, Route, ScoreMap, UserPreferences};
 
+/// Compute scores for tourist attractions based on user preferences for categories or specific
+/// tourist attractions, respectively
+///
+/// TODO map user preference number to algorithm internal score number
+fn compute_scores(sights: &HashMap<usize, Sight>, user_prefs: UserPreferences) -> ScoreMap {
+    let mut scores = sights.iter()
+        .map(|(&sight_id, _)| (sight_id, 0_usize))
+        .collect::<ScoreMap>();
+    for sight in &user_prefs.sights {
+        scores.insert(sight.id, sight.pref);
+    }
+    for category in &user_prefs.categories {
+        sights.iter()
+            // TODO filter sights by category name and set score for all sights in category
+            .filter(|(_, sight)| false)
+            .for_each(|(&sight_id, _)| {
+                scores.entry(sight_id).or_insert(category.pref);
+            });
+    }
+    scores
+}
+
 pub struct GreedyAlgorithm<'a> {
     graph: &'a Graph,
     start_time: DateTime<Utc>,
@@ -14,36 +36,10 @@ pub struct GreedyAlgorithm<'a> {
     area: Area,
     sights: HashMap<usize, Sight>,
     root_id: usize,
-    user_prefs: UserPreferences,
+    scores: ScoreMap,
 }
-
-
-impl GreedyAlgorithm<'_> {
-    /// Compute scores for tourist attractions based on user preferences for categories or specific
-    /// tourist attractions, respectively
-     fn compute_scores(&self) -> ScoreMap {
-        // TODO initialize score map with initial value 0 for all sights
-        let mut scores = ScoreMap::with_capacity(self.sights.len());
-        for _ in &self.user_prefs.categories {
-            // TODO filter sights by category name and insert score for all sights in category
-        }
-        for sight in &self.user_prefs.sights {
-            // TODO (maybe) compute algorithm internal score from user preference
-            scores.insert(sight.id, sight.pref);
-        }
-        scores
-    }
-
-    /// Try to map a node to its sight instance.
-    /// Returns `None` if the node is not a sight.
-    fn map_node_to_sight(&self, node: &Node) -> Option<&Sight> {
-        self.sights.get(&node.id)
-    }
-}
-
 
 impl<'a> Algorithm<'a> for GreedyAlgorithm<'a> {
-
     fn new(graph: &'a Graph,
            start_time: DateTime<Utc>,
            end_time: DateTime<Utc>,
@@ -56,6 +52,7 @@ impl<'a> Algorithm<'a> for GreedyAlgorithm<'a> {
 
         let sights = graph.get_sights_in_area(area.lat, area.lon, area.radius);
         let root_id = graph.get_nearest_node(area.lat, area.lon);
+        let scores = compute_scores(&sights, user_prefs);
         Self {
             graph,
             start_time,
@@ -64,13 +61,11 @@ impl<'a> Algorithm<'a> for GreedyAlgorithm<'a> {
             area,
             sights,
             root_id,
-            user_prefs,
+            scores,
         }
     }
 
      fn compute_route(&self) -> Route {
-        let scores = self.compute_scores();
-
         let mut curr_node_id = self.root_id;
         let successors = |node: &Node|
             self.graph.get_outgoing_edges_in_area(node.id, self.area.lat, self.area.lon, self.area.radius)
@@ -91,8 +86,8 @@ impl<'a> Algorithm<'a> for GreedyAlgorithm<'a> {
             let sorted_dist_vec: Vec<_> = result_to_sights.values()
                 .filter(|(node, _)| self.sights.contains_key(&node.id))
                 .sorted_unstable_by(|(node1, dist1), (node2, dist2)| {
-                    let score1 = scores[&node1.id];
-                    let score2 = scores[&node2.id];
+                    let score1 = self.scores[&node1.id];
+                    let score2 = self.scores[&node2.id];
                     (score1 / dist1).cmp(&(score2 / dist2))
                 })
                 .collect();
@@ -147,5 +142,9 @@ impl<'a> Algorithm<'a> for GreedyAlgorithm<'a> {
         }
 
         route
+    }
+
+    fn map_node_to_sight(&self, node: &Node) -> Option<&Sight> {
+        self.sights.get(&node.id)
     }
 }
