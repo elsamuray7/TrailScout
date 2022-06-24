@@ -6,7 +6,7 @@ use std::io;
 use std::io::{BufRead, BufReader, LineWriter, Write};
 use std::num::{ParseFloatError, ParseIntError};
 use osmpbf::{ElementReader, Element, Node};
-use crate::api::graph::{calc_dist, Edge, Node as GraphNode, Sight};
+use crate::api::graph::{calc_dist, Category, Edge, Node as GraphNode, Sight};
 
 pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges: &mut Vec<Edge>, sights: &mut Vec<Sight>) -> Result<(), io::Error> {
     let mut num_nodes: usize = 0;
@@ -24,36 +24,62 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
     reader.for_each(|element| {
         if let Element::Node(n) = element {
             // TODO if no tags corrects tags for category + category enum
+            /*
+            let mut isSight = false;
+            for (key, value) in n.tags() {
+                match key {
+                    "amenity" => {
+                        isSight = true;
+                        match value {
+                            "restaurant" | "biergarten" | "cafe" | "fast_food" | "food_court" => {
+                                let mut sight = Sight {
+                                    node_id: n.id() as usize,
+                                    lat: n.lat(),
+                                    lon: n.lon(),
+                                    category: Category::Restaurants,
+                                };
+                                sights.push(sight);
+                                num_sights += 1;
+                                node_count += 1;
+                            }
+                            _ => {}
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            if(!isSight) {
+                let mut node = GraphNode {
+                    osm_id: n.id() as usize,
+                    id: num_nodes,
+                    lat: n.lat(),
+                    lon: n.lon(),
+                    //info: "".to_string()
+                };
+                osm_id_to_node_id.entry(node.osm_id)
+                    .or_insert(num_nodes);
+                nodes.push(node);
+                num_nodes += 1;
+                node_count += 1;
+            }
+
+             */
+
             let mut node = GraphNode {
                 osm_id: n.id() as usize,
                 id: num_nodes,
                 lat: n.lat(),
                 lon: n.lon(),
-                info: "".to_string()
+                //info: "".to_string()
             };
-            for (key, value) in n.tags() {
-                node.info.push_str("key: (");
-                node.info.push_str(key);
-                node.info.push_str(") value: (");
-                node.info.push_str(value);
-                node.info.push_str(")\n");
-            }
-
             osm_id_to_node_id.entry(node.osm_id)
                 .or_insert(num_nodes);
-
             nodes.push(node);
-            node_count += 1;
             num_nodes += 1;
-        } else if let Element::DenseNode(n) = element {
-            // TODO if no tags corrects tags for category + category enum + compare node ids from denseNode and Node !!!
-            let mut node = GraphNode {
-                osm_id: n.id() as usize,
-                id: num_nodes,
-                lat: n.lat(),
-                lon: n.lon(),
-                info: "".to_string()
-            };
+            node_count += 1;
+
+
+            /*
             for (key, value) in n.tags() {
                 node.info.push_str("key: (");
                 node.info.push_str(key);
@@ -61,6 +87,61 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
                 node.info.push_str(value);
                 node.info.push_str(")\n");
             }
+
+             */
+
+
+
+        } else if let Element::DenseNode(n) = element {
+            // TODO if no tags corrects tags for category + category enum + compare node ids from denseNode and Node !!!
+            /*
+            let mut isSight = false;
+            for (key, value) in n.tags() {
+                match key {
+                    "amenity" => {
+                        isSight = true;
+                        match value {
+                            "restaurant" | "biergarten" | "cafe" | "fast_food" | "food_court" => {
+                                let mut sight = Sight {
+                                    node_id: n.id() as usize,
+                                    lat: n.lat(),
+                                    lon: n.lon(),
+                                    category: Category::Restaurants,
+                                };
+                                sights.push(sight);
+                                num_sights += 1;
+                                node_count += 1;
+                            }
+                            _ => {}
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            if(!isSight) {
+                let mut node = GraphNode {
+                    osm_id: n.id() as usize,
+                    id: num_nodes,
+                    lat: n.lat(),
+                    lon: n.lon(),
+                    //info: "".to_string()
+                };
+                osm_id_to_node_id.entry(node.osm_id)
+                    .or_insert(num_nodes);
+                nodes.push(node);
+                num_nodes += 1;
+                node_count += 1;
+            }
+
+             */
+
+            let mut node = GraphNode {
+                osm_id: n.id() as usize,
+                id: num_nodes,
+                lat: n.lat(),
+                lon: n.lon(),
+                //info: "".to_string()
+            };
             osm_id_to_node_id.entry(node.osm_id)
                 .or_insert(num_nodes);
             nodes.push(node);
@@ -80,6 +161,10 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
                     tgt: *osm_id_to_node_id.get(&osm_tgt).unwrap(),
                     dist: 0
                 };
+                edge.dist = calc_dist(0.0, 0.0, 0.0, 0.0);
+                //let srcNode = &nodes[edge.src];
+                //let tgtNode = &nodes[edge.tgt];
+                //let dist = calc_dist(srcNode.lat, srcNode.lon), tgt.;
 
                 //let src_node = &nodes[edge.src];
                 //let tgt_node = &nodes[edge.tgt];

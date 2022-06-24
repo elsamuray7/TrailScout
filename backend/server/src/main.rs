@@ -1,18 +1,42 @@
-use actix_web::{web, App, HttpServer, Result,Responder, get, post};
+mod route_provider;
+
+use actix_web::{web, App, HttpServer, Result, Responder, get, post, HttpResponse};
 use actix_files;
 use serde::Deserialize;
+use serde_json::json;
 use std::{path::PathBuf};
+use std::any::Any;
+use std::borrow::Borrow;
 use std::str;
 use std::fs;
+use std::ops::Deref;
+use actix_web::web::Data;
 use serde_json;
+use algorithm_api::api::Algorithm;
+use algorithm_api::api::greedy::{GreedyAlgorithm};
+//use chrono::format::ParseError;
+
+use chrono::{DateTime, Utc, NaiveTime};
+
+
+use data_api::api::graph::{Graph, ParseError, Sight};
+//TODO cleanup imports
 
 const CONFIG_PATH :&str = "src/config.json";
+
+// This struct represents state
+struct AppState {
+    graph: Graph,
+}
+
 
 //Deserialization of config
 #[derive(Deserialize)]
 struct Config {
     ip: String,
     port: u16,
+    graph_file_path : String,
+
 }
 
 //read config at CONFIG_PATH and return it
@@ -26,16 +50,12 @@ fn get_config() -> Config {
 }
 
 //struct to contain parameters from get_sights request
-#[derive(Debug, Deserialize)]
+//ToDo possibly refactor -> move somewhere else
+#[derive(Deserialize)]
 pub struct SightsRequest {
-   lat: u64,
-   lon: u64,
-   radius: u64,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct RouteRequest {
-   node_list: Vec<String>,
+   lat: f64,
+   lon: f64,
+   radius: f64
 }
 
 //Default service: sends all not differently handled requests to angular index.html
@@ -44,20 +64,45 @@ async fn index() -> Result<actix_files::NamedFile> {
     Ok(actix_files::NamedFile::open(path)?)
 }
 
-//Get Request to handle sights
-#[get("/sights")]
-async fn get_sights(request:  web::Query<SightsRequest>) -> Result<impl Responder> {
-    //Placeholder => get sights by parameter and radius?
-    let response =  format!("Placeholder Sights Request for lat={}, lon={} and radius={}.", request.lat, request.lon, request.radius);
+
+///Responds to post request asking for sights
+#[post("/sights")]
+async fn post_sights(request:  web::Json<SightsRequest>, data: web::Data<AppState>) -> impl Responder {
+
+    println!("Placeholder Sights Request for lat={}, lon={} and radius={}.", request.lat, request.lon, request.radius);
+
+    let sights = data.graph.get_sights_in_area(request.lat, request.lon, request.radius);
+
+    //TODO does this serialize correctly according to interface definition?
+    let mut res = HttpResponse::Ok();
+    res.json(json!(sights))
+}
+
+
+
+///Responds to post request asking for routing
+#[post("/route")]
+async fn post_route(request:  web::Json<route_provider::RouteProviderReq>, data: web::Data<AppState>) -> Result<impl Responder> {
+
+    println!("Placeholder Route Request");
+    let route_request = request.into_inner();
+
+    //parse start and end from Iso 8601 (rfc3339)
+    let start = DateTime::parse_from_rfc3339(&route_request.start).expect("Timer Parse Error");
+    let end = DateTime::parse_from_rfc3339(&route_request.end).expect("Timer Parse Error");
+
+    //convert km/h to m/s
+    let speed_mps = route_request.walking_speed_kmh as f64 / 3.6;
+
+    let algo = GreedyAlgorithm::new(&data.graph, DateTime::from(start),
+                                   DateTime::from(end), speed_mps, route_request.area, route_request.user_prefs);
+
+    let route = algo.compute_route();
+    let response = route_provider::RouteProviderRes{route};
+
     Ok(web::Json(response))
 }
 
-//Post Request to handle route request
-#[post("/route")]
-async fn post_route(request: web::Json<RouteRequest>) -> Result<impl Responder> {
-    let response =  format!("Placeholder Route Request for lat={}", request.node_list.len());
-    Ok(web::Json(response))
-}
 
 
 //server main
@@ -65,13 +110,28 @@ async fn post_route(request: web::Json<RouteRequest>) -> Result<impl Responder> 
 async fn main() -> std::io::Result<()> { 
     let config: Config = get_config();
 
-    HttpServer::new(|| {
+    //TODO fix state - Arc RWlock?
+
+    //TODO probably remove
+    //let graph_result: Result<Graph, ParseError> = Graph::parse_from_file(&config.graph_file_path);
+    //let currentGraph = graph_result.expect("Error parsing graph from file");
+    //let graph_result: Graph = Graph::new();
+    //let rw_lock_graph = Arc::new(RwLock::new(graph_result));
+
+
+    //move
+    HttpServer::new(move|| {
         App::new()
-            .service(get_sights)
+            .service(post_sights)
             .service(post_route)
             .service(actix_files::Files::new("/static", "../../gui/dist/").show_files_listing())
             .service(actix_files::Files::new("/assets", "../../gui/dist/assets").show_files_listing())
             .default_service(web::get().to(index))
+            .app_data(web::Data::new(AppState {
+                graph: Graph::parse_from_file(&config.graph_file_path).expect("Error parsing graph from file"),
+                //rw_lock_graph : Arc::new(RwLock::new(Graph::new())),
+            }))
+
     })
     .bind((config.ip, config.port))?
     .run()

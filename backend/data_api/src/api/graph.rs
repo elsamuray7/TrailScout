@@ -1,8 +1,15 @@
-use std::collections::HashMap;
+extern crate haversine;
+
+use std::collections::{BTreeMap, HashMap};
 use std::fmt::Formatter;
 use std::fs::File;
+use std::hash::{Hash, Hasher};
 use std::io::{BufRead, BufReader};
 use std::num::{ParseFloatError, ParseIntError};
+use haversine::{Location, Units};
+use serde::{Serialize};
+use serde_enum_str::{Deserialize_enum_str, Serialize_enum_str};
+use rand::Rng;
 
 /// Bounding box of a circular area around a coordinate
 struct BoundingBox {
@@ -26,22 +33,55 @@ impl BoundingBox {
     }
 }
 
+#[derive(Deserialize_enum_str, Serialize_enum_str, PartialEq, Debug)]
+#[serde(rename_all = "PascalCase")]
+pub enum Category {
+    ThemePark,
+    Swimming,
+    PicnicBarbequeSpot,
+    MuseumExhibition,
+    Nature,
+    Nightlife,
+    Restaurants,
+    Sightseeing,
+    Shopping,
+    Animals,
+    Other
+}
+
 /// A graph node located at a specific coordinate
 pub struct Node {
     pub osm_id: usize,
     pub id: usize,
     pub lat: f64,
     pub lon: f64,
-    pub info: String,
+    //pub info: String,
 }
 
-/// A directed and weighted (dist) graph edge between a source (src) and a target (tgt) node
+impl PartialEq<Self> for Node {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
+impl Eq for Node {}
+
+impl Hash for Node {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+    }
+}
+
+/// A directed and weighted graph edge
 pub struct Edge {
     pub(crate) osm_id: usize, // TODO delete later!
     pub osm_src: usize,
     pub osm_tgt: usize,
+    /// The id of the edge's source node
     pub src: usize,
+    /// The id of the edge's target node
     pub tgt: usize,
+    /// The edge's weight, i.e., the distance between its source and target
     pub dist: usize,
 }
 
@@ -49,24 +89,26 @@ pub struct Edge {
 pub type Tags = Vec<(String, String)>; // TODO are tags needed or just categories
 
 /// A sight node mapped on its nearest node
+#[derive(Serialize)]
 pub struct Sight {
-    lat: f64,
-    lon: f64,
     pub node_id: usize,
-    pub tags: Tags,
-    pub info: String,
+    pub lat: f64,
+    pub lon: f64,
+    //pub tags: Tags,
+    //pub info: String,
+    pub category: Category,
 }
 
 /// A directed graph. In addition to nodes and edges, the definition also contains a set of sights
 /// mapped on their nearest nodes, respectively.
 pub struct Graph {
-    pub nodes: Vec<Node>,
+    nodes: Vec<Node>,
     // TODO check if pub needed or pub (crate)
-    edges: Vec<Edge>,
+    pub edges: Vec<Edge>,
     pub offsets: Vec<usize>,
     pub num_nodes: usize,
     pub num_edges: usize,
-    sights: Vec<Sight>,
+    pub sights: Vec<Sight>,
     pub num_sights: usize,
 }
 
@@ -86,39 +128,27 @@ impl Graph {
 
     /// Parse graph data (in particular, nodes, edges and sights) from a file and create a new
     /// graph from it
-    pub fn parse_from_file(&mut self, graph_file_path: &str) -> Result<Self, ParseError> {
-        // TODO parse osm graph creator output into graph
-        todo!()
-        /*
+    pub fn parse_from_file(graph_file_path: &str) -> Result<Self, ParseError> {
+        let mut graph = Graph::new();
         let graph_file = File::open(graph_file_path)?;
         let graph_reader = BufReader::new(graph_file);
 
         let mut lines = graph_reader.lines();
         let mut line_no = 0;
 
-        loop {
-            let line = lines.next()
-                .expect(&format!("Unexpected EOF while parsing header in line {}", line_no))?;
-            line_no += 1;
-
-            self.meta.push_str(&line);
-            self.meta.push_str("\n");
-
-            if !line.starts_with("#") {
-                break;
-            }
-        }
-
-        self.num_nodes = lines.next()
+        graph.num_nodes = lines.next()
             .expect("Unexpected EOF while parsing number of nodes")?
             .parse()?;
-        self.num_edges = lines.next()
+        graph.num_sights = lines.next()
+            .expect("Unexpected EOF while parsing number of nodes")?
+            .parse()?;
+        graph.num_edges = lines.next()
             .expect("Unexpected EOF while parsing number of edges")?
             .parse()?;
         line_no += 3;
 
-        self.nodes.reserve_exact(self.num_nodes);
-        for i in 0..self.num_nodes {
+        graph.nodes.reserve_exact(graph.num_nodes);
+        for i in 0..graph.num_nodes {
             let line = lines.next()
                 .expect(&format!("Unexpected EOF while parsing nodes in line {}", line_no))?;
             let mut split = line.split(" ");
@@ -126,41 +156,68 @@ impl Graph {
             split.next(); // id
 
             let node = Node {
+                osm_id: 0,
                 id: i,
-                id2: split.next()
-                    .expect(&format!("Unexpected EOL while parsing node latitude in line {}",
-                                     line_no))
-                    .parse()?,
                 lat: split.next()
                     .expect(&format!("Unexpected EOL while parsing node latitude in line {}",
                                      line_no))
-                    .to_string(),
+                    .parse()?,
                 lon: split.next()
                     .expect(&format!("Unexpected EOL while parsing node longitude in line {}",
                                      line_no))
-                    .to_string(),
-                elevation: split.next()
-                    .expect(&format!("Unexpected EOL while parsing node latitude in line {}",
-                                     line_no))
-                    .to_string(),
+                    .parse()?,
             };
-            self.nodes.push(node);
+            graph.nodes.push(node);
         }
 
-        self.edges.reserve_exact(self.num_edges);
-        let mut new_temp_edges: BTreeMap<(usize, usize), Vec<(usize, usize, usize, String, String)>> = BTreeMap::new();
-        for _ in 0..self.num_edges {
+        graph.sights.reserve_exact(graph.num_sights);
+        for i in 0..graph.num_sights {
+            let line = lines.next()
+                .expect(&format!("Unexpected EOF while parsing nodes in line {}", line_no))?;
+            let mut split = line.split(" ");
+            line_no += 1;
+
+            let sight = Sight {
+                node_id: split.next()
+                    .expect(&format!("Unexpected EOL while parsing sight node id in line {}",
+                                     line_no))
+                    .parse()?,
+                lat: split.next()
+                    .expect(&format!("Unexpected EOL while parsing sight latitude in line {}",
+                                     line_no))
+                    .parse()?,
+                lon: split.next()
+                    .expect(&format!("Unexpected EOL while parsing sight longitude in line {}",
+                                     line_no))
+                    .parse()?,
+                category: split.next()
+                    .expect(&format!("Unexpected EOL while parsing sight category in line {}",
+                                     line_no))
+                    .parse()
+                    .unwrap(),
+            };
+            graph.sights.push(sight);
+        }
+
+        let mut last_src: i64 = -1;
+        let mut offset: usize = 0;
+        graph.edges.reserve_exact(graph.num_edges);
+        graph.offsets.resize(graph.num_nodes + 1, 0);
+        for _ in 0..graph.num_edges {
             let line = lines.next()
                 .expect(&format!("Unexpected EOF while parsing edges in line {}", line_no))?;
             let mut split = line.split(" ");
             line_no += 1;
 
             let edge = Edge {
-                a: split.next()
+                osm_id: 0,
+                osm_src: 0,
+                osm_tgt: 0,
+                src: split.next()
                     .expect(&format!("Unexpected EOL while parsing edge source in line {}",
                                      line_no))
                     .parse()?,
-                b: split.next()
+                tgt: split.next()
                     .expect(&format!("Unexpected EOL while parsing edge target in line {}",
                                      line_no))
                     .parse()?,
@@ -168,54 +225,46 @@ impl Graph {
                     .expect(&format!("Unexpected EOL while parsing edge weight in line {}",
                                      line_no))
                     .parse()?,
-                edge_type: split.next()
-                    .expect(&format!("Unexpected EOL while parsing edge weight in line {}",
-                                     line_no))
-                    .to_string(),
-                maxspeed: split.next()
-                    .expect(&format!("Unexpected EOL while parsing edge weight in line {}",
-                                     line_no))
-                    .to_string(),
             };
 
-            let min_vertex = edge.a.min(edge.b);
-            let max_vertex = edge.a.max(edge.b);
-            new_temp_edges.entry((min_vertex, max_vertex))
-                .and_modify(|edges|{
-                    if edge.dist < edges[0].2 {
-                        edges[0].2 = edge.dist;
-                        edges[1].2 = edge.dist;
-                    }
-                })
-                .or_insert(vec![(edge.a, edge.b, edge.dist, edge.edge_type.clone(), edge.maxspeed.clone()), (edge.b, edge.a, edge.dist, edge.edge_type, edge.maxspeed)]);
-        }
-
-        self.new_edges.reserve_exact(new_temp_edges.len() * 2);
-        for edge_values in new_temp_edges.values() {
-            for (a, b, dist, edge_type, maxspeed) in edge_values {
-                self.new_edges.push((*a, *b, *dist, edge_type.clone(), maxspeed.clone()));
+            if edge.src as i64 > last_src {
+                for j in (last_src + 1) as usize..=edge.src {
+                    graph.offsets[j] = offset;
+                }
+                last_src = edge.src as i64;
             }
+            offset += 1;
+
+            graph.edges.push(edge);
         }
-        self.new_edges.sort_unstable_by(|e1, e2| {
-            let id1 = e1.0;
-            let id2 = e2.0;
-            id1.cmp(&id2).then_with(||{
-                let id1 = e1.1;
-                let id2 = e2.1;
-                id1.cmp(&id2)
-            })
-        });
-        self.new_num_edges = self.new_edges.len();
+        graph.offsets[graph.num_nodes] = graph.num_edges;
 
-        Ok(())
+        Ok(graph)
+    }
 
-         */
+    /// Returns a reference to the vector containing all nodes in this graph
+    pub fn nodes(&self) -> &Vec<Node> {
+        &self.nodes
+    }
+
+    /// Get the node with id `node_id`
+    pub fn get_node(&self, node_id: usize) -> &Node {
+        &self.nodes[node_id]
     }
 
     /// Get the nearest node to a given coordinate (latitude / longitude)
-    fn get_nearest_node(&self, lat: f64, lon: f64) -> usize {
+    pub fn get_nearest_node(&self, lat: f64, lon: f64) -> usize {
         // TODO compute nearest node to given coordinate
-        todo!()
+        let mut min_dist = usize::MAX;
+        let mut min_id = self.nodes[0].id;
+        for (id, node) in self.nodes.iter().enumerate() {
+            let dist = calc_dist(lat, lon, node.lat, node.lon);
+            if dist < min_dist {
+                min_dist = dist;
+                min_id = id;
+            }
+        }
+        min_id
     }
 
     /// Get the number of outgoing edges of the node with id `node_id`
@@ -228,9 +277,21 @@ impl Graph {
         &self.edges[self.offsets[node_id]..self.offsets[node_id+1]]
     }
 
+    /// Get all outgoing edges of a particular node where the edge target lies within given area
+    pub fn get_outgoing_edges_in_area(&self, node_id: usize, lat: f64, lon: f64, radius: f64) -> Vec<&Edge> {
+        let out_edges = self.get_outgoing_edges(node_id);
+        out_edges.iter()
+            .filter(|&edge| {
+                let tgt_node = self.get_node(edge.tgt);
+                // TODO check whether target node lies in area
+                todo!()
+            })
+            .collect()
+    }
+
     /// Get all sights within a circular area, specified by `radius`, around a given coordinate
     /// (latitude / longitude)
-    pub fn get_sights_in_area(&self, lat: f64, lon: f64, radius: f64) -> HashMap<usize, Sight> {
+    pub fn get_sights_in_area(&self, lat: f64, lon: f64, radius: f64) -> HashMap<usize, &Sight> {
         /*
         TODO
             - get bbox of area around coordinate
@@ -242,13 +303,17 @@ impl Graph {
             - get slice of sights within min/max longitude of bbox, e.g. with binary search
             - return new vector with fetched sights
          */
-        todo!()
+        self.sights.iter()
+            .map(|sight| (sight.node_id, sight))
+            .collect()
     }
 }
 
 /// Calculates the distance between two given coordinates (latitude / longitude) in metres. TODO make metre changeable later?
-pub(crate) fn calc_dist(lat1: &f64, lon1: &f64, lat2: &f64, lon2: &f64) -> usize {
-    0
+pub(crate) fn calc_dist(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> usize {
+    let p1 = Location{latitude: lat1,longitude: lon1};
+    let p2 = Location{latitude: lat2,longitude: lon2};
+    haversine::distance(p1, p2, Units::Kilometers) as usize * 1000
 }
 
 #[derive(Debug)]

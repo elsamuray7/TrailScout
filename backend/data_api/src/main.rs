@@ -8,7 +8,13 @@ fn main() -> Result<(), io::Error> {
     let mut nodes : Vec<Node> = Vec::new();
     let mut edges : Vec<Edge> = Vec::new();
     let mut sights : Vec<Sight> = Vec::new();
-    parse_osm_data(&in_graph, &mut nodes, &mut edges, &mut sights);
-    write_graph_file( &out_graph, &mut nodes, &mut edges, &mut sights);
+    parse_osm_data(in_graph, &mut nodes, &mut edges, &mut sights);
+    write_graph_file( out_graph, &mut nodes, &mut edges, &mut sights);
+
+    let graph = data_api::api::graph::Graph::parse_from_file(out_graph).unwrap();
+
+    println!("{}", graph.num_nodes);
+    println!("{}", graph.num_sights);
+    println!("{}", graph.num_edges);
     Ok(())
 }
