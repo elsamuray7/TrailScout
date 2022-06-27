@@ -161,7 +161,9 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
                     tgt: *osm_id_to_node_id.get(&osm_tgt).unwrap(),
                     dist: 0
                 };
-                edge.dist = calc_dist(0.0, 0.0, 0.0, 0.0);
+                let src_node = &nodes[edge.src];
+                let tgt_node = &nodes[edge.tgt];
+                edge.dist = calc_dist(src_node.lat, src_node.lon, tgt_node.lat, tgt_node.lon);
                 //let srcNode = &nodes[edge.src];
                 //let tgtNode = &nodes[edge.tgt];
                 //let dist = calc_dist(srcNode.lat, srcNode.lon), tgt.;
