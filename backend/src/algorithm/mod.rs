@@ -10,7 +10,7 @@ use serde::{Serialize, Deserialize};
 type ScoreMap = HashMap<usize, usize>;
 
 /// Geographic coordinate
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct Coordinate {
     lat: f64,
     lon: f64,
