@@ -5,12 +5,10 @@
                 <ngb-panel id="radius" [title]="radius > 0 ? 'Radius: ' + radius + 'km' : 'Radius'" [disabled]="!startPointSet"
                     [class.disabled]="!startPointSet">
                     <ng-template ngbPanelContent>
-                      <form class='form-inline'>
-                        <input mbdInput id='radiusInput' type="number" placeholder="Enter radius in km..." class="form-control"
-                               [(ngModel)]="radius" />
-                        <button class="btn-primary btn" id="refresh" type="submit"
-                                (click)="refreshSights()">Refresh</button>
-                      </form>
+                      <input mbdInput id='radiusInput' type="number" placeholder="Enter radius in km..." class="form-control"
+                             [(ngModel)]="radius" />
+                      <button class="btn-primary btn" id="refresh" type="submit"
+                              (click)="refreshSights()">Refresh</button>
                     </ng-template>
                 </ngb-panel>
                 <ngb-panel

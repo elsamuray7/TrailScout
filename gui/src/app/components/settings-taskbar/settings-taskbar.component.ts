@@ -21,7 +21,7 @@ export class SettingsTaskbarComponent implements OnInit {
   @Output() radiusChange = new EventEmitter;
   @Output() closeButton = new EventEmitter;
 
-  private _radius!: number;
+  public _radius!: number;
   private _startTime: NgbTimeStruct;
   private _walkTime?: NgbTimeStruct;
   private _endTime?: NgbTimeStruct;
@@ -124,7 +124,9 @@ export class SettingsTaskbarComponent implements OnInit {
     if (startCookie.value !== '' && this.radius > 0) {
       const val = startCookie.value as string;
       const coords = JSON.parse(val);
-      this.sightsService.getSights(coords, this.radius);
+      this.sightsService.getSights(coords, this.radius).subscribe((sights) => {
+        console.log(sights);
+      });
     }
   }
 }

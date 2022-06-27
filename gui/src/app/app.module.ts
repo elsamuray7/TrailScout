@@ -8,6 +8,7 @@ import { NavigationModule } from './desktop/navigation/navigation.module';
 import { MobileModule } from './mobile/mobile.module';
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 import { CookieService } from 'ngx-cookie-service';
+import { HttpClientModule } from '@angular/common/http';
 
 @NgModule({
   declarations: [
@@ -17,6 +18,7 @@ import { CookieService } from 'ngx-cookie-service';
     BrowserModule,
     AppRoutingModule,
     DesktopModule,
+    HttpClientModule,
     MobileModule,
     NavigationModule,
     NgbModule
