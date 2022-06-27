@@ -38,7 +38,7 @@ export class SettingsTaskbarComponent implements OnInit {
         this.radius = this.startRadius;
       }
   }, 0);
-    
+
   }
 
   set radius(r: number) {
@@ -83,10 +83,7 @@ export class SettingsTaskbarComponent implements OnInit {
   }
 
   calculationAllowed() {
-    if ((this.radius > 0 || this.walkTime) && this.startPointSet) {
-      return true;
-    }
-    return false;
+    return (this.radius > 0 || this.walkTime) && this.startPointSet;
   }
 
   calculate(){
@@ -119,4 +116,7 @@ export class SettingsTaskbarComponent implements OnInit {
     this.closeButton.emit();
   }
 
+  refreshSights() {
+
+  }
 }

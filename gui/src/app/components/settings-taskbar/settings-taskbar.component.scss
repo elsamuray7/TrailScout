@@ -4,12 +4,16 @@
   overflow-x: hidden;
 }
 
-.btn {
+.btn-lg {
   margin: 30px !important;
 }
-
-.buttons {
-  align-items: center;
+#radiusInput {
+  display: inline-block;
+  width: 70%;
+}
+#refresh {
+  margin-top: -5px;
+  width: 30%;
 }
 
 .inputs {
