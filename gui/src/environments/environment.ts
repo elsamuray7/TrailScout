@@ -7,7 +7,7 @@ export const environment = {
   cookieLocation: 'location',
   cookieRadius: 'radius',
   pathToSightsJson: '../../sights.json',
-  backendUrl: 'http://localhost:8081'
+  backendUrl: 'http://localhost:8080'
 };
 
 /*
