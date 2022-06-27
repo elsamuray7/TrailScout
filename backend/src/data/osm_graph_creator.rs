@@ -5,6 +5,7 @@ use std::fs::File;
 use std::io;
 use std::io::{BufRead, BufReader, LineWriter, Write};
 use std::num::{ParseFloatError, ParseIntError};
+use log::{info,trace};
 use osmpbf::{ElementReader, Element, Node};
 use crate::data::graph::{calc_dist, Category, Edge, Node as GraphNode, Sight};
 
@@ -19,8 +20,11 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
     let mut dense_count = 0;
     let mut relation_count = 0;
 
+    let mut progress_counter = 0;
+
     let mut osm_id_to_node_id: BTreeMap<usize, usize> = BTreeMap::new();
 
+    info!("Start reading the PBF file!");
     reader.for_each(|element| {
         if let Element::Node(n) = element {
             // TODO if no tags corrects tags for category + category enum
@@ -187,8 +191,13 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
         } else if let Element::Relation(_) = element {
             relation_count += 1;
         }
+        if progress_counter % 40000 == 0 {
+            trace!("finished processing {} elements", progress_counter);
+        }
+        progress_counter += 1;
         //println!("nodes {} ways {} denses {} relations {}", node_count, way_count, dense_count, relation_count);
     })?;
+    info!("Finished reading PBF file!");
     edges.sort_unstable_by(|e1, e2| {
         let id1 = e1.src;
         let id2 = e2.src;
