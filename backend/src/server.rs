@@ -5,7 +5,7 @@ use actix_files;
 use chrono::{DateTime, Utc, NaiveTime};
 use serde::Deserialize;
 use serde_json::json;
-use std::{path::PathBuf};
+use std::{env, path::PathBuf};
 use std::any::Any;
 use std::borrow::Borrow;
 use std::str;
@@ -28,10 +28,11 @@ struct AppState {
 
 
 //Deserialization of config
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct Config {
     ip: String,
     port: u16,
+    log_level: String,
     graph_file_path : String,
 
 }
@@ -41,7 +42,7 @@ fn get_config() -> Config {
 
     let data = fs::read_to_string(CONFIG_PATH).expect("Unable to read file");
     let config: Config = serde_json::from_str(&data).expect("Unable to parse");
-    println!("Read config: IP {}, Port {}", config.ip, config.port);
+    log::info!("Read config:\n{:#?}", &config);
 
     return config;
 }
@@ -106,6 +107,11 @@ async fn post_route(request:  web::Json<route_provider::RouteProviderReq>, data:
 #[actix_web::main]
 async fn main() -> std::io::Result<()> { 
     let config: Config = get_config();
+
+    // Initialize logger
+    env::set_var("RUST_LOG", &config.log_level);
+    env::set_var("RUST_BACKTRACE", "1");
+    env_logger::init();
 
     //TODO fix state - Arc RWlock?
 
