@@ -7,10 +7,14 @@ import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 })
 export class NavigationTaskbarComponent implements OnInit {
 
-  @Input() height: number = 50;
   @Output() startEvent = new EventEmitter;
   @Output() mainEvent = new EventEmitter;
 
+  themes: String[] = [
+    "Cyborg",
+    "Cosmo",
+    "Flatly"
+  ]
   constructor() { }
 
   ngOnInit(): void {
@@ -24,4 +28,8 @@ export class NavigationTaskbarComponent implements OnInit {
     this.mainEvent.emit();
   }
 
+  changeTheme(theme: String) {
+    console.log('changing theme to:' + theme);
+
+  }
 }
