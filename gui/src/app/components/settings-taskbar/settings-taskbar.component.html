@@ -1,8 +1,8 @@
 <div class="card text-white border-primary mb-3">
     <div class="row">
         <div class="inputs">
-            <ngb-accordion #acc="ngbAccordion" [closeOthers]="true" activeIds="radius">
-                <ngb-panel id="radius" [title]="radius > 0 ? 'Radius: ' + radius + 'km' : 'Radius'" [disabled]="!startPointSet" 
+            <ngb-accordion #acc="ngbAccordion" [closeOthers]="true" activeIds="radius" [destroyOnHide]="false">
+                <ngb-panel id="radius" [title]="radius > 0 ? 'Radius: ' + radius + 'km' : 'Radius'" [disabled]="!startPointSet"
                     [class.disabled]="!startPointSet">
                     <ng-template class="row" ngbPanelContent>
                         <input mbdInput type="number" placeholder="Enter radius in km..." class="form-control"
