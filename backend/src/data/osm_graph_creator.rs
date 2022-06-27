@@ -198,6 +198,15 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
         //println!("nodes {} ways {} denses {} relations {}", node_count, way_count, dense_count, relation_count);
     })?;
     info!("Finished reading PBF file!");
+    edges.sort_unstable_by(|e1, e2| {
+        let id1 = e1.src;
+        let id2 = e2.src;
+        id1.cmp(&id2).then_with(||{
+            let id1 = e1.tgt;
+            let id2 = e2.tgt;
+            id1.cmp(&id2)
+        })
+    });
     Ok(())
 }
 
