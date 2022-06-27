@@ -1,6 +1,8 @@
 import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { NgbTimeStruct } from '@ng-bootstrap/ng-bootstrap';
 import { Settings, Sight, SightsPrios, TagCheckboxResponse } from 'src/app/types.utils';
+import { SightsServiceService } from '../../services/sights-service.service';
+import { CookieHandlerService } from '../../services/cookie-handler.service';
 
 @Component({
   selector: 'app-settings-taskbar',
@@ -26,7 +28,8 @@ export class SettingsTaskbarComponent implements OnInit {
   private currentDate: Date;
   private selectedSights: Map<string, number> = new Map<string, number>();
 
-  constructor() {
+  constructor(private sightsService: SightsServiceService,
+              private cookieService: CookieHandlerService) {
     this.currentDate = new Date();
     this._startTime = {hour: this.currentDate.getHours(), minute: this.currentDate.getMinutes(), second: 0};
    }
@@ -117,6 +120,11 @@ export class SettingsTaskbarComponent implements OnInit {
   }
 
   refreshSights() {
-
+    const startCookie = this.cookieService.getLocationCookie();
+    if (startCookie.value !== '' && this.radius > 0) {
+      const val = startCookie.value as string;
+      const coords = JSON.parse(val);
+      this.sightsService.getSights(coords, this.radius);
+    }
   }
 }

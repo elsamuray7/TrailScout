@@ -26,7 +26,7 @@ export class CookieHandlerService {
   }
 
   setLocationCookie(latlng: L.LatLng) {
-    const latlngString: string = latlng.toString();
+    const latlngString: string = JSON.stringify(latlng)
     this.cookieService.set(environment.cookieLocation, latlngString)
   }
 

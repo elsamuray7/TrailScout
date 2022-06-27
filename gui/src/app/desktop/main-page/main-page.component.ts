@@ -86,8 +86,8 @@ export class MainPageComponent implements OnInit {
 
   radius?: number;
   constructor(
-    private cookieService: CookieHandlerService, 
-    private offcanvasService: NgbOffcanvas) { 
+    private cookieService: CookieHandlerService,
+    private offcanvasService: NgbOffcanvas) {
 
     this.sights = this.mapData();
 
@@ -101,8 +101,8 @@ export class MainPageComponent implements OnInit {
     const startCookie = this.cookieService.getLocationCookie();
     if (startCookie.value !== '') {
       const val = startCookie.value as string;
-      const coords = val.substring(val.indexOf('(') + 1, val.indexOf(')')).split(',');
-      this.markerSet(new L.LatLng(coords[0] as any, coords[1] as any))
+      const coords = JSON.parse(val);
+      this.markerSet(new L.LatLng(coords["lat"] as any, coords["lng"] as any))
     }
 
     const radiusCookie = this.cookieService.getRadiusCookie();
@@ -112,7 +112,7 @@ export class MainPageComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    
+
   }
 
   getSettings(result: Settings) {
