@@ -9,17 +9,10 @@
 
 #settings {
     position:absolute;
-    font-size: 3vw;
     top: 44vh;
     margin-left: 10px;
     left: 0;
     z-index: 1;
-    background-color: whitesmoke;
-}
-
-.bi:hover {
-    cursor: pointer;
-    background-color: greenyellow !important;
 }
 
 #container {
@@ -28,9 +21,6 @@
     height: 100%;
 }
 
-.btn {
-    width: fit-content;
-}
 .disabled {
     color:gray;
     cursor: not-allowed !important;

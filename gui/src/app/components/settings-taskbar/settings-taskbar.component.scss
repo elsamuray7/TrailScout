@@ -1,45 +1,15 @@
-.taskbar {
-  background-color: #636975;
-  height: 100vh !important;
-  overflow-y: auto;
+.card {
+  height: 100vh;
+  overflow-y: hidden;
   overflow-x: hidden;
 }
 
-#setting-btn {
-  margin: 30px !important;
-}
-
 .btn {
-  font-size: 1vw !important;
-  padding: 10px !important;
+  margin: 30px !important;
 }
 
 .buttons {
   align-items: center;
-}
-
-.calc {
-  border: none;
-  background-color: greenyellow;
-  cursor: pointer;
-}
-
-/* On mouse-over */
-.calc:hover {
-  background: #eee;
-}
-
-.default {
-  color: black;
-}
-
-.btndisabled {
-  border: none;
-  background-color: inherit;
-  cursor: not-allowed;
-  color: gray;
-  font-size: 1vw !important;
-  padding: 10px !important;
 }
 
 .inputs {
@@ -53,14 +23,3 @@
     max-height: 70vh !important;
     overflow: auto !important;
 }
-
-.title {
-  font-size: 1.3vw;
-  font-style: bold;
-}
-.close {
-  background-color: whitesmoke;
-  float: right;
-  margin: 30px;
-}
-
