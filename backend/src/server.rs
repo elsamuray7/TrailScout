@@ -116,6 +116,13 @@ async fn main() -> std::io::Result<()> {
     //let rw_lock_graph = Arc::new(RwLock::new(graph_result));
 
 
+    let graph = Graph::parse_from_file(&config.graph_file_path).expect("Error parsing graph from file");
+    log::info!("Parsed graph: {}", &config.graph_file_path);
+    let data = web::Data::new(AppState {
+        graph,
+        //rw_lock_graph : Arc::new(RwLock::new(Graph::new())),
+    });
+
     //move
     HttpServer::new(move|| {
         App::new()
@@ -124,10 +131,7 @@ async fn main() -> std::io::Result<()> {
             .service(actix_files::Files::new("/static", "../../gui/dist/").show_files_listing())
             .service(actix_files::Files::new("/assets", "../../gui/dist/assets").show_files_listing())
             .default_service(web::get().to(index))
-            .app_data(web::Data::new(AppState {
-                graph: Graph::parse_from_file(&config.graph_file_path).expect("Error parsing graph from file"),
-                //rw_lock_graph : Arc::new(RwLock::new(Graph::new())),
-            }))
+            .app_data(data.clone())
 
     })
     .bind((config.ip, config.port))?
