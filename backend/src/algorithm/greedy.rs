@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, HashSet};
 use chrono::{DateTime, Utc};
 use crate::data::graph::{Category, Graph, Node, Sight};
 use itertools::Itertools;
@@ -18,10 +18,10 @@ fn compute_scores(sights: &HashMap<usize, &Sight>, user_prefs: UserPreferences) 
         scores.insert(sight.id, sight.pref);
     }
     for category in &user_prefs.categories {
-        let category_enum = category.name.parse::<Category>()
+        let _category_enum = category.name.parse::<Category>()
             .unwrap_or(Category::Other);
         sights.iter()
-            .filter(|(_, sight)| matches!(&sight.category, category_enum))
+            .filter(|(_, sight)| matches!(&sight.category, _category_enum))
             .for_each(|(&sight_id, _)| {
                 scores.entry(sight_id).or_insert(category.pref);
             });
@@ -78,7 +78,6 @@ impl<'a> Algorithm<'a> for GreedyAlgorithm<'a> {
                  .map(|edge| (self.graph.get_node(edge.tgt), edge.dist))
                  .collect::<Vec<(&Node, usize)>>();
 
-         let root = self.graph.get_node(self.root_id);
          let mut route: Route = vec![];
          let mut time_budget_left = (self.end_time.timestamp() - self.start_time.timestamp()) as usize;
          let mut sights_left: HashSet<_> = self.sights.keys().map(usize::to_owned).collect();
