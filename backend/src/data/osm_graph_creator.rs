@@ -1,17 +1,69 @@
 use std::any::Any;
 use std::collections::BTreeMap;
 use std::fmt::Formatter;
+use std::{fs, io};
 use std::fs::File;
-use std::io;
-use std::io::{BufRead, BufReader, LineWriter, Write};
+use std::io::{LineWriter, Write};
 use std::num::{ParseFloatError, ParseIntError};
 use osmpbf::{ElementReader, Element, Node};
-use crate::data::graph::{calc_dist, Category, Edge, Node as GraphNode, Sight};
+use serde::Deserialize;
+use crate::data::graph::{calc_dist, Category, Edge, get_nearest_node, Node as GraphNode, Sight};
+
+const SIGHTS_CONFIG_PATH :&str = "./sights_config.json";
+const EDGE_CONFIG_PATH :&str = "./edge_type_config.json";
+
+//Deserialization of sights_config
+#[derive(Deserialize)]
+struct SightsConfig {
+    category_tag_map: Vec<CategoryTagMap>
+}
+
+#[derive(Deserialize)]
+struct CategoryTagMap {
+    category: String,
+    tags: Vec<Tag>
+}
+
+#[derive(Deserialize)]
+struct Tag {
+    key: String,
+    value: String
+}
+
+//Deserialization of edge_type_config
+#[derive(Deserialize)]
+struct EdgeTypeConfig {
+    edge_type_tag_map: Vec<EdgeTypeMap>
+}
+
+#[derive(Deserialize)]
+struct EdgeTypeMap {
+    edge_type: String,
+    tag: Tag
+}
+
+//read config at SIGHTS_CONFIG_PATH and return it
+fn get_sights_config() -> SightsConfig {
+    let data = fs::read_to_string(SIGHTS_CONFIG_PATH).expect("Unable to read file");
+    let sights_config: SightsConfig = serde_json::from_str(&data).expect("Unable to parse");
+    return sights_config;
+}
+
+//read config at EDGE_CONFIG_PATH and return it
+fn get_edge_type_config() -> EdgeTypeConfig {
+    let data = fs::read_to_string(EDGE_CONFIG_PATH).expect("Unable to read file");
+    let edge_type_config: EdgeTypeConfig = serde_json::from_str(&data).expect("Unable to parse");
+    return edge_type_config;
+}
+
 
 pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges: &mut Vec<Edge>, sights: &mut Vec<Sight>) -> Result<(), io::Error> {
     let mut num_nodes: usize = 0;
     let mut num_edges: usize = 0;
-    //let mut num_sights: usize = 0;
+    let mut num_sights: usize = 0;
+
+    let sight_config = get_sights_config();
+    //let edge_type_config = get_edge_type_config();
 
     let reader = ElementReader::from_path(osmpbf_file_path)?;
     let mut node_count = 0;
@@ -20,6 +72,7 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
     let mut relation_count = 0;
 
     let mut osm_id_to_node_id: BTreeMap<usize, usize> = BTreeMap::new();
+    let mut is_street_node: BTreeMap<usize, bool> = BTreeMap::new(); // TODO when parsing ways mark street ndoes, filter nodes that are neither street nodes nor sight nodes
 
     reader.for_each(|element| {
         if let Element::Node(n) = element {
@@ -65,33 +118,63 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
 
              */
 
-            let mut node = GraphNode {
-                osm_id: n.id() as usize,
-                id: num_nodes,
-                lat: n.lat(),
-                lon: n.lon(),
-                //info: "".to_string()
-            };
-            osm_id_to_node_id.entry(node.osm_id)
-                .or_insert(num_nodes);
-            nodes.push(node);
-            num_nodes += 1;
-            node_count += 1;
-
-
-            /*
+            let mut is_sight = false;
             for (key, value) in n.tags() {
+                /*
                 node.info.push_str("key: (");
                 node.info.push_str(key);
                 node.info.push_str(") value: (");
                 node.info.push_str(value);
                 node.info.push_str(")\n");
+
+                 */
+                for cat_tag_map in &sight_config.category_tag_map {
+                    for tag in &cat_tag_map.tags {
+                        if (key.eq(&tag.key)) {
+                            if (value.eq(&tag.value)) {
+                                is_sight = true;
+                                let mut sight = Sight {
+                                    node_id: num_nodes, // TODO change to nearest node
+                                    lat: n.lat(),
+                                    lon: n.lon(),
+                                    category: cat_tag_map.category.parse::<Category>().unwrap(),
+                                };
+                                sights.push(sight);
+                                num_sights += 1;
+
+                                let mut node = GraphNode {
+                                    osm_id: n.id() as usize,
+                                    id: num_nodes,
+                                    lat: n.lat(),
+                                    lon: n.lon(),
+                                    info: "".to_string()
+                                };
+
+                                osm_id_to_node_id.entry(node.osm_id)
+                                    .or_insert(num_nodes);
+                                nodes.push(node);
+                                num_nodes += 1;
+                                node_count += 1;
+                            }
+                        }
+                    }
+                }
             }
+            if (!is_sight) {
+                let mut node = GraphNode {
+                    osm_id: n.id() as usize,
+                    id: num_nodes,
+                    lat: n.lat(),
+                    lon: n.lon(),
+                    info: "".to_string()
+                };
 
-             */
-
-
-
+                osm_id_to_node_id.entry(node.osm_id)
+                    .or_insert(num_nodes);
+                nodes.push(node);
+                num_nodes += 1;
+                node_count += 1;
+            }
         } else if let Element::DenseNode(n) = element {
             // TODO if no tags corrects tags for category + category enum + compare node ids from denseNode and Node !!!
             /*
@@ -135,20 +218,65 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
 
              */
 
-            let mut node = GraphNode {
-                osm_id: n.id() as usize,
-                id: num_nodes,
-                lat: n.lat(),
-                lon: n.lon(),
-                //info: "".to_string()
-            };
-            osm_id_to_node_id.entry(node.osm_id)
-                .or_insert(num_nodes);
-            nodes.push(node);
-            num_nodes += 1;
-            dense_count += 1;
+            let mut is_sight = false;
+            for (key, value) in n.tags() {
+                /*
+                node.info.push_str("key: (");
+                node.info.push_str(key);
+                node.info.push_str(") value: (");
+                node.info.push_str(value);
+                node.info.push_str(")\n");
+
+                 */
+                for cat_tag_map in &sight_config.category_tag_map {
+                    for tag in &cat_tag_map.tags {
+                        if (key.eq(&tag.key)) {
+                            if (value.eq(&tag.value)) {
+                                is_sight = true;
+                                let mut sight = Sight {
+                                    node_id: num_nodes, // TODO change to nearest node
+                                    lat: n.lat(),
+                                    lon: n.lon(),
+                                    category: cat_tag_map.category.parse::<Category>().unwrap(),
+                                };
+                                sights.push(sight);
+                                num_sights += 1;
+
+                                let mut node = GraphNode {
+                                    osm_id: n.id() as usize,
+                                    id: num_nodes,
+                                    lat: n.lat(),
+                                    lon: n.lon(),
+                                    info: "".to_string()
+                                };
+
+                                osm_id_to_node_id.entry(node.osm_id)
+                                    .or_insert(num_nodes);
+                                nodes.push(node);
+                                num_nodes += 1;
+                                node_count += 1;
+                            }
+                        }
+                    }
+                }
+            }
+            if (!is_sight) {
+                let mut node = GraphNode {
+                    osm_id: n.id() as usize,
+                    id: num_nodes,
+                    lat: n.lat(),
+                    lon: n.lon(),
+                    info: "".to_string()
+                };
+
+                osm_id_to_node_id.entry(node.osm_id)
+                    .or_insert(num_nodes);
+                nodes.push(node);
+                num_nodes += 1;
+                node_count += 1;
+            }
         } else if let Element::Way(w) = element {
-            // TODO way id; check way tags
+            // TODO way id; check way tags for edge type
             let mut way_ref_iter = w.refs();
             let mut osm_src = way_ref_iter.next().unwrap() as usize;
             for node_id  in way_ref_iter {
@@ -161,7 +289,7 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
                     tgt: *osm_id_to_node_id.get(&osm_tgt).unwrap(),
                     dist: 0
                 };
-                edge.dist = calc_dist(0.0, 0.0, 0.0, 0.0);
+                // TODO set edge_type
                 //let srcNode = &nodes[edge.src];
                 //let tgtNode = &nodes[edge.tgt];
                 //let dist = calc_dist(srcNode.lat, srcNode.lon), tgt.;
@@ -223,11 +351,9 @@ pub fn write_graph_file(graph_file_path_out: &str, nodes: &mut Vec<GraphNode>, e
     for node in &*nodes {
         file.write((format!("{} {} {}\n", node.id, node.lat, node.lon).as_bytes()))?;
     }
-    /*
     for sight in &*sights {
-        file.write((format!("{} {} {}\n", node.id, node.lat, node.lon).as_bytes()))?;
+        file.write((format!("{} {} {} {}\n", sight.node_id, sight.lat, sight.lon, sight.category.to_string()).as_bytes()))?;
     }
-     */
     for edge in &*edges {
         file.write((format!("{} {} {}\n", edge.src, edge.tgt, edge.dist)).as_bytes())?;
     }
