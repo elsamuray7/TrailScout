@@ -40,30 +40,60 @@ pub struct UserPreferences {
 }
 
 /// A sector within a route
-///
-/// # Attributes
-/// * `sights` - A vector containing the sights on this sector in the order in which they occur in
-/// `nodes` (may contain between 1 and 2 sights)
-/// * `nodes` - A vector containing a sequence of nodes from the sectors source to its target node
-/// (both inclusive), where at least one of them is a sight
+#[derive(Serialize, Debug)]
+#[serde(tag = "type")]
+pub enum RouteSector<'a> {
+    /// The first sector in a route
+    Start(Sector<'a>),
+    /// An intermediate sector that has a predecessor and a successor
+    Intermediate(Sector<'a>),
+    /// The last sector in a route
+    End(Sector<'a>),
+}
+
+/// Concrete representation of a route sector
 #[derive(Serialize, Debug)]
 pub struct Sector<'a> {
-    sights: Vec<&'a Sight>,
+    time_budget: usize,
+    sight: Option<&'a Sight>,
     nodes: Vec<&'a Node>,
 }
 
 impl<'a> Sector<'a> {
-    /// Creates a new sector from given `sights` and `nodes`
-    fn new(sights: Vec<&'a Sight>, nodes: Vec<&'a Node>) -> Self {
+    /// Creates a new route sector
+    ///
+    /// # Arguments
+    /// * `time_budget` - The required time budget in seconds to travel from the sectors source
+    /// to its target node
+    /// * `nodes` - A vector containing a sequence of nodes from the sectors source to its
+    /// target node (both inclusive)
+    fn new(time_budget: usize, nodes: Vec<&'a Node>) -> Self {
         Self {
-            sights,
+            time_budget,
+            sight: None,
+            nodes,
+        }
+    }
+
+    /// Creates a new route sector with a target sight
+    ///
+    /// # Arguments
+    /// * `time_budget` - The required time budget in seconds to travel from the sectors source
+    /// to its target node
+    /// * `sight` - The target sight of this sector
+    /// * `nodes` - A vector containing a sequence of nodes from the sectors source to its
+    /// target node (both inclusive)
+    fn with_sight(time_budget: usize, sight: &'a Sight, nodes: Vec<&'a Node>) -> Self {
+        Self {
+            time_budget,
+            sight: Some(sight),
             nodes,
         }
     }
 }
 
 /// Type alias for a vector of route sectors that form a contiguous route
-pub type Route<'a> = Vec<Sector<'a>>;
+pub type Route<'a> = Vec<RouteSector<'a>>;
 
 /// Algorithm trait to be implemented by concrete algorithm implementations
 pub trait Algorithm<'a> {

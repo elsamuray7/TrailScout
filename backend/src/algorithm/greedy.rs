@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 use crate::data::graph::{Category, Graph, Node, Sight};
 use itertools::Itertools;
 use pathfinding::prelude::*;
-use crate::algorithm::{Algorithm, Area, Route, ScoreMap, Sector, UserPreferences};
+use crate::algorithm::{Algorithm, Area, Route, RouteSector, ScoreMap, Sector, UserPreferences};
 
 /// Compute scores for tourist attractions based on user preferences for categories or specific
 /// tourist attractions, respectively
@@ -84,12 +84,6 @@ impl<'a> Algorithm<'a> for GreedyAlgorithm<'a> {
          let mut sights_left: HashSet<_> = self.sights.keys().map(usize::to_owned).collect();
          let mut curr_node_id = self.root_id;
          loop {
-             // if current node is sight, add it to sights on current sector
-             let mut sector_sights = match self.sights.get(&curr_node_id) {
-                 Some(&sight) => vec![sight],
-                 None => vec![]
-             };
-
              // calculate distances from curr_node to all sight nodes
              let result_to_sights: HashMap<&Node, (&Node, usize)> =
                  dijkstra_all(&self.graph.get_node(curr_node_id),
@@ -131,11 +125,17 @@ impl<'a> Algorithm<'a> for GreedyAlgorithm<'a> {
                              log::debug!("Adding sight to route");
 
                              // add sector containing sight and all intermediate nodes to route
-                             sector_sights.push(self.sights[&sight_node.id]);
                              let sector_nodes = build_path(&sight_node, &result_to_sights);
                              log::debug!("Appending sector to route:\n{:?}", &sector_nodes);
 
-                             route.push(Sector::new(sector_sights, sector_nodes));
+                             let sector = Sector::with_sight(secs_needed_to_sight as usize,
+                                                             self.sights[&sight_node.id],
+                                                             sector_nodes);
+                             route.push(if curr_node_id == self.root_id {
+                                 RouteSector::Start(sector)
+                             } else {
+                                 RouteSector::Intermediate(sector)
+                             });
 
                              time_budget_left -= secs_total;
                              sights_left.remove(&sight_node.id);
@@ -157,11 +157,11 @@ impl<'a> Algorithm<'a> for GreedyAlgorithm<'a> {
                              |&node| node.id == self.root_id)
                         .expect("No path from last visited sight to root");
 
-                let sector_sights = vec![self.sights[&curr_node_id]];
-                let (sector_nodes, _) = result_to_root;
+                let (sector_nodes, dist_to_root) = result_to_root;
+                let secs_to_root = (dist_to_root as f64 / self.walking_speed_mps) as usize;
                 log::debug!("Appending sector to route:\n{:?}", &sector_nodes);
 
-                route.push(Sector::new(sector_sights, sector_nodes));
+                route.push(RouteSector::End(Sector::new(secs_to_root, sector_nodes)));
                 break;
             }
         }
