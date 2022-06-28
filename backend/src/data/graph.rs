@@ -47,7 +47,7 @@ pub enum Category {
 }
 
 /// A graph node located at a specific coordinate
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct Node {
     pub osm_id: usize,
     pub id: usize,
@@ -87,7 +87,7 @@ pub struct Edge {
 pub type Tags = Vec<(String, String)>; // TODO are tags needed or just categories
 
 /// A sight node mapped on its nearest node
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct Sight {
     pub node_id: usize,
     pub lat: f64,

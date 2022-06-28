@@ -9,14 +9,7 @@ use serde::{Serialize, Deserialize};
 /// attractions
 type ScoreMap = HashMap<usize, usize>;
 
-/// Geographic coordinate
-#[derive(Serialize, Debug)]
-pub struct Coordinate {
-    lat: f64,
-    lon: f64,
-}
-
-/// Circular area around a coordinate
+/// Circular area around a geographic coordinate
 #[derive(Deserialize)]
 pub struct Area {
     lat: f64,
@@ -46,8 +39,31 @@ pub struct UserPreferences {
     sights: Vec<SightPref>,
 }
 
-/// Type alias for a sequence of coordinates that form a contiguous route
-pub type Route = Vec<Coordinate>;
+/// A sector within a route
+///
+/// # Attributes
+/// * `sights` - A vector containing the sights on this sector in the order in which they occur in
+/// `nodes` (may contain between 1 and 2 sights)
+/// * `nodes` - A vector containing a sequence of nodes from the sectors source to its target node
+/// (both inclusive), where at least one of them is a sight
+#[derive(Serialize, Debug)]
+pub struct Sector<'a> {
+    sights: Vec<&'a Sight>,
+    nodes: Vec<&'a Node>,
+}
+
+impl<'a> Sector<'a> {
+    /// Creates a new sector from given `sights` and `nodes`
+    fn new(sights: Vec<&'a Sight>, nodes: Vec<&'a Node>) -> Self {
+        Self {
+            sights,
+            nodes,
+        }
+    }
+}
+
+/// Type alias for a vector of route sectors that form a contiguous route
+pub type Route<'a> = Vec<Sector<'a>>;
 
 /// Algorithm trait to be implemented by concrete algorithm implementations
 pub trait Algorithm<'a> {

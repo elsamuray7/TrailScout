@@ -80,7 +80,7 @@ async fn post_sights(request:  web::Json<SightsRequest>, data: web::Data<AppStat
 
 ///Responds to post request asking for routing
 #[post("/route")]
-async fn post_route(request:  web::Json<route_provider::RouteProviderReq>, data: web::Data<AppState>) -> Result<impl Responder> {
+async fn post_route(request:  web::Json<route_provider::RouteProviderReq>, data: web::Data<AppState>) -> impl Responder {
 
     println!("Placeholder Route Request");
     let route_request = request.into_inner();
@@ -98,7 +98,8 @@ async fn post_route(request:  web::Json<route_provider::RouteProviderReq>, data:
     let route = algo.compute_route();
     let response = route_provider::RouteProviderRes{route};
 
-    Ok(web::Json(response))
+    let mut res = HttpResponse::Ok();
+    res.json(response)
 }
 
 

@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 use crate::data::graph::{Category, Graph, Node, Sight};
 use itertools::Itertools;
 use pathfinding::prelude::*;
-use crate::algorithm::{Algorithm, Area, Coordinate, Route, ScoreMap, UserPreferences};
+use crate::algorithm::{Algorithm, Area, Route, ScoreMap, Sector, UserPreferences};
 
 /// Compute scores for tourist attractions based on user preferences for categories or specific
 /// tourist attractions, respectively
@@ -79,11 +79,17 @@ impl<'a> Algorithm<'a> for GreedyAlgorithm<'a> {
                  .collect::<Vec<(&Node, usize)>>();
 
          let root = self.graph.get_node(self.root_id);
-         let mut route: Route = vec![Coordinate { lat: root.lat, lon: root.lon }];
+         let mut route: Route = vec![];
          let mut time_budget_left = (self.end_time.timestamp() - self.start_time.timestamp()) as usize;
          let mut sights_left = self.sights.clone();
          let mut curr_node_id = self.root_id;
          loop {
+             // if current node is sight, add it to sights on current sector
+             let mut sector_sights = match self.sights.get(&curr_node_id) {
+                 Some(&sight) => vec![sight],
+                 None => vec![]
+             };
+
              // calculate distances from curr_node to all sight nodes
              let result_to_sights: HashMap<&Node, (&Node, usize)> =
                  dijkstra_all(&self.graph.get_node(curr_node_id),
@@ -104,7 +110,7 @@ impl<'a> Algorithm<'a> for GreedyAlgorithm<'a> {
                      (score1 / dist1.max(&1)).cmp(&(score2 / dist2.max(&2)))
                  })
                  .collect();
-             log::debug!("Sorted sights:\n{:#?}", &sorted_dist_vec);
+             log::debug!("Sorted sights:\n{:?}", &sorted_dist_vec);
 
              // for each sight node, check whether sight can be included in route without violating time budget
              let len_route_before = route.len();
@@ -125,20 +131,12 @@ impl<'a> Algorithm<'a> for GreedyAlgorithm<'a> {
                          if secs_total <= time_budget_left {
                              log::debug!("Adding sight to route");
 
-                             // add sight and all intermediate nodes to route
-                             let mut new_route_tail =
-                                 VecDeque::from([Coordinate {lat: sight_node.lat, lon: sight_node.lon}]);
-                             let mut curr_pred = sight_node;
-                             while curr_pred.id != curr_node_id {
-                                 curr_pred = result_to_sights[&curr_pred].0;
-                                 new_route_tail.push_front(Coordinate { lat: curr_pred.lat, lon: curr_pred.lon });
-                             }
-                             log::debug!("Append coordinates to route:\n{:#?}", &new_route_tail);
+                             // add sector containing sight and all intermediate nodes to route
+                             sector_sights.push(self.sights[&sight_node.id]);
+                             let sector_nodes = build_path(&sight_node, &result_to_sights);
+                             log::debug!("Appending sector to route:\n{:?}", &sector_nodes);
 
-                             route.reserve(new_route_tail.len());
-                             for coord in new_route_tail {
-                                 route.push(coord);
-                             }
+                             route.push(Sector::new(sector_sights, sector_nodes));
 
                              time_budget_left -= secs_total;
                              sights_left.remove(&sight_node.id);
@@ -159,14 +157,12 @@ impl<'a> Algorithm<'a> for GreedyAlgorithm<'a> {
                              |&node| successors(node),
                              |&node| node.id == self.root_id)
                         .expect("No path from last visited sight to root");
-                let (new_route_tail, _) = result_to_root;
-                let new_route_tail = &new_route_tail[1..];
-                log::debug!("Appending coordinates to route:\n{:#?}", new_route_tail);
 
-                route.reserve(new_route_tail.len());
-                for &elem in new_route_tail {
-                    route.push(Coordinate { lat: elem.lat, lon: elem.lon });
-                }
+                let sector_sights = vec![self.sights[&curr_node_id]];
+                let (sector_nodes, _) = result_to_root;
+                log::debug!("Appending sector to route:\n{:?}", &sector_nodes);
+
+                route.push(Sector::new(sector_sights, sector_nodes));
                 break;
             }
         }
