@@ -116,8 +116,4 @@ pub trait Algorithm<'a> {
     /// Compute a route on a given graph that visits tourist attractions in a given area based on
     /// user preferences for these tourist attractions
     fn compute_route(&self) -> Route;
-
-    /// Try to map a node to its sight instance.
-    /// Returns a `Some` containing the sight instance or `None` if the node is not a sight.
-    fn map_node_to_sight(&self, node: &Node) -> Option<&Sight>;
 }

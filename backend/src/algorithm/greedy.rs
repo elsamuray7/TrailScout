@@ -167,10 +167,6 @@ impl<'a> Algorithm<'a> for GreedyAlgorithm<'a> {
 
         route
     }
-
-    fn map_node_to_sight(&self, node: &Node) -> Option<&Sight> {
-        todo!()
-    }
 }
 
 #[cfg(test)]
