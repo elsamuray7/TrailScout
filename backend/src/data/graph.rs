@@ -49,6 +49,26 @@ pub enum Category {
     Other
 }
 
+#[derive(Deserialize_enum_str, Serialize_enum_str, PartialEq, Debug)]
+#[serde(rename_all = "PascalCase")]
+pub enum EdgeType {
+    Unclassified, // Öffentlich befahrbare Nebenstraßen
+    Residential, // Tempo-30-Zonen
+    Service, // Privatgelände)
+    LivingStreet, // Verkehrsberuhigter Bereich
+    Pedestrian, // Fußgängerzone
+    Track, // Wirtschafts-, Feld- oder Waldweg
+    Road, // Straße unbekannter Klassifikation)
+    Footway, // Gehweg
+    Bridleway, // Reitweg
+    Steps, // Treppen auf Fuß-/Wanderwegen
+    Corridor, // Ein Gang im Inneren eines Gebäudes
+    Path, // Wanderwege oder Trampelpfade
+    Primary, // Straßen von nationaler Bedeutung
+    Secondary, // Straßen von überregionaler Bedeutung
+    Tertiary // Straßen, die Dörfer verbinden
+}
+
 /// A graph node located at a specific coordinate
 pub struct Node {
     pub osm_id: usize,
