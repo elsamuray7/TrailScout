@@ -13,18 +13,18 @@ fn compute_scores(sights: &HashMap<usize, &Sight>, user_prefs: UserPreferences) 
     let mut scores: ScoreMap = sights.iter()
         .map(|(&sight_id, _)| (sight_id, 0_usize))
         .collect();
-    for sight in &user_prefs.sights {
-        // TODO implement check whether SightPref really corresponds to sight
-        scores.insert(sight.id, sight.pref);
-    }
     for category in &user_prefs.categories {
         let category_enum = category.name.parse::<Category>()
             .unwrap_or(Category::Other);
         sights.iter()
             .filter(|(_, sight)| matches!(&sight.category, category_enum))
             .for_each(|(&sight_id, _)| {
-                scores.entry(sight_id).or_insert(category.pref);
+                scores.insert(sight_id, category.pref);
             });
+    }
+    for sight in &user_prefs.sights {
+        // TODO implement check whether SightPref really corresponds to sight
+        scores.insert(sight.id, sight.pref);
     }
     scores
 }
