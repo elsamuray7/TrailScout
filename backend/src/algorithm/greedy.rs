@@ -1,9 +1,9 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use chrono::{DateTime, Utc};
 use crate::data::graph::{Category, Graph, Node, Sight};
 use itertools::Itertools;
 use pathfinding::prelude::*;
-use crate::algorithm::{Algorithm, Area, Coordinate, Route, ScoreMap, UserPreferences};
+use crate::algorithm::{Algorithm, Area, Route, ScoreMap, Sector, UserPreferences};
 
 /// Compute scores for tourist attractions based on user preferences for categories or specific
 /// tourist attractions, respectively
@@ -72,61 +72,75 @@ impl<'a> Algorithm<'a> for GreedyAlgorithm<'a> {
     }
 
      fn compute_route(&self) -> Route {
-        let mut curr_node_id = self.root_id;
-        let successors = |node: &Node|
-            self.graph.get_outgoing_edges_in_area(node.id, self.area.lat, self.area.lon, self.area.radius)
-                .into_iter()
-                .map(|edge| (self.graph.get_node(edge.tgt), edge.dist))
-                .collect::<Vec<(&Node, usize)>>();
+         let successors = |node: &Node|
+             self.graph.get_outgoing_edges_in_area(node.id, self.area.lat, self.area.lon, self.area.radius)
+                 .into_iter()
+                 .map(|edge| (self.graph.get_node(edge.tgt), edge.dist))
+                 .collect::<Vec<(&Node, usize)>>();
 
-        let root = self.graph.get_node(self.root_id);
-        let mut route: Route = vec![Coordinate { lat: root.lat, lon: root.lon }];
-        let mut time_budget_left = (self.end_time.timestamp() - self.start_time.timestamp()) as usize;
-        loop {
-            // calculate distances from curr_node to all sight nodes
-            let result_to_sights: HashMap<&Node, (&Node, usize)> =
-                dijkstra_all(&self.graph.get_node(curr_node_id),
-                             |&node| successors(node));
+         let root = self.graph.get_node(self.root_id);
+         let mut route: Route = vec![];
+         let mut time_budget_left = (self.end_time.timestamp() - self.start_time.timestamp()) as usize;
+         let mut sights_left: HashSet<_> = self.sights.keys().map(usize::to_owned).collect();
+         let mut curr_node_id = self.root_id;
+         loop {
+             // if current node is sight, add it to sights on current sector
+             let mut sector_sights = match self.sights.get(&curr_node_id) {
+                 Some(&sight) => vec![sight],
+                 None => vec![]
+             };
 
-            // sort sight nodes by their distance to curr_node
-            let sorted_dist_vec: Vec<_> = result_to_sights.values()
-                .filter(|(node, _)| self.sights.contains_key(&node.id))
-                .sorted_unstable_by(|(node1, dist1), (node2, dist2)| {
-                    let score1 = self.scores[&node1.id];
-                    let score2 = self.scores[&node2.id];
-                    (score1 / dist1).cmp(&(score2 / dist2))
-                })
-                .collect();
+             // calculate distances from curr_node to all sight nodes
+             let result_to_sights: HashMap<&Node, (&Node, usize)> =
+                 dijkstra_all(&self.graph.get_node(curr_node_id),
+                              |&node| successors(node));
 
-            // for each sight node, check whether sight can be included in route without violating time budget
-            let len_route_before = route.len();
-            for &(sight_node, dist) in sorted_dist_vec {
-                let secs_needed_to_sight = dist as f64 / self.walking_speed_mps;
-                let result_sight_to_root =
-                    dijkstra(&self.graph.get_node(sight_node.id),
-                             |&node| successors(node),
-                             |&node| node.id == self.root_id);
-                match result_sight_to_root {
-                    Some((_, dist_sight_to_root)) => {
-                        let secs_needed_sight_to_root = dist_sight_to_root as f64 / self.walking_speed_mps;
-                        let secs_total = (secs_needed_to_sight + secs_needed_sight_to_root) as usize + 1;
-                        if secs_total <= time_budget_left {
-                            // add sight and all intermediate nodes to route
-                            let mut new_route_tail =
-                                VecDeque::from([Coordinate {lat: sight_node.lat, lon: sight_node.lon}]);
-                            let mut curr_pred = sight_node;
-                            while curr_pred.id != curr_node_id {
-                                curr_pred = result_to_sights[&curr_pred].0;
-                                new_route_tail.push_front(Coordinate { lat: curr_pred.lat, lon: curr_pred.lon });
-                            }
-                            route.reserve(new_route_tail.len());
-                            for coord in new_route_tail {
-                                route.push(coord);
-                            }
+             // sort sight nodes by their distance to curr_node
+             let sorted_dist_vec: Vec<_> = result_to_sights.values()
+                 .filter(|(node, _)| sights_left.contains(&node.id))
+                 .sorted_unstable_by(|(node1, dist1), (node2, dist2)| {
+                     let score1 = self.scores[&node1.id];
+                     let score2 = self.scores[&node2.id];
 
-                            time_budget_left -= secs_total;
-                            curr_node_id = sight_node.id;
-                            break;
+                     log::debug!("Comparing nodes {} and {}", node1.id, node2.id);
+                     log::debug!("Node1: score: {}, distance to current position: {}", score1, dist1);
+                     log::debug!("Node2: score: {}, distance to current position: {}", score2, dist2);
+
+                     (score1 / dist1.max(&1)).cmp(&(score2 / dist2.max(&2)))
+                 })
+                 .collect();
+             log::debug!("Sorted sights:\n{:?}", &sorted_dist_vec);
+
+             // for each sight node, check whether sight can be included in route without violating time budget
+             let len_route_before = route.len();
+             for &(sight_node, dist) in sorted_dist_vec {
+                 let secs_needed_to_sight = dist as f64 / self.walking_speed_mps;
+                 let result_sight_to_root =
+                     dijkstra(&self.graph.get_node(sight_node.id),
+                              |&node| successors(node),
+                              |&node| node.id == self.root_id);
+                 match result_sight_to_root {
+                     Some((_, dist_sight_to_root)) => {
+                         let secs_needed_sight_to_root = dist_sight_to_root as f64 / self.walking_speed_mps;
+                         let secs_total = (secs_needed_to_sight + secs_needed_sight_to_root) as usize + 1;
+
+                         log::debug!("Checking sight {}: secs to include sight: {}, left time budget: {}",
+                             sight_node.id, secs_total, time_budget_left);
+
+                         if secs_total <= time_budget_left {
+                             log::debug!("Adding sight to route");
+
+                             // add sector containing sight and all intermediate nodes to route
+                             sector_sights.push(self.sights[&sight_node.id]);
+                             let sector_nodes = build_path(&sight_node, &result_to_sights);
+                             log::debug!("Appending sector to route:\n{:?}", &sector_nodes);
+
+                             route.push(Sector::new(sector_sights, sector_nodes));
+
+                             time_budget_left -= secs_total;
+                             sights_left.remove(&sight_node.id);
+                             curr_node_id = sight_node.id;
+                             break;
                         }
                     }
                     None => continue // No path from sight to root found. Continue.
@@ -135,17 +149,19 @@ impl<'a> Algorithm<'a> for GreedyAlgorithm<'a> {
 
             // check whether any sight has been included in route and if not, go back to root
             if route.len() == len_route_before {
+                log::debug!("Traveling back to root");
+
                 let result_to_root =
                     dijkstra(&self.graph.get_node(curr_node_id),
                              |&node| successors(node),
                              |&node| node.id == self.root_id)
                         .expect("No path from last visited sight to root");
-                let (new_route_tail, _) = result_to_root;
-                let new_route_tail = &new_route_tail[1..];
-                route.reserve(new_route_tail.len());
-                for &elem in new_route_tail {
-                    route.push(Coordinate { lat: elem.lat, lon: elem.lon });
-                }
+
+                let sector_sights = vec![self.sights[&curr_node_id]];
+                let (sector_nodes, _) = result_to_root;
+                log::debug!("Appending sector to route:\n{:?}", &sector_nodes);
+
+                route.push(Sector::new(sector_sights, sector_nodes));
                 break;
             }
         }
@@ -155,5 +171,35 @@ impl<'a> Algorithm<'a> for GreedyAlgorithm<'a> {
 
     fn map_node_to_sight(&self, node: &Node) -> Option<&Sight> {
         todo!()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use chrono::{DateTime, Utc};
+    use crate::algorithm::{Algorithm, Area, SightCategoryPref, UserPreferences};
+    use crate::algorithm::greedy::GreedyAlgorithm;
+    use crate::data::graph::Graph;
+
+    #[test]
+    fn test_greedy() {
+        let graph = Graph::parse_from_file("./osm_graphs/bremen-latest.fmi").unwrap();
+
+        let algo = GreedyAlgorithm::new(&graph,
+                                        DateTime::parse_from_rfc3339("1996-12-19T10:39:57-08:00").unwrap().with_timezone(&Utc),
+                                        DateTime::parse_from_rfc3339("1996-12-19T20:39:57-08:00").unwrap().with_timezone(&Utc),
+                                        7.0 / 3.6,
+                                        Area {
+                                            lat: 53.14519850000001,
+                                            lon: 8.8384274,
+                                            radius: 5.0,
+                                        },
+                                        UserPreferences {
+                                            categories: vec![SightCategoryPref{ name: "Restaurants".to_string(), pref: 5 }],
+                                            sights: vec![],
+                                        });
+        let route = algo.compute_route();
+
+        println!("Computed travel route:\n{:#?}", &route);
     }
 }
