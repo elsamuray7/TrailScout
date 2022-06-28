@@ -80,7 +80,11 @@ impl<'a> Algorithm<'a> for GreedyAlgorithm<'a> {
 
          let mut route: Route = vec![];
          let mut time_budget_left = (self.end_time.timestamp() - self.start_time.timestamp()) as usize;
-         let mut sights_left: HashSet<_> = self.sights.keys().map(usize::to_owned).collect();
+         // Get all sights that can potentially be visited
+         let mut sights_left: HashSet<_> = self.sights.keys()
+             .filter(|&sight_id| self.scores[sight_id] > 0)
+             .map(usize::to_owned)
+             .collect();
          let mut curr_node_id = self.root_id;
          loop {
              // calculate distances from curr_node to all sight nodes
