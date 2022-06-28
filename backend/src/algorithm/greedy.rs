@@ -1,4 +1,4 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use chrono::{DateTime, Utc};
 use crate::data::graph::{Category, Graph, Node, Sight};
 use itertools::Itertools;
@@ -81,7 +81,7 @@ impl<'a> Algorithm<'a> for GreedyAlgorithm<'a> {
          let root = self.graph.get_node(self.root_id);
          let mut route: Route = vec![];
          let mut time_budget_left = (self.end_time.timestamp() - self.start_time.timestamp()) as usize;
-         let mut sights_left = self.sights.clone();
+         let mut sights_left: HashSet<_> = self.sights.keys().map(usize::to_owned).collect();
          let mut curr_node_id = self.root_id;
          loop {
              // if current node is sight, add it to sights on current sector
@@ -97,8 +97,7 @@ impl<'a> Algorithm<'a> for GreedyAlgorithm<'a> {
 
              // sort sight nodes by their distance to curr_node
              let sorted_dist_vec: Vec<_> = result_to_sights.values()
-                 .filter(|(node, _)|
-                     node.id != curr_node_id && sights_left.contains_key(&node.id))
+                 .filter(|(node, _)| sights_left.contains(&node.id))
                  .sorted_unstable_by(|(node1, dist1), (node2, dist2)| {
                      let score1 = self.scores[&node1.id];
                      let score2 = self.scores[&node2.id];
@@ -178,7 +177,7 @@ impl<'a> Algorithm<'a> for GreedyAlgorithm<'a> {
 #[cfg(test)]
 mod test {
     use chrono::{DateTime, Utc};
-    use crate::algorithm::{Algorithm, Area, Coordinate, SightCategoryPref, UserPreferences};
+    use crate::algorithm::{Algorithm, Area, SightCategoryPref, UserPreferences};
     use crate::algorithm::greedy::GreedyAlgorithm;
     use crate::data::graph::Graph;
 
