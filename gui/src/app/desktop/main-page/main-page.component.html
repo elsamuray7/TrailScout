@@ -9,7 +9,8 @@
         (markerLocation)="markerSet($event)"></app-map-container>
     </div>
     
-        <ng-template #content let-offcanvas>
+    <div class="wrapper">
+        <div #collapse="ngbCollapse" [(ngbCollapse)]="isCollapsed" id="collapse" [animation]="false">
             <app-settings-taskbar 
             [sights]="sights" 
             [sightsWithPrio]="sightsWithPrio" 
@@ -17,10 +18,19 @@
             [startPointSet]="marker"
             (settings)="getSettings($event)" 
             (radiusChange)="radiusChange($event)"
-            (closeButton)="offcanvas.close('Save click')" ></app-settings-taskbar>
-        </ng-template>
+            (closeButton)="collapse.toggle()" ></app-settings-taskbar>
+        </div>
         <!-- <button class="btn btn-primary"  id="settings" (click)="open(content)">Open Settings</button> -->
-        <i class="btn btn-primary bi-chevron-right" [class.disabled]="!markerCoords" [class.bi]="markerCoords" id="settings" (click)="open(content)" ngbTooltip="Click on Map to select startpoint first" [disableTooltip]="!!markerCoords"></i>
+        <i class="btn btn-primary"  
+            [class.disabled]="!markerCoords" 
+            [class.bi]="markerCoords"
+            [class.bi-chevron-right]="isCollapsed"
+            [class.bi-chevron-left]="!isCollapsed" 
+            id="settings" 
+            (click)="collapse.toggle()"  
+            ngbTooltip="Click on Map to select startpoint first" 
+            [disableTooltip]="!!markerCoords"
+            ></i>
     
-    
+        </div>
 </div>

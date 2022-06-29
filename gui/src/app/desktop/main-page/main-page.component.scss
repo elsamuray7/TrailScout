@@ -11,14 +11,22 @@
     position:absolute;
     top: 44vh;
     margin-left: 10px;
-    left: 0;
+    float: left;
     z-index: 1;
+    font-size: 1.5vw;
 }
 
 #container {
     position: relative;
     width: 100%;
     height: 100%;
+}
+.btn {
+    width: fit-content;
+}
+
+.wrapper {
+    width: 100%;
 }
 
 .disabled {
@@ -27,4 +35,13 @@
     :hover {
         background-color: whitesmoke !important;
     }
+}
+
+.hide {
+    display: none;
+}
+
+#collapse {
+    width: 25vw;
+    float: left;
 }
