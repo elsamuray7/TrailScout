@@ -1,14 +1,11 @@
-use std::any::Any;
 use std::collections::BTreeMap;
-use std::fmt::Formatter;
 use std::{fs, io};
 use std::fs::File;
 use std::io::{LineWriter, Write};
-use std::num::{ParseFloatError, ParseIntError};
 use log::{info,trace};
-use osmpbf::{ElementReader, Element, Node};
+use osmpbf::{ElementReader, Element};
 use serde::Deserialize;
-use crate::data::graph::{calc_dist, Category, Edge, get_nearest_node, Node as GraphNode, Sight};
+use crate::data::graph::{calc_dist, Category, Edge, Node as GraphNode, Sight};
 
 const SIGHTS_CONFIG_PATH :&str = "./sights_config.json";
 const EDGE_CONFIG_PATH :&str = "./edge_type_config.json";
@@ -134,10 +131,10 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
                  */
                 for cat_tag_map in &sight_config.category_tag_map {
                     for tag in &cat_tag_map.tags {
-                        if (key.eq(&tag.key)) {
-                            if (value.eq(&tag.value)) {
+                        if key.eq(&tag.key) {
+                            if value.eq(&tag.value) {
                                 is_sight = true;
-                                let mut sight = Sight {
+                                let sight = Sight {
                                     node_id: num_nodes, // TODO change to nearest node
                                     lat: n.lat(),
                                     lon: n.lon(),
@@ -146,7 +143,7 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
                                 sights.push(sight);
                                 num_sights += 1;
 
-                                let mut node = GraphNode {
+                                let node = GraphNode {
                                     osm_id: n.id() as usize,
                                     id: num_nodes,
                                     lat: n.lat(),
@@ -164,8 +161,8 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
                     }
                 }
             }
-            if (!is_sight) {
-                let mut node = GraphNode {
+            if !is_sight {
+                let node = GraphNode {
                     osm_id: n.id() as usize,
                     id: num_nodes,
                     lat: n.lat(),
@@ -234,10 +231,10 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
                  */
                 for cat_tag_map in &sight_config.category_tag_map {
                     for tag in &cat_tag_map.tags {
-                        if (key.eq(&tag.key)) {
-                            if (value.eq(&tag.value)) {
+                        if key.eq(&tag.key) {
+                            if value.eq(&tag.value) {
                                 is_sight = true;
-                                let mut sight = Sight {
+                                let sight = Sight {
                                     node_id: num_nodes, // TODO change to nearest node
                                     lat: n.lat(),
                                     lon: n.lon(),
@@ -246,7 +243,7 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
                                 sights.push(sight);
                                 num_sights += 1;
 
-                                let mut node = GraphNode {
+                                let node = GraphNode {
                                     osm_id: n.id() as usize,
                                     id: num_nodes,
                                     lat: n.lat(),
@@ -264,8 +261,8 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
                     }
                 }
             }
-            if (!is_sight) {
-                let mut node = GraphNode {
+            if !is_sight {
+                let node = GraphNode {
                     osm_id: n.id() as usize,
                     id: num_nodes,
                     lat: n.lat(),
@@ -361,13 +358,13 @@ pub fn write_graph_file(graph_file_path_out: &str, nodes: &mut Vec<GraphNode>, e
     file.write((format!("{}\n", sights.len())).as_bytes())?;
     file.write((format!("{}\n", edges.len())).as_bytes())?;
     for node in &*nodes {
-        file.write((format!("{} {} {}\n", node.id, node.lat, node.lon).as_bytes()))?;
+        file.write(format!("{} {} {}\n", node.id, node.lat, node.lon).as_bytes())?;
     }
     for sight in &*sights {
-        file.write((format!("{} {} {} {}\n", sight.node_id, sight.lat, sight.lon, sight.category.to_string()).as_bytes()))?;
+        file.write(format!("{} {} {} {}\n", sight.node_id, sight.lat, sight.lon, sight.category.to_string()).as_bytes())?;
     }
     for edge in &*edges {
-        file.write((format!("{} {} {}\n", edge.src, edge.tgt, edge.dist)).as_bytes())?;
+        file.write(format!("{} {} {}\n", edge.src, edge.tgt, edge.dist).as_bytes())?;
     }
     Ok(())
 }

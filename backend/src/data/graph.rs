@@ -1,14 +1,11 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 use std::fmt::Formatter;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io::{BufRead, BufReader};
 use std::num::{ParseFloatError, ParseIntError};
-use futures::StreamExt;
-use haversine::{Location, Units};
 use serde::{Serialize};
 use serde_enum_str::{Deserialize_enum_str, Serialize_enum_str};
-use rand::Rng;
 
 /// Bounding box of a circular area around a coordinate
 struct BoundingBox {
@@ -329,7 +326,7 @@ impl Graph {
 
 /// Calculates the distance between two given coordinates (latitude / longitude) in metres. TODO make metre changeable later?
 pub(crate) fn calc_dist(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> usize {
-    let mut r: f64 = 6371000.0;
+    let r: f64 = 6371000.0;
 
     let d_lat: f64 = (lat2 - lat1).to_radians();
     let d_lon: f64 = (lon2 - lon1).to_radians();
