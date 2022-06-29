@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 use crate::data::graph::{Category, Graph, Node, Sight};
 use itertools::Itertools;
 use pathfinding::prelude::*;
-use crate::algorithm::{Algorithm, Area, Route, RouteSector, ScoreMap, Sector, UserPreferences};
+use crate::algorithm::{_Algorithm, Area, Route, RouteSector, ScoreMap, Sector, UserPreferences};
 
 /// Compute scores for tourist attractions based on user preferences for categories or specific
 /// tourist attractions, respectively
@@ -45,7 +45,12 @@ pub struct GreedyAlgorithm<'a> {
     scores: ScoreMap,
 }
 
-impl<'a> Algorithm<'a> for GreedyAlgorithm<'a> {
+impl GreedyAlgorithm<'_> {
+    /// Unique string identifier of this algorithm implementation
+    pub const ALGORITHM_NAME: &'static str = "Greedy";
+}
+
+impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
     fn new(graph: &'a Graph,
            start_time: DateTime<Utc>,
            end_time: DateTime<Utc>,
@@ -176,7 +181,7 @@ impl<'a> Algorithm<'a> for GreedyAlgorithm<'a> {
 #[cfg(test)]
 mod test {
     use chrono::{DateTime, Utc};
-    use crate::algorithm::{Algorithm, Area, SightCategoryPref, UserPreferences};
+    use crate::algorithm::{_Algorithm, Area, SightCategoryPref, UserPreferences};
     use crate::algorithm::greedy::GreedyAlgorithm;
     use crate::data::graph::Graph;
 

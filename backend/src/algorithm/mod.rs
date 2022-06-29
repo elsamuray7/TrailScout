@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use crate::data::graph::{Graph, Node, Sight};
 use serde::{Serialize, Deserialize};
+use crate::algorithm::greedy::GreedyAlgorithm;
 
 /// Type alias for a mapping from node id's to scores, where the nodes represent sights / tourist
 /// attractions
@@ -96,7 +97,7 @@ impl<'a> Sector<'a> {
 pub type Route<'a> = Vec<RouteSector<'a>>;
 
 /// Algorithm trait to be implemented by concrete algorithm implementations
-pub trait Algorithm<'a> {
+trait _Algorithm<'a> {
     /// Create a new algorithm instance
     ///
     /// # Arguments
@@ -111,9 +112,53 @@ pub trait Algorithm<'a> {
            end_time: DateTime<Utc>,
            walking_speed_mps: f64,
            area: Area,
-           user_prefs: UserPreferences) -> Self;
+           user_prefs: UserPreferences) -> Self where Self: Sized;
 
-    /// Compute a route on a given graph that visits tourist attractions in a given area based on
+    /// Compute a route on a graph that visits tourist attractions in a specific area based on
     /// user preferences for these tourist attractions
     fn compute_route(&self) -> Route;
+
+    /// Returns a reference to this concrete implementation of the `_Algorithm` trait
+    /// as a generic trait object
+    fn as_algorithm(&'a self) -> &'a dyn _Algorithm where Self: Sized {
+       self as &dyn _Algorithm
+    }
+}
+
+pub enum Algorithm<'a> {
+    Greedy(GreedyAlgorithm<'a>),
+}
+
+impl<'a> Algorithm<'a> {
+    /// Create a new algorithm instance with the provided `algorithm_name`
+    ///
+    /// # Arguments
+    /// * `algorithm_name` - The name of the algorithm implementation
+    /// * `graph` - A reference to the graph on which to run the algorithm
+    /// * `start_time` - The intended start time of the walk
+    /// * `end_time` - The intended end time of the walk
+    /// * `walking_speed_mps` - The walking speed in meters per second
+    /// * `area` - The area in which the walking route should lie
+    /// * `user_prefs` - The users preferences for sight categories and sights, respectively
+    pub fn from_name(algorithm_name: &str,
+                 graph: &'a Graph,
+                 start_time: DateTime<Utc>,
+                 end_time: DateTime<Utc>,
+                 walking_speed_mps: f64,
+                 area: Area,
+                 user_prefs: UserPreferences) -> Self {
+        match algorithm_name {
+            GreedyAlgorithm::ALGORITHM_NAME => Algorithm::Greedy(GreedyAlgorithm::new(
+                graph, start_time, end_time, walking_speed_mps, area, user_prefs)),
+            _ => panic!("Unknown algorithm")
+        }
+    }
+
+    /// Compute a route on a graph that visits tourist attractions in a specific area based on
+    /// user preferences for these tourist attractions
+    pub fn compute_route(&self) -> Route {
+        match self {
+            Self::Greedy(inner) => inner.as_algorithm(),
+        }.compute_route()
+    }
 }
