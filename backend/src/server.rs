@@ -5,7 +5,7 @@ use actix_files;
 use chrono::{DateTime, Utc, NaiveTime};
 use serde::Deserialize;
 use serde_json::json;
-use std::{path::PathBuf};
+use std::{env, path::PathBuf};
 use std::any::Any;
 use std::borrow::Borrow;
 use std::str;
@@ -28,10 +28,11 @@ struct AppState {
 
 
 //Deserialization of config
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct Config {
     ip: String,
     port: u16,
+    log_level: String,
     graph_file_path : String,
 
 }
@@ -41,7 +42,7 @@ fn get_config() -> Config {
 
     let data = fs::read_to_string(CONFIG_PATH).expect("Unable to read file");
     let config: Config = serde_json::from_str(&data).expect("Unable to parse");
-    println!("Read config: IP {}, Port {}", config.ip, config.port);
+    log::info!("Read config:\n{:#?}", &config);
 
     return config;
 }
@@ -79,7 +80,7 @@ async fn post_sights(request:  web::Json<SightsRequest>, data: web::Data<AppStat
 
 ///Responds to post request asking for routing
 #[post("/route")]
-async fn post_route(request:  web::Json<route_provider::RouteProviderReq>, data: web::Data<AppState>) -> Result<impl Responder> {
+async fn post_route(request:  web::Json<route_provider::RouteProviderReq>, data: web::Data<AppState>) -> impl Responder {
 
     println!("Placeholder Route Request");
     let route_request = request.into_inner();
@@ -97,7 +98,8 @@ async fn post_route(request:  web::Json<route_provider::RouteProviderReq>, data:
     let route = algo.compute_route();
     let response = route_provider::RouteProviderRes{route};
 
-    Ok(web::Json(response))
+    let mut res = HttpResponse::Ok();
+    res.json(response)
 }
 
 
@@ -106,6 +108,11 @@ async fn post_route(request:  web::Json<route_provider::RouteProviderReq>, data:
 #[actix_web::main]
 async fn main() -> std::io::Result<()> { 
     let config: Config = get_config();
+
+    // Initialize logger
+    env::set_var("RUST_LOG", &config.log_level);
+    env::set_var("RUST_BACKTRACE", "1");
+    env_logger::init();
 
     //TODO fix state - Arc RWlock?
 
@@ -116,6 +123,13 @@ async fn main() -> std::io::Result<()> {
     //let rw_lock_graph = Arc::new(RwLock::new(graph_result));
 
 
+    let graph = Graph::parse_from_file(&config.graph_file_path).expect("Error parsing graph from file");
+    log::info!("Parsed graph: {}", &config.graph_file_path);
+    let data = web::Data::new(AppState {
+        graph,
+        //rw_lock_graph : Arc::new(RwLock::new(Graph::new())),
+    });
+
     //move
     HttpServer::new(move|| {
         App::new()
@@ -124,10 +138,7 @@ async fn main() -> std::io::Result<()> {
             .service(actix_files::Files::new("/static", "../../gui/dist/").show_files_listing())
             .service(actix_files::Files::new("/assets", "../../gui/dist/assets").show_files_listing())
             .default_service(web::get().to(index))
-            .app_data(web::Data::new(AppState {
-                graph: Graph::parse_from_file(&config.graph_file_path).expect("Error parsing graph from file"),
-                //rw_lock_graph : Arc::new(RwLock::new(Graph::new())),
-            }))
+            .app_data(data.clone())
 
     })
     .bind((config.ip, config.port))?
