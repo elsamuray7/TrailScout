@@ -1,17 +1,13 @@
 mod route_provider;
 
-use actix_web::{web, App, HttpServer, Result, Responder, get, post, HttpResponse};
+use actix_web::{web, App, HttpServer, Result, Responder, post, HttpResponse};
 use actix_files;
-use chrono::{DateTime, Utc, NaiveTime};
+use chrono::DateTime;
 use serde::Deserialize;
 use serde_json::json;
 use std::{env, path::PathBuf};
-use std::any::Any;
-use std::borrow::Borrow;
 use std::str;
 use std::fs;
-use std::ops::Deref;
-use actix_web::web::Data;
 use serde_json;
 
 use trailscout_lib::algorithm::Algorithm;
