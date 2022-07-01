@@ -6,13 +6,11 @@
     height: 92vh;
     z-index: 0;
 }
-
 #settings {
     position:absolute;
     top: 44vh;
     margin-left: 10px;
     float: left;
-    z-index: 1;
     font-size: 1.5vw;
 }
 
@@ -27,6 +25,7 @@
 
 .wrapper {
     width: 100%;
+    z-index: 1;
 }
 
 .disabled {
@@ -42,6 +41,6 @@
 }
 
 #collapse {
-    width: 25vw;
+    width: 20vw;
     float: left;
 }

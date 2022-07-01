@@ -20,7 +20,6 @@
             (radiusChange)="radiusChange($event)"
             (closeButton)="collapse.toggle()" ></app-settings-taskbar>
         </div>
-        <!-- <button class="btn btn-primary"  id="settings" (click)="open(content)">Open Settings</button> -->
         <i class="btn btn-primary"  
             [class.disabled]="!markerCoords" 
             [class.bi]="markerCoords"
@@ -31,6 +30,5 @@
             ngbTooltip="Click on Map to select startpoint first" 
             [disableTooltip]="!!markerCoords"
             ></i>
-    
         </div>
 </div>
