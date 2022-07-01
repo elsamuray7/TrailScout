@@ -1,11 +1,14 @@
 use std::any::Any;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fmt::Formatter;
 use std::fs::File;
-use std::io;
+use std::{io, vec};
 use std::io::{BufRead, BufReader, LineWriter, Write};
 use std::num::{ParseFloatError, ParseIntError};
-use log::{info,trace};
+use std::ptr::null;
+use actix_web::web::trace;
+use itertools::Tuples;
+use log::{info,trace,error};
 use osmpbf::{ElementReader, Element, Node};
 use crate::data::graph::{calc_dist, Category, Edge, Node as GraphNode, Sight};
 
@@ -25,7 +28,75 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
     let mut osm_id_to_node_id: BTreeMap<usize, usize> = BTreeMap::new();
 
     info!("Start reading the PBF file!");
-    reader.for_each(|element| {
+
+    let entries:(Vec<GraphNode>, Vec<Edge>) = reader.par_map_reduce(
+        |element| {
+
+            let mut result = (Vec::<GraphNode>::new(), Vec::<Edge>::new());
+
+
+            /*match element {
+                Element::Way(_) => trace!("Way"),
+                Element::DenseNode(_) => trace!("DenseNode"),
+                Element::Node(_) => trace!("Node"),
+                Element::Relation(_) => trace!("Relation"),
+                _ => error!("Unrecognized Element")
+            }*/
+            if let Element::Node(n) = element {
+                // TODO if no tags corrects tags for category + category enum
+                let node = GraphNode {
+                    osm_id: n.id() as usize,
+                    id: num_nodes,
+                    lat: n.lat(),
+                    lon: n.lon(),
+                };
+                result.0.push(node);
+            } else if let Element::DenseNode(n) = element {
+                // TODO if no tags corrects tags for category + category enum + compare node ids from denseNode and Node !!!
+                let node = GraphNode {
+                    osm_id: n.id() as usize,
+                    id: num_nodes,
+                    lat: n.lat(),
+                    lon: n.lon(),
+                    //info: "".to_string()
+                };
+                result.0.push(node);
+            } else if let Element::Way(w) = element {
+                // TODO way id; check way tags
+                /*let mut way_ref_iter = w.refs();
+                let mut osm_src = way_ref_iter.next().unwrap() as usize;
+                for node_id  in way_ref_iter {
+                    let osm_tgt = node_id as usize;
+                    let mut edge = Edge {
+                        osm_id: w.id() as usize,
+                        osm_src: osm_src,
+                        osm_tgt: osm_tgt,
+                        src: *osm_id_to_node_id.get(&osm_src).unwrap(),
+                        tgt: *osm_id_to_node_id.get(&osm_tgt).unwrap(),
+                        dist: 0
+                    };
+                    let src_node = &nodes[edge.src];
+                    let tgt_node = &nodes[edge.tgt];
+                    edge.dist = calc_dist(src_node.lat, src_node.lon, tgt_node.lat, tgt_node.lon);
+                    result.1.push(edge);
+                    osm_src = osm_tgt;
+                }*/
+            }
+            return result
+        },
+        ||(Vec::<GraphNode>::new(), Vec::<Edge>::new()),      // Zero is the identity value for addition
+        |mut m1, m2| {
+            for k in m2.0 {
+                m1.0.push(k);
+            }
+            for k in m2.1 {
+                m1.1.push(k);
+            }
+            m1
+        }
+    )?;
+
+    /*reader.for_each(|element| {
         if let Element::Node(n) = element {
             // TODO if no tags corrects tags for category + category enum
             /*
@@ -198,7 +269,7 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
         }
         progress_counter += 1;
         //println!("nodes {} ways {} denses {} relations {}", node_count, way_count, dense_count, relation_count);
-    })?;
+    })?;*/
     info!("Finished reading PBF file!");
     edges.sort_unstable_by(|e1, e2| {
         let id1 = e1.src;
