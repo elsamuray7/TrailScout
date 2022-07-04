@@ -10,6 +10,7 @@ import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 import { CookieService } from 'ngx-cookie-service';
 import {NgcCookieConsentModule, NgcCookieConsentConfig} from 'ngx-cookieconsent';
 import { CookieHandlerService } from './services/cookie-handler.service';
+import { HttpClientModule } from '@angular/common/http';
 
 const cookieConfig:NgcCookieConsentConfig = {
   cookie: {

@@ -1,6 +1,8 @@
-import { AfterViewInit, Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
+import { AfterViewInit, Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
 import * as L from 'leaflet';
 import { GeoSearchControl, OpenStreetMapProvider } from 'leaflet-geosearch';
+import { Sight } from '../../data/Sight';
+import { LatLngExpression } from 'leaflet';
 
 const iconRetinaUrl = 'assets/marker-icon-2x.png';
 const iconUrl = 'assets/marker-icon.png';
@@ -34,8 +36,9 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
   @Output() markerLocation = new EventEmitter;
   private marker?: L.Marker;
   private circle?: L.Circle;
+  private sightsLayer: L.LayerGroup;
 
-  constructor() { 
+  constructor() {
   }
   ngOnChanges(changes: SimpleChanges): void {
     this.addCircle(this.marker?.getLatLng()!);
@@ -111,4 +114,15 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
     }
   }
 
+  public drawSights(sights: Map<number, Sight>) {
+    this.sightsLayer = new L.LayerGroup<any>();
+    sights.forEach((sight) => {
+      var latlng: LatLngExpression = {
+        lat: sight.lat,
+        lng: sight.lon
+      }
+      var newMarker = new L.Marker(latlng).addTo(this.sightsLayer);
+      this.sightsLayer.addTo(this.map);
+    });
+  }
 }

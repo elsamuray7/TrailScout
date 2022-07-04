@@ -1,8 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { NgbOffcanvas } from '@ng-bootstrap/ng-bootstrap';
 import * as L from 'leaflet';
 import { CookieHandlerService } from 'src/app/services/cookie-handler.service';
 import { Settings, Sight, SightsPrios } from 'src/app/types.utils';
+import { MapContainerComponent } from '../../components/map-container/map-container.component';
 
 @Component({
   selector: 'app-main-page',
@@ -79,6 +80,7 @@ export class MainPageComponent implements OnInit {
 
   sights: Sight[] = [];
 
+  @ViewChild(MapContainerComponent) mapContainer: MapContainerComponent;
   marker = false;
   markerCoords?: L.LatLng;
   sightsWithPrio?: SightsPrios;
@@ -159,5 +161,10 @@ export class MainPageComponent implements OnInit {
         imagePath: s.image
       }
     })
+  }
+
+  // sights sollte hier Sight[] aber irgendwie nimmt es das nicht an
+  placeSightMarkers(sights: any) {
+    this.mapContainer.drawSights(sights);
   }
 }

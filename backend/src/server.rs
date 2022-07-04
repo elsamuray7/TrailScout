@@ -1,6 +1,7 @@
 mod route_provider;
 
-use actix_web::{web, App, HttpServer, Result, Responder, get, post, HttpResponse};
+use actix_cors::Cors;
+use actix_web::{web, App, HttpServer, Result, Responder, get, post, HttpResponse, http};
 use actix_files;
 use chrono::{DateTime, Utc, NaiveTime};
 use serde::Deserialize;
@@ -69,7 +70,7 @@ async fn post_sights(request:  web::Json<SightsRequest>, data: web::Data<AppStat
 
     println!("Placeholder Sights Request for lat={}, lon={} and radius={}.", request.lat, request.lon, request.radius);
 
-    let sights = data.graph.get_sights_in_area(request.lat, request.lon, request.radius);
+    let sights = data.graph.get_sights_in_area(request.lat, request.lon, request.radius).values().cloned().collect::<Vec<&Sight>>();
 
     //TODO does this serialize correctly according to interface definition?
     let mut res = HttpResponse::Ok();
@@ -132,7 +133,15 @@ async fn main() -> std::io::Result<()> {
 
     //move
     HttpServer::new(move|| {
+        let cors = Cors::default()
+            .allow_any_origin()
+            .allowed_methods(vec!["GET", "POST"])
+            .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
+            .allowed_header(http::header::CONTENT_TYPE)
+            .supports_credentials()
+            .max_age(3600);
         App::new()
+            .wrap(cors)
             .service(post_sights)
             .service(post_route)
             .service(actix_files::Files::new("/static", "../../gui/dist/").show_files_listing())
