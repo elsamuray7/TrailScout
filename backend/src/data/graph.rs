@@ -1,15 +1,11 @@
-extern crate haversine;
-
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 use std::fmt::Formatter;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io::{BufRead, BufReader};
 use std::num::{ParseFloatError, ParseIntError};
-use haversine::{Location, Units};
 use serde::{Serialize};
 use serde_enum_str::{Deserialize_enum_str, Serialize_enum_str};
-use rand::Rng;
 
 /// Bounding box of a circular area around a coordinate
 struct BoundingBox {
@@ -49,13 +45,34 @@ pub enum Category {
     Other
 }
 
+#[derive(Deserialize_enum_str, Serialize_enum_str, PartialEq, Debug)]
+#[serde(rename_all = "PascalCase")]
+pub enum EdgeType {
+    Unclassified, // Öffentlich befahrbare Nebenstraßen
+    Residential, // Tempo-30-Zonen
+    Service, // Privatgelände)
+    LivingStreet, // Verkehrsberuhigter Bereich
+    Pedestrian, // Fußgängerzone
+    Track, // Wirtschafts-, Feld- oder Waldweg
+    Road, // Straße unbekannter Klassifikation)
+    Footway, // Gehweg
+    Bridleway, // Reitweg
+    Steps, // Treppen auf Fuß-/Wanderwegen
+    Corridor, // Ein Gang im Inneren eines Gebäudes
+    Path, // Wanderwege oder Trampelpfade
+    Primary, // Straßen von nationaler Bedeutung
+    Secondary, // Straßen von überregionaler Bedeutung
+    Tertiary // Straßen, die Dörfer verbinden
+}
+
 /// A graph node located at a specific coordinate
+#[derive(Debug, Serialize)]
 pub struct Node {
     pub osm_id: usize,
     pub id: usize,
     pub lat: f64,
     pub lon: f64,
-    //pub info: String,
+    pub info: String,
 }
 
 impl PartialEq<Self> for Node {
@@ -85,11 +102,8 @@ pub struct Edge {
     pub dist: usize,
 }
 
-/// Type alias for a vector containing sight tags with a key and value
-pub type Tags = Vec<(String, String)>; // TODO are tags needed or just categories
-
 /// A sight node mapped on its nearest node
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct Sight {
     pub node_id: usize,
     pub lat: f64,
@@ -166,6 +180,7 @@ impl Graph {
                     .expect(&format!("Unexpected EOL while parsing node longitude in line {}",
                                      line_no))
                     .parse()?,
+                info: "".to_string()
             };
             graph.nodes.push(node);
         }
@@ -284,7 +299,7 @@ impl Graph {
             .filter(|&edge| {
                 let tgt_node = self.get_node(edge.tgt);
                 // TODO check whether target node lies in area
-                todo!()
+                true
             })
             .collect()
     }
@@ -311,9 +326,17 @@ impl Graph {
 
 /// Calculates the distance between two given coordinates (latitude / longitude) in metres. TODO make metre changeable later?
 pub(crate) fn calc_dist(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> usize {
-    let p1 = Location{latitude: lat1,longitude: lon1};
-    let p2 = Location{latitude: lat2,longitude: lon2};
-    haversine::distance(p1, p2, Units::Kilometers) as usize * 1000
+    let r: f64 = 6371000.0;
+
+    let d_lat: f64 = (lat2 - lat1).to_radians();
+    let d_lon: f64 = (lon2 - lon1).to_radians();
+    let lat1: f64 = lat1.to_radians();
+    let lat2: f64 = lat2.to_radians();
+
+    let a: f64 = ((d_lat/2.0).sin()) * ((d_lat/2.0).sin()) + ((d_lon/2.0).sin()) * ((d_lon/2.0).sin()) * (lat1.cos()) * (lat2.cos());
+    let c: f64 = 2.0 * ((a.sqrt()).atan2((1.0-a).sqrt()));
+
+    (r * c) as usize
 }
 
 #[derive(Debug)]

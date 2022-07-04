@@ -82,7 +82,7 @@ export class MainPageComponent implements OnInit {
   marker = false;
   markerCoords?: L.LatLng;
   sightsWithPrio?: SightsPrios;
-  isCollapsed = false;
+  isCollapsed = true;
 
   radius?: number;
   constructor(

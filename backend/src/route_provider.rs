@@ -12,6 +12,6 @@ pub struct RouteProviderReq {
 }
 
 #[derive(Serialize)]
-pub struct RouteProviderRes {
-    pub(crate) route: Route,
+pub struct RouteProviderRes<'a> {
+    pub(crate) route: Route<'a>,
 }

@@ -8,9 +8,21 @@ import { environment } from 'src/environments/environment';
 })
 export class CookieHandlerService {
 
+  private cookiesAllowed = false;
+
   constructor(private cookieService: CookieService) { }
 
+  allowCookies(value: boolean) {
+    this.cookiesAllowed = value;
+    if (this.cookiesAllowed) {
+      this.cookieService.deleteAll();
+    }
+  }
+
   setPriosCookie(prios: SightsPrios) {
+    if (!this.cookiesAllowed) {
+      return;
+    }
     for (const prio of prios.sightWithPrio) {
       const cookie = prio[0];
       this.cookieService.set(cookie, prio[1].toString());
@@ -26,6 +38,9 @@ export class CookieHandlerService {
   }
 
   setLocationCookie(latlng: L.LatLng) {
+    if (!this.cookiesAllowed) {
+      return;
+    }
     const latlngString: string = JSON.stringify(latlng)
     this.cookieService.set(environment.cookieLocation, latlngString)
   }
@@ -36,6 +51,9 @@ export class CookieHandlerService {
   }
 
   setRadiusCookie(radius: number) {
+    if (!this.cookiesAllowed) {
+      return;
+    }
     this.cookieService.set(environment.cookieRadius, radius.toString());
   }
 
