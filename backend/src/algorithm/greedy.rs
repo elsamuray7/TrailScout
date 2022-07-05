@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 use crate::data::graph::{Category, Graph, Node, Sight};
 use itertools::Itertools;
 use pathfinding::prelude::*;
-use crate::algorithm::{_Algorithm, Area, Route, RouteSector, ScoreMap, Sector, UserPreferences};
+use crate::algorithm::{_Algorithm, AlgorithmError, Area, Route, RouteSector, ScoreMap, Sector, UserPreferences};
 
 /// Compute scores for tourist attractions based on user preferences for categories or specific
 /// tourist attractions, respectively
@@ -58,15 +58,15 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
            end_time: DateTime<Utc>,
            walking_speed_mps: f64,
            area: Area,
-           user_prefs: UserPreferences) -> Self {
+           user_prefs: UserPreferences) -> Result<Self, AlgorithmError> {
         if end_time < start_time {
-            panic!("End time before start time");
+            return Err(AlgorithmError::NegativeTimeInterval);
         }
 
         let sights = graph.get_sights_in_area(area.lat, area.lon, area.radius);
         let root_id = graph.get_nearest_node(area.lat, area.lon);
         let scores = compute_scores(&sights, user_prefs);
-        Self {
+        Ok(Self {
             graph,
             start_time,
             end_time,
@@ -75,7 +75,7 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
             sights,
             root_id,
             scores,
-        }
+        })
     }
 
      fn compute_route(&self) -> Route {

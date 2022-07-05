@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use crate::data::graph::{Graph, Node, Sight};
 use serde::{Serialize, Deserialize};
+use derive_more::{Display, Error};
 use crate::algorithm::greedy::GreedyAlgorithm;
 
 /// Type alias for a mapping from node id's to scores, where the nodes represent sights / tourist
@@ -107,12 +108,16 @@ trait _Algorithm<'a> {
     /// * `walking_speed_mps` - The walking speed in meters per second
     /// * `area` - The area in which the walking route should lie
     /// * `user_prefs` - The users preferences for sight categories and sights, respectively
+    ///
+    /// # Returns
+    /// * an `Ok` containing a new algorithm instance in case of no errors, or
+    /// * an `Err` containing an `AlgorithmError`, otherwise
     fn new(graph: &'a Graph,
            start_time: DateTime<Utc>,
            end_time: DateTime<Utc>,
            walking_speed_mps: f64,
            area: Area,
-           user_prefs: UserPreferences) -> Self where Self: Sized;
+           user_prefs: UserPreferences) -> Result<Self, AlgorithmError> where Self: Sized;
 
     /// Compute a route on a graph that visits tourist attractions in a specific area based on
     /// user preferences for these tourist attractions
@@ -140,17 +145,24 @@ impl<'a> Algorithm<'a> {
     /// * `walking_speed_mps` - The walking speed in meters per second
     /// * `area` - The area in which the walking route should lie
     /// * `user_prefs` - The users preferences for sight categories and sights, respectively
+    ///
+    /// # Returns
+    /// * an `Ok` containing a new algorithm instance with the provided `algorithm_name`
+    /// if such an algorithm exists, or
+    /// * an `Err` containing an `AlgorithmError`, if the specified name is unknown
     pub fn from_name(algorithm_name: &str,
-                 graph: &'a Graph,
-                 start_time: DateTime<Utc>,
-                 end_time: DateTime<Utc>,
-                 walking_speed_mps: f64,
-                 area: Area,
-                 user_prefs: UserPreferences) -> Self {
+                     graph: &'a Graph,
+                     start_time: DateTime<Utc>,
+                     end_time: DateTime<Utc>,
+                     walking_speed_mps: f64,
+                     area: Area,
+                     user_prefs: UserPreferences) -> Result<Self, AlgorithmError> {
         match algorithm_name {
-            GreedyAlgorithm::ALGORITHM_NAME => Algorithm::Greedy(GreedyAlgorithm::new(
-                graph, start_time, end_time, walking_speed_mps, area, user_prefs)),
-            _ => panic!("Unknown algorithm")
+            GreedyAlgorithm::ALGORITHM_NAME => Ok(Self::Greedy(GreedyAlgorithm::new(
+                graph, start_time, end_time, walking_speed_mps, area, user_prefs)?)),
+            unknown_name => Err(AlgorithmError::UnknownAlgorithm {
+                unknown_name: unknown_name.to_string(),
+            })
         }
     }
 
@@ -161,6 +173,20 @@ impl<'a> Algorithm<'a> {
             Self::Greedy(inner) => inner.as_algorithm(),
         }.compute_route()
     }
+}
+
+/// Error type of `algorithm` module
+#[derive(Debug, Display, Error)]
+pub enum AlgorithmError {
+    /// Error indicating that an unknown algorithm has been requested
+    #[display(fmt = "Unknown algorithm name: {}", unknown_name)]
+    UnknownAlgorithm {
+        unknown_name: String,
+    },
+    /// Error indicating that an algorithm has been requested with `end_time` before `start_time`,
+    /// i.e., a negative time interval
+    #[display(fmt = "End time is before start time")]
+    NegativeTimeInterval,
 }
 
 #[cfg(test)]
