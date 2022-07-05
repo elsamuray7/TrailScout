@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use itertools::Itertools;
-use pathfinding::prelude::{dijkstra, dijkstra_all};
+use pathfinding::prelude::dijkstra_all;
 use rand::prelude::*;
 use crate::algorithm::{_Algorithm, AlgorithmError, Area, Route, RouteSector, ScoreMap, Sector, UserPreferences};
 use crate::data::graph::{Category, Graph, Node, Sight};
@@ -134,51 +134,51 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
             }
         }
 
-        let I_iter = initial_route.len() * 5000;
-        let mut X = initial_route;
-        let mut T = T_0;
-        let mut I = 0;
-        let mut X_best = &X;
-        let mut F_best = self.calculate_score(&X);
+        let i_iter = initial_route.len() * 5000;
+        let mut x = initial_route;
+        let mut t = T_0;
+        let mut i = 0;
+        let mut x_best = &x;
+        let mut f_best = self.calculate_score(&x);
 
         let start_time = Instant::now();
-        let mut old_score = self.calculate_score(&X);
+        let old_score = self.calculate_score(&x);
         loop {
             let p = rng.gen::<f64>();
 
-            let Y;
+            let y;
             if p <= 1./3. {
-                Y = swap(&X);
+                y = swap(&x);
             } else if p <= 2./3. {
-                Y = insert(&X);
+                y = insert(&x);
             } else {
-                Y = reverse(&X);
+                y = reverse(&x);
             }
 
-            I = I + 1;
+            i = i + 1;
 
-            let new_score = self.calculate_score(&Y);
+            let new_score = self.calculate_score(&x);
 
-            let score_dif = new_score - old_score;
+            let score_dif = new_score as isize - old_score as isize;
             if score_dif >= 0 {
-                X = Y;
+                x = y;
             } else {
                 let r = rng.gen::<f64>();
-                if r < std::f64::consts::E.powf(score_dif as f64 / T) {
-                    X = Y;
+                if r < std::f64::consts::E.powf(score_dif as f64 / t) {
+                    x = y;
                 } else {
                     continue;
                 }
             }
 
-            if new_score > F_best {
-                F_best = new_score;
-                X_best = &X;
+            if new_score > f_best {
+                f_best = new_score;
+                x_best = &x;
             }
 
-            if I == I_iter {
-                T = T * ALPHA;
-                I = 0;
+            if i == i_iter {
+                t = t * ALPHA;
+                i = 0;
 
                 //TODO: PERFORM LOCAL SEARCH WHATEVER THAT MEANS
 
@@ -188,6 +188,9 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
                 }
             }
         }
+
+        let route = Route::new();
+        let mut time_budget = self.end_time.timestamp() - self.start_time.timestamp();
 
         todo!()
     }
