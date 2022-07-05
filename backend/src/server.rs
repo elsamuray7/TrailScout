@@ -12,7 +12,7 @@ use std::fs;
 use serde_json;
 
 use trailscout_lib::algorithm::Algorithm;
-use trailscout_lib::data::graph::Graph;
+use trailscout_lib::data::graph::{Graph, Sight};
 use crate::route_provider::RouteProviderRes;
 //TODO cleanup imports
 
