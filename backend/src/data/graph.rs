@@ -29,7 +29,7 @@ impl BoundingBox {
     }
 }
 
-#[derive(Deserialize_enum_str, Serialize_enum_str, PartialEq, Debug)]
+#[derive(Deserialize_enum_str, Serialize_enum_str, PartialEq, Eq, Debug)]
 #[serde(rename_all = "PascalCase")]
 pub enum Category {
     ThemePark,
