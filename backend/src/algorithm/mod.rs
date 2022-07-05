@@ -217,12 +217,14 @@ mod test {
     fn test_greedy() -> std::io::Result<()> {
         let graph = get_graph()?;
 
+        let start_time = DateTime::parse_from_rfc3339("2022-06-29T00:00:00+01:00")
+            .unwrap().with_timezone(&Utc);
+        let end_time = DateTime::parse_from_rfc3339("2022-07-01T00:00:00+01:00")
+            .unwrap().with_timezone(&Utc);
         let algo = GreedyAlgorithm::new(
             &graph,
-            DateTime::parse_from_rfc3339("2022-06-29T00:00:00+01:00")
-                .unwrap().with_timezone(&Utc),
-            DateTime::parse_from_rfc3339("2022-07-01T00:00:00+01:00")
-                .unwrap().with_timezone(&Utc),
+            start_time,
+            end_time,
             7.0 / 3.6,
             Area {
                 lat: 53.14519850000001,
@@ -234,7 +236,7 @@ mod test {
                                  SightCategoryPref { name: "Sightseeing".to_string(), pref: 5 },
                                  SightCategoryPref { name: "Nightlife".to_string(), pref: 4 }],
                 sights: vec![SightPref { id: 1274147, category: "Sightseeing".to_string(), pref: 0 }],
-            });
+            }).unwrap();
         let route = algo.compute_route();
 
         // Route should only contain sectors that include sights with categories restaurant,
@@ -257,6 +259,20 @@ mod test {
             _ => false,
         });
         assert!(sector.is_none());
+
+        let total_time_budget: usize = route.iter()
+            .map(|sector|
+                match sector {
+                    RouteSector::Start(sector) => sector,
+                    RouteSector::Intermediate(sector) => sector,
+                    RouteSector::End(sector) => sector,
+                }.time_budget
+            )
+            .sum();
+        let actual_time_budget = end_time.timestamp() - start_time.timestamp();
+        assert!((total_time_budget as i64) < actual_time_budget,
+                "Used time budget: {}. Actual time budget: {}.",
+                total_time_budget, actual_time_budget);
 
         Ok(())
     }
