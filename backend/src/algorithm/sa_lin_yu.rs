@@ -1,7 +1,21 @@
 use std::collections::HashMap;
 use chrono::{DateTime, Utc};
-use crate::algorithm::{_Algorithm, AlgorithmError, Area, Route, ScoreMap, UserPreferences};
-use crate::data::graph::{Category, Graph, Sight};
+use itertools::Itertools;
+use pathfinding::prelude::{dijkstra, dijkstra_all};
+use rand::prelude::*;
+use crate::algorithm::{_Algorithm, AlgorithmError, Area, Route, RouteSector, ScoreMap, Sector, UserPreferences};
+use crate::data::graph::{Category, Graph, Node, Sight};
+use std::time::Instant;
+
+// Constant parameters
+// Initial temperature
+const T_0: f64 = 1.;
+// Number of cooldowns that do not improve the result
+const N_NON_IMPROVING: usize = 30;
+// Factor by which the temperature is cooled down
+const ALPHA: f64 = 0.97;
+// Maximum allowed calculation time
+const MAX_T: u128 = 5000;
 
 /// Compute scores for tourist attractions based on user preferences for categories or specific
 /// tourist attractions, respectively
@@ -48,6 +62,11 @@ pub struct SimAnnealingLinYu<'a> {
 impl SimAnnealingLinYu<'_> {
     /// Unique string identifier of this algorithm implementation
     pub const ALGORITHM_NAME: &'static str = "DerAllerbesteste";
+
+    fn calculate_score(&self, current_solution: &Vec<(&Sight, usize)>) -> usize {
+        let mut rng = rand::thread_rng();
+        rng.gen_range(0..100)
+    }
 }
 
 impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
@@ -77,6 +96,150 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
     }
 
     fn compute_route(&self) -> Route {
+        let successors = |node: &Node|
+            self.graph.get_outgoing_edges_in_area(node.id, self.area.lat, self.area.lon, self.area.radius)
+                .into_iter()
+                .map(|edge| (self.graph.get_node(edge.tgt), edge.dist))
+                .collect::<Vec<(&Node, usize)>>();
+
+        // Get the distances from the root and all sights to all other nodes
+        let mut distance_map = HashMap::with_capacity(self.sights.len());
+        let mut sights_and_root = self.sights.iter().map(|(&sight_id, _)| sight_id)
+            .collect_vec();
+        sights_and_root.push(self.root_id);
+        for node_id in sights_and_root {
+            let dijkstra_result = dijkstra_all(
+                &self.graph.get_node(node_id),
+                |node| successors(node));
+            distance_map.insert(node_id, dijkstra_result);
+        }
+
+        // Create a random initial route
+        let mut rng = thread_rng();
+        let mut randomized_sights: Vec<_> = self.sights.iter()
+            .map(|(_, &sight)| sight).collect();
+        randomized_sights.shuffle(&mut rng);
+
+        // Enrich sight data with distance from previous sight or root, respectively
+        let mut initial_route = Vec::with_capacity(self.sights.len());
+        for (i, &sight) in randomized_sights.iter().enumerate() {
+            if i == 0 {
+                let distances = &distance_map[&self.root_id];
+                let (_, dist) = distances[&self.graph.get_node(sight.node_id)];
+                initial_route.push((sight, dist));
+            } else {
+                let distances = &distance_map[&randomized_sights[i - 1].node_id];
+                let (_, dist) = distances[&self.graph.get_node(sight.node_id)];
+                initial_route.push((sight, dist));
+            }
+        }
+
+        let I_iter = initial_route.len() * 5000;
+        let mut X = initial_route;
+        let mut T = T_0;
+        let mut I = 0;
+        let mut X_best = &X;
+        let mut F_best = self.calculate_score(&X);
+
+        let start_time = Instant::now();
+        let mut old_score = self.calculate_score(&X);
+        loop {
+            let p = rng.gen::<f64>();
+
+            let Y;
+            if p <= 1./3. {
+                Y = swap(&X);
+            } else if p <= 2./3. {
+                Y = insert(&X);
+            } else {
+                Y = reverse(&X);
+            }
+
+            I = I + 1;
+
+            let new_score = self.calculate_score(&Y);
+
+            let score_dif = new_score - old_score;
+            if score_dif >= 0 {
+                X = Y;
+            } else {
+                let r = rng.gen::<f64>();
+                if r < std::f64::consts::E.powf(score_dif as f64 / T) {
+                    X = Y;
+                } else {
+                    continue;
+                }
+            }
+
+            if new_score > F_best {
+                F_best = new_score;
+                X_best = &X;
+            }
+
+            if I == I_iter {
+                T = T * ALPHA;
+                I = 0;
+
+                //TODO: PERFORM LOCAL SEARCH WHATEVER THAT MEANS
+
+                let elapsed = start_time.elapsed().as_millis();
+                if elapsed > MAX_T {
+                    break;
+                }
+            }
+        }
+
         todo!()
+    }
+}
+
+fn swap<'a>(current_solution: &Vec<(&'a Sight, usize)>) -> Vec<(&'a Sight, usize)> {
+    let mut rng = thread_rng();
+    let size = current_solution.len();
+    let i = rng.gen_range(0..size);
+    let j = rng.gen_range(0..size);
+
+    let mut result = current_solution.clone();
+    result.swap(i, j);
+    result
+}
+
+fn insert<'a>(current_solution: &Vec<(&'a Sight, usize)>) -> Vec<(&'a Sight, usize)> {
+    let mut rng = thread_rng();
+    let size = current_solution.len();
+    let i = rng.gen_range(0..size);
+    let j = rng.gen_range(0..size);
+
+    let mut result = current_solution.clone();
+    if j < i {
+        result.insert(j, current_solution[i]);
+        result.remove(i + 1);
+    } else if j > i {
+        result.insert(j, current_solution[i]);
+        result.remove(i);
+    }
+    result
+}
+
+fn reverse<'a>(current_solution: &Vec<(&'a Sight, usize)>) -> Vec<(&'a Sight, usize)> {
+    let mut rng = rand::thread_rng();
+    let size = current_solution.len();
+    let i = rng.gen_range(0..size);
+    let j = rng.gen_range(0..size);
+
+    let mut result = current_solution.clone();
+    let partial_solution = &mut result[i..=j];
+    partial_solution.reverse();
+    result
+}
+
+#[cfg(test)]
+mod example {
+    #[test]
+    fn test() {
+        let mut myvec = vec![1, 2, 3, 4, 5, 6];
+        let mut my_slice = &mut myvec[1..=4];
+        my_slice.reverse();
+        println!("{:?}", &myvec);
     }
 }
