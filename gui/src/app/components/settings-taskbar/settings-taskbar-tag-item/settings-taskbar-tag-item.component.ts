@@ -1,5 +1,5 @@
 import { Component, Input, OnInit, Output, EventEmitter } from '@angular/core';
-import { Sight, SightsPrios, TagCheckboxResponse } from 'src/app/types.utils';
+import { Sight, TagCheckboxResponse } from 'src/app/types.utils';
 
 @Component({
   selector: 'app-settings-taskbar-tag-item',
@@ -13,9 +13,16 @@ export class SettingsTaskbarTagItemComponent implements OnInit {
   @Output('checked') checkedEvent = new EventEmitter;
 
   imagePath?: string;
-
   checked = false;
-  prio: number = 0;
+  prio: number = 3;
+  readonly priorityLabels = new Map<number, string>([
+    [0, "Gar Nicht"],
+    [1, "Niedriger"],
+    [2, "Niedrig"],
+    [3, "Neutral"],
+    [4, "Hoch"],
+    [5, "Höher"]
+  ])
   constructor() {
    }
 
@@ -40,7 +47,6 @@ export class SettingsTaskbarTagItemComponent implements OnInit {
   }
 
   getImage() {
-    const image = {'background-image' : 'url(assets/sights/' + this.imagePath + ')' };
-    return image;
+    return {'background-image' : 'url(assets/sights/' + this.imagePath + ')' };
   }
 }
