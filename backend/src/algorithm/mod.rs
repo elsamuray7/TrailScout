@@ -162,3 +162,76 @@ impl<'a> Algorithm<'a> {
         }.compute_route()
     }
 }
+
+#[cfg(test)]
+mod test {
+    use std::path::Path;
+    use chrono::{DateTime, Utc};
+    use crate::algorithm::{_Algorithm, Area, RouteSector, SightCategoryPref, SightPref, UserPreferences};
+    use crate::algorithm::greedy::GreedyAlgorithm;
+    use crate::data::graph::{Category, Graph};
+    use crate::data::osm_graph_creator::{parse_osm_data, write_graph_file};
+
+    fn get_graph() -> std::io::Result<Graph> {
+        let pbf_path = "./osm_graphs/bremen-latest.osm.pbf";
+        let fmi_path = "./osm_graphs/bremen-latest.fmi";
+        if !Path::new(fmi_path).exists() {
+            let mut nodes = Vec::new();
+            let mut edges = Vec::new();
+            let mut sights = Vec::new();
+            parse_osm_data(pbf_path, &mut nodes, &mut edges, &mut sights)?;
+            write_graph_file(fmi_path, &mut nodes, &mut edges, &mut sights)?;
+        }
+        let graph = Graph::parse_from_file("./osm_graphs/bremen-latest.fmi")
+            .expect("Failed to parse graph file");
+        Ok(graph)
+    }
+
+    #[test]
+    fn test_greedy() -> std::io::Result<()> {
+        let graph = get_graph()?;
+
+        let algo = GreedyAlgorithm::new(
+            &graph,
+            DateTime::parse_from_rfc3339("2022-06-29T00:00:00+01:00")
+                .unwrap().with_timezone(&Utc),
+            DateTime::parse_from_rfc3339("2022-07-01T00:00:00+01:00")
+                .unwrap().with_timezone(&Utc),
+            7.0 / 3.6,
+            Area {
+                lat: 53.14519850000001,
+                lon: 8.8384274,
+                radius: 5.0,
+            },
+            UserPreferences {
+                categories: vec![SightCategoryPref { name: "Restaurants".to_string(), pref: 3 },
+                                 SightCategoryPref { name: "Sightseeing".to_string(), pref: 5 },
+                                 SightCategoryPref { name: "Nightlife".to_string(), pref: 4 }],
+                sights: vec![SightPref { id: 1274147, category: "Sightseeing".to_string(), pref: 0 }],
+            });
+        let route = algo.compute_route();
+
+        // Route should only contain sectors that include sights with categories restaurant,
+        // sightseeing or nightlife
+        let invalid_category = |category: &Category| {
+            *category != Category::Restaurants && *category != Category::Sightseeing &&
+                *category != Category::Nightlife
+        };
+        let sector = route.iter().find(|&sector| match sector {
+            RouteSector::Start(sector) => invalid_category(&sector.sight.unwrap().category),
+            RouteSector::Intermediate(sector) => invalid_category(&sector.sight.unwrap().category),
+            _ => false,
+        });
+        assert!(sector.is_none());
+
+        // Route should not contain a sector with sight node 1274147
+        let sector = route.iter().find(|&sector| match sector {
+            RouteSector::Start(sector) => sector.sight.unwrap().node_id == 1274147,
+            RouteSector::Intermediate(sector) => sector.sight.unwrap().node_id == 1274147,
+            _ => false,
+        });
+        assert!(sector.is_none());
+
+        Ok(())
+    }
+}

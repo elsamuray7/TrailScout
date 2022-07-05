@@ -179,33 +179,3 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
         route
     }
 }
-
-#[cfg(test)]
-mod test {
-    use chrono::{DateTime, Utc};
-    use crate::algorithm::{_Algorithm, Area, SightCategoryPref, UserPreferences};
-    use crate::algorithm::greedy::GreedyAlgorithm;
-    use crate::data::graph::Graph;
-
-    #[test]
-    fn test_greedy() {
-        let graph = Graph::parse_from_file("./osm_graphs/bremen-latest.fmi").unwrap();
-
-        let algo = GreedyAlgorithm::new(&graph,
-                                        DateTime::parse_from_rfc3339("1996-12-19T10:39:57-08:00").unwrap().with_timezone(&Utc),
-                                        DateTime::parse_from_rfc3339("1996-12-19T20:39:57-08:00").unwrap().with_timezone(&Utc),
-                                        7.0 / 3.6,
-                                        Area {
-                                            lat: 53.14519850000001,
-                                            lon: 8.8384274,
-                                            radius: 5.0,
-                                        },
-                                        UserPreferences {
-                                            categories: vec![SightCategoryPref{ name: "Restaurants".to_string(), pref: 5 }],
-                                            sights: vec![],
-                                        });
-        let route = algo.compute_route();
-
-        println!("Computed travel route:\n{:#?}", &route);
-    }
-}
