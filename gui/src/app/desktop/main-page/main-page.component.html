@@ -18,8 +18,7 @@
             [startPointSet]="marker"
             (settings)="getSettings($event)"
             (radiusChange)="radiusChange($event)"
-            (closeButton)="collapse.toggle()"
-            (sightsReceived)='placeSightMarkers($event)'></app-settings-taskbar>
+            (closeButton)="collapse.toggle()"></app-settings-taskbar>
         </div>
         <i class="btn btn-primary"
             [class.disabled]="!markerCoords"

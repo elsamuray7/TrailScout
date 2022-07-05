@@ -162,9 +162,4 @@ export class MainPageComponent implements OnInit {
       }
     })
   }
-
-  // sights sollte hier Sight[] aber irgendwie nimmt es das nicht an
-  placeSightMarkers(sights: any) {
-    this.mapContainer.drawSights(sights);
-  }
 }

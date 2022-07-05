@@ -3,6 +3,7 @@ import * as L from 'leaflet';
 import { GeoSearchControl, OpenStreetMapProvider } from 'leaflet-geosearch';
 import { Sight } from '../../data/Sight';
 import { LatLngExpression } from 'leaflet';
+import { SightsServiceService } from '../../services/sights-service.service';
 
 const iconRetinaUrl = 'assets/marker-icon-2x.png';
 const iconUrl = 'assets/marker-icon.png';
@@ -38,7 +39,10 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
   private circle?: L.Circle;
   private sightsLayer: L.LayerGroup;
 
-  constructor() {
+  constructor(private sightsService: SightsServiceService) {
+    sightsService.sightsChanged.subscribe((sights) => {
+      this.drawSights(sights);
+    });
   }
   ngOnChanges(changes: SimpleChanges): void {
     this.addCircle(this.marker?.getLatLng()!);
@@ -114,7 +118,7 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
     }
   }
 
-  public drawSights(sights: Map<number, Sight>) {
+  drawSights(sights: Sight[]) {
     this.sightsLayer = new L.LayerGroup<any>();
     sights.forEach((sight) => {
       var latlng: LatLngExpression = {
