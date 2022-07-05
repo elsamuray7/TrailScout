@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 use crate::data::graph::{Category, Graph, Node, Sight};
 use itertools::Itertools;
 use pathfinding::prelude::*;
-use crate::algorithm::{Algorithm, Area, Route, RouteSector, ScoreMap, Sector, UserPreferences};
+use crate::algorithm::{_Algorithm, Area, Route, RouteSector, ScoreMap, Sector, UserPreferences};
 
 /// Compute scores for tourist attractions based on user preferences for categories or specific
 /// tourist attractions, respectively
@@ -14,10 +14,10 @@ fn compute_scores(sights: &HashMap<usize, &Sight>, user_prefs: UserPreferences) 
         .map(|(&sight_id, _)| (sight_id, 0_usize))
         .collect();
     for category in &user_prefs.categories {
-        let _category_enum = category.name.parse::<Category>()
+        let category_enum = category.name.parse::<Category>()
             .unwrap_or(Category::Other);
         sights.iter()
-            .filter(|(_, sight)| matches!(&sight.category, _category_enum))
+            .filter(|(_, sight)| sight.category == category_enum)
             .for_each(|(&sight_id, _)| {
                 scores.insert(sight_id, category.pref);
             });
@@ -26,6 +26,8 @@ fn compute_scores(sights: &HashMap<usize, &Sight>, user_prefs: UserPreferences) 
         // TODO implement check whether SightPref really corresponds to sight
         scores.insert(sight.id, sight.pref);
     }
+    log::debug!("Computed scores: {:?}", &scores);
+
     scores
 }
 
@@ -45,7 +47,12 @@ pub struct GreedyAlgorithm<'a> {
     scores: ScoreMap,
 }
 
-impl<'a> Algorithm<'a> for GreedyAlgorithm<'a> {
+impl GreedyAlgorithm<'_> {
+    /// Unique string identifier of this algorithm implementation
+    pub const ALGORITHM_NAME: &'static str = "Greedy";
+}
+
+impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
     fn new(graph: &'a Graph,
            start_time: DateTime<Utc>,
            end_time: DateTime<Utc>,
@@ -176,7 +183,7 @@ impl<'a> Algorithm<'a> for GreedyAlgorithm<'a> {
 #[cfg(test)]
 mod test {
     use chrono::{DateTime, Utc};
-    use crate::algorithm::{Algorithm, Area, SightCategoryPref, UserPreferences};
+    use crate::algorithm::{_Algorithm, Area, SightCategoryPref, UserPreferences};
     use crate::algorithm::greedy::GreedyAlgorithm;
     use crate::data::graph::Graph;
 
