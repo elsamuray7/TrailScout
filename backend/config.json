@@ -2,6 +2,7 @@
     "ip": "127.0.0.1",
     "port": 8080,
     "log_level": "debug",
-    "graph_file_path": "./osm_graphs/bremen-latest.fmi"
+    "graph_file_path": "./osm_graphs/bremen-latest.fmi",
+    "routing_algorithm": "Greedy"
 }
 
