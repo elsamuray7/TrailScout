@@ -57,7 +57,23 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
            walking_speed_mps: f64,
            area: Area,
            user_prefs: UserPreferences) -> Result<Self, AlgorithmError> where Self: Sized {
-        todo!()
+        if end_time < start_time {
+            return Err(AlgorithmError::NegativeTimeInterval);
+        }
+
+        let sights = graph.get_sights_in_area(area.lat, area.lon, area.radius);
+        let root_id = graph.get_nearest_node(area.lat, area.lon);
+        let scores = compute_scores(&sights, user_prefs);
+        Ok(Self {
+            graph,
+            start_time,
+            end_time,
+            walking_speed_mps,
+            area,
+            sights,
+            root_id,
+            scores,
+        })
     }
 
     fn compute_route(&self) -> Route {
