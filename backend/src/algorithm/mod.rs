@@ -1,4 +1,5 @@
 pub mod greedy;
+pub mod sa_lin_yu;
 
 use std::collections::HashMap;
 use chrono::{DateTime, Utc};
