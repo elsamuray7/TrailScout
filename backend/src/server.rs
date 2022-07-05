@@ -90,13 +90,17 @@ async fn post_route(request:  web::Json<route_provider::RouteProviderReq>, data:
     //convert km/h to m/s
     let speed_mps = route_request.walking_speed_kmh as f64 / 3.6;
 
-    let algo = Algorithm::from_name(&data.config.routing_algorithm, &data.graph, DateTime::from(start),
-                                   DateTime::from(end), speed_mps, route_request.area, route_request.user_prefs);
+    let algo = Algorithm::from_name(&data.config.routing_algorithm,
+                                    &data.graph,
+                                    DateTime::from(start),
+                                    DateTime::from(end),
+                                    speed_mps,
+                                    route_request.area,
+                                    route_request.user_prefs).unwrap();
     let route = algo.compute_route();
     log::debug!("Computed route. Sending response...");
 
-    let mut res = HttpResponse::Ok();
-    res.json(RouteProviderRes{
+    HttpResponse::Ok().json(RouteProviderRes {
         route,
     })
 }
