@@ -14,7 +14,7 @@ export class CookieHandlerService {
 
   allowCookies(value: boolean) {
     this.cookiesAllowed = value;
-    if (this.cookiesAllowed === false) {
+    if (this.cookiesAllowed) {
       this.cookieService.deleteAll();
     }
   }
@@ -41,14 +41,13 @@ export class CookieHandlerService {
     if (!this.cookiesAllowed) {
       return;
     }
-    const latlngString: string = latlng.toString();
+    const latlngString: string = JSON.stringify(latlng)
     this.cookieService.set(environment.cookieLocation, latlngString)
   }
 
   getLocationCookie(): Cookie {
     const result = this.cookieService.get(environment.cookieLocation);
-    const cookie: Cookie = {key: environment.cookieLocation, value: result}
-    return cookie;
+    return {key: environment.cookieLocation, value: result} as Cookie;
   }
 
   setRadiusCookie(radius: number) {
@@ -60,7 +59,6 @@ export class CookieHandlerService {
 
   getRadiusCookie(): Cookie {
     const result = this.cookieService.get(environment.cookieRadius);
-    const cookie: Cookie = {key: environment.cookieRadius, value: result};
-    return cookie;
+    return {key: environment.cookieRadius, value: result} as Cookie;
   }
 }

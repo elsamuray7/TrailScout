@@ -1,6 +1,8 @@
 import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { NgbTimeStruct } from '@ng-bootstrap/ng-bootstrap';
 import { Settings, Sight, SightsPrios, TagCheckboxResponse } from 'src/app/types.utils';
+import { SightsServiceService } from '../../services/sights-service.service';
+import { CookieHandlerService } from '../../services/cookie-handler.service';
 
 @Component({
   selector: 'app-settings-taskbar',
@@ -18,15 +20,17 @@ export class SettingsTaskbarComponent implements OnInit {
   @Output() settings = new EventEmitter;
   @Output() radiusChange = new EventEmitter;
   @Output() closeButton = new EventEmitter;
+  @Output() sightsReceived = new EventEmitter<Sight[]>();
 
-  private _radius!: number;
+  public _radius!: number;
   private _startTime: NgbTimeStruct;
   private _walkTime?: NgbTimeStruct;
   private _endTime?: NgbTimeStruct;
   private currentDate: Date;
   private selectedSights: Map<string, number> = new Map<string, number>();
 
-  constructor() {
+  constructor(private sightsService: SightsServiceService,
+              private cookieService: CookieHandlerService) {
     this.currentDate = new Date();
     this._startTime = {hour: this.currentDate.getHours(), minute: this.currentDate.getMinutes(), second: 0};
    }
@@ -38,7 +42,7 @@ export class SettingsTaskbarComponent implements OnInit {
         this.radius = this.startRadius;
       }
   }, 0);
-    
+
   }
 
   set radius(r: number) {
@@ -83,10 +87,7 @@ export class SettingsTaskbarComponent implements OnInit {
   }
 
   calculationAllowed() {
-    if ((this.radius > 0 || this.walkTime) && this.startPointSet) {
-      return true;
-    }
-    return false;
+    return (this.radius > 0 || this.walkTime) && this.startPointSet;
   }
 
   calculate(){
@@ -119,4 +120,14 @@ export class SettingsTaskbarComponent implements OnInit {
     this.closeButton.emit();
   }
 
+  refreshSights() {
+    const startCookie = this.cookieService.getLocationCookie();
+    if (startCookie.value !== '' && this.radius > 0) {
+      const val = startCookie.value as string;
+      const coords = JSON.parse(val);
+      this.sightsService.getSights(coords, this.radius).subscribe((sights) => {
+        this.sightsReceived.emit(sights as Sight[]);
+      });
+    }
+  }
 }
