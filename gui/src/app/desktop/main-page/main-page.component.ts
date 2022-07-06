@@ -86,6 +86,9 @@ export class MainPageComponent implements OnInit {
   sightsWithPrio?: SightsPrios;
   isCollapsed = true;
 
+  defaultStartPointLong = 8.806422;
+  defaultStartPointLat = 53.073635;
+
   radius?: number;
   constructor(
     private cookieService: CookieHandlerService,
