@@ -1,2 +1,2 @@
-pub mod errors;
+pub mod custom_errors;
 pub mod requests;

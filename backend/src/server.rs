@@ -8,15 +8,13 @@ use std::{env, path::PathBuf};
 use std::any::Any;
 use std::str;
 use std::fs;
-use log::info;
-use log::debug;
-use log::error;
+use log::{info, debug, error};
 use serde_json;
 
 use trailscout_lib::algorithm::{Algorithm, AlgorithmError};
 use trailscout_lib::data::graph::{Graph, Sight};
 use trailscout_lib::server_utils::requests::{RouteProviderReq, RouteProviderRes, SightsRequest};
-use trailscout_lib::server_utils::errors::{TailScoutError};
+use trailscout_lib::server_utils::custom_errors::{TailScoutError};
 
 ///Location of the application config file
 const CONFIG_PATH :&str = "./config.json";
@@ -44,8 +42,10 @@ fn get_config() -> Config {
     //using println instead of logging because this runs before logger can be initialized
     println!("Trying to read config at {}", CONFIG_PATH);
 
-    let data = fs::read_to_string(CONFIG_PATH).expect("Unable to read file");
-    let config: Config = serde_json::from_str(&data).expect("Unable to parse");
+
+
+    let data = fs::read_to_string(CONFIG_PATH).expect(&format!("Unable to read config at {}", CONFIG_PATH));
+    let config: Config = serde_json::from_str(&data).expect("Unable to parse config files");
 
     println!("Read config:\n{:#?}", &config);
 
@@ -54,16 +54,17 @@ fn get_config() -> Config {
 
 ///Responds to post request asking for sights
 #[post("/sights")]
-async fn post_sights(request:  web::Json<SightsRequest>, data: web::Data<AppState>) -> impl Responder {
+async fn post_sights(request:  web::Json<SightsRequest>, data: web::Data<AppState>) -> Result<HttpResponse, TailScoutError> {
 
     debug!("Got Sights Request for lat={}, lon={} and radius={}.",
         request.lat, request.lon, request.radius);
 
+    //TODO does not yet produce any Result with error to handle
     let sights = data.graph.get_sights_in_area(
         request.lat, request.lon, request.radius).values().cloned().collect::<Vec<&Sight>>();
 
-    let mut res = HttpResponse::Ok();
-    res.json(json!(sights))
+
+    Ok(HttpResponse::Ok().json(sights))
 }
 
 
@@ -95,7 +96,6 @@ async fn post_route(request:  web::Json<RouteProviderReq>, data: web::Data<AppSt
 
     match algo_result {
         Ok(algo) => {
-
             let route = algo.compute_route();
             debug!("Computed route with {}. Sending response...", &data.config.routing_algorithm);
 
