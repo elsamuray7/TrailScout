@@ -1,21 +1,22 @@
-mod route_provider;
-
 use actix_cors::Cors;
-use actix_web::{web, App, HttpServer, Result, Responder, get, post, HttpResponse, http};
+use actix_web::{App, get, http, HttpResponse, HttpServer, post, Responder, Result, web};
 use actix_files;
 use chrono::DateTime;
 use serde::Deserialize;
 use serde_json::json;
 use std::{env, path::PathBuf};
+use std::any::Any;
 use std::str;
 use std::fs;
 use log::info;
 use log::debug;
+use log::error;
 use serde_json;
 
-use trailscout_lib::algorithm::Algorithm;
+use trailscout_lib::algorithm::{Algorithm, AlgorithmError};
 use trailscout_lib::data::graph::{Graph, Sight};
-use crate::route_provider::RouteProviderRes;
+use trailscout_lib::server_utils::requests::{RouteProviderReq, RouteProviderRes, SightsRequest};
+use trailscout_lib::server_utils::errors::{TailScoutError};
 
 ///Location of the application config file
 const CONFIG_PATH :&str = "./config.json";
@@ -51,15 +52,6 @@ fn get_config() -> Config {
     return config;
 }
 
-//struct to contain parameters from get_sights request
-//ToDo possibly refactor -> move somewhere else
-#[derive(Deserialize)]
-pub struct SightsRequest {
-   lat: f64,
-   lon: f64,
-   radius: f64
-}
-
 ///Responds to post request asking for sights
 #[post("/sights")]
 async fn post_sights(request:  web::Json<SightsRequest>, data: web::Data<AppState>) -> impl Responder {
@@ -78,7 +70,7 @@ async fn post_sights(request:  web::Json<SightsRequest>, data: web::Data<AppStat
 
 ///Responds to post request asking for routing
 #[post("/route")]
-async fn post_route(request:  web::Json<route_provider::RouteProviderReq>, data: web::Data<AppState>) -> impl Responder {
+async fn post_route(request:  web::Json<RouteProviderReq>, data: web::Data<AppState>) -> Result<HttpResponse, TailScoutError> {
     debug!("Received route request");
 
     let route_request = request.into_inner();
@@ -93,20 +85,39 @@ async fn post_route(request:  web::Json<route_provider::RouteProviderReq>, data:
     let speed_mps = route_request.walking_speed_kmh as f64 / 3.6;
 
     //get configured algorithm
-    let algo = Algorithm::from_name(&data.config.routing_algorithm,
+    let algo_result = Algorithm::from_name(&data.config.routing_algorithm,
                                     &data.graph,
                                     DateTime::from(start),
                                     DateTime::from(end),
                                     speed_mps,
                                     route_request.area,
-                                    route_request.user_prefs).unwrap();
-    let route = algo.compute_route();
+                                    route_request.user_prefs);
 
-    debug!("Computed route with {}. Sending response...", &data.config.routing_algorithm);
+    match algo_result {
+        Ok(algo) => {
 
-    HttpResponse::Ok().json(RouteProviderRes {
-        route,
-    })
+            let route = algo.compute_route();
+            debug!("Computed route with {}. Sending response...", &data.config.routing_algorithm);
+
+            Ok(HttpResponse::Ok().json(RouteProviderRes {
+                route,
+            }))
+        }
+        Err(error) => {
+            error!("Error in post_route: {}",error);
+            Err(TailScoutError::InternalError {message: format!("Error in post_route: {}",error)})
+
+        }
+    }
+
+
+
+}
+
+/// TODO Function kickoff a parse of a new pbf file to fmi graph
+/// TODO Should also update the appstate if possible
+async fn update_graph(){
+    unimplemented!();
 }
 
 
@@ -123,7 +134,7 @@ async fn main() -> std::io::Result<()> {
 
 
     debug!("Starting to parsed graph from: {}", &config.graph_file_path);
-    let graph = Graph::parse_from_file(&config.graph_file_path).expect("Error parsing graph from file");
+    let graph = Graph::parse_from_file(&config.graph_file_path).expect("Error parsing graph from file"); //parse error
     debug!("Parsed graph from: {}", &config.graph_file_path);
 
 
