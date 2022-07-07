@@ -25,7 +25,6 @@ struct AppState {
     config: Config,
 }
 
-
 ///Deserialization of config file
 #[derive(Deserialize, Debug, Clone)]
 struct Config {
@@ -41,8 +40,6 @@ fn get_config() -> Config {
 
     //using println instead of logging because this runs before logger can be initialized
     println!("Trying to read config at {}", CONFIG_PATH);
-
-
 
     let data = fs::read_to_string(CONFIG_PATH).expect(&format!("Unable to read config at {}", CONFIG_PATH));
     let config: Config = serde_json::from_str(&data).expect("Unable to parse config files");
@@ -66,7 +63,6 @@ async fn post_sights(request:  web::Json<SightsRequest>, data: web::Data<AppStat
 
     Ok(HttpResponse::Ok().json(sights))
 }
-
 
 
 ///Responds to post request asking for routing
@@ -94,27 +90,27 @@ async fn post_route(request:  web::Json<RouteProviderReq>, data: web::Data<AppSt
                                     route_request.area,
                                     route_request.user_prefs);
 
-    match algo_result {
-        Ok(algo) => {
-            let route = algo.compute_route();
-            debug!("Computed route with {}. Sending response...", &data.config.routing_algorithm);
-
-            Ok(HttpResponse::Ok().json(RouteProviderRes {
-                route,
-            }))
-        }
+    let algo = match algo_result {
+        Ok(algo) => algo,
         Err(error) => {
+            //Mein intellij mekert hier wegen "doesn't implement Display". Geht aber -> intellij bug?
             error!("Error in post_route: {}",error);
-            Err(TailScoutError::InternalError {message: format!("Error in post_route: {}",error)})
-
+            return Err(TailScoutError::InternalError {message: format!("Error in post_route: {}",error)})
         }
-    }
 
+    };
+
+    let route = algo.compute_route();
+    debug!("Computed route with {}. Sending response...", &data.config.routing_algorithm);
+
+    Ok(HttpResponse::Ok().json(RouteProviderRes {
+        route,
+    }))
 
 
 }
 
-/// TODO Function kickoff a parse of a new pbf file to fmi graph
+/// TODO Function to kickoff a parse of a new pbf file to fmi graph
 /// TODO Should also update the appstate if possible
 async fn update_graph(){
     unimplemented!();
@@ -134,9 +130,8 @@ async fn main() -> std::io::Result<()> {
 
 
     debug!("Starting to parsed graph from: {}", &config.graph_file_path);
-    let graph = Graph::parse_from_file(&config.graph_file_path).expect("Error parsing graph from file"); //parse error
+    let graph = Graph::parse_from_file(&config.graph_file_path).expect("Error parsing graph from file");
     debug!("Parsed graph from: {}", &config.graph_file_path);
-
 
     let data = web::Data::new(AppState {
         graph,
