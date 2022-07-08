@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 use std::fmt::Formatter;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
@@ -6,7 +6,6 @@ use std::io::{BufRead, BufReader};
 use std::num::{ParseFloatError, ParseIntError};
 use serde::{Serialize};
 use serde_enum_str::{Deserialize_enum_str, Serialize_enum_str};
-use rand::Rng;
 
 /// Bounding box of a circular area around a coordinate
 struct BoundingBox {
@@ -30,7 +29,7 @@ impl BoundingBox {
     }
 }
 
-#[derive(Deserialize_enum_str, Serialize_enum_str, PartialEq, Debug)]
+#[derive(Deserialize_enum_str, Serialize_enum_str, PartialEq, Eq, Debug)]
 #[serde(rename_all = "PascalCase")]
 pub enum Category {
     ThemePark,
@@ -46,6 +45,26 @@ pub enum Category {
     Other
 }
 
+#[derive(Deserialize_enum_str, Serialize_enum_str, PartialEq, Debug)]
+#[serde(rename_all = "PascalCase")]
+pub enum EdgeType {
+    Unclassified, // Öffentlich befahrbare Nebenstraßen
+    Residential, // Tempo-30-Zonen
+    Service, // Privatgelände)
+    LivingStreet, // Verkehrsberuhigter Bereich
+    Pedestrian, // Fußgängerzone
+    Track, // Wirtschafts-, Feld- oder Waldweg
+    Road, // Straße unbekannter Klassifikation)
+    Footway, // Gehweg
+    Bridleway, // Reitweg
+    Steps, // Treppen auf Fuß-/Wanderwegen
+    Corridor, // Ein Gang im Inneren eines Gebäudes
+    Path, // Wanderwege oder Trampelpfade
+    Primary, // Straßen von nationaler Bedeutung
+    Secondary, // Straßen von überregionaler Bedeutung
+    Tertiary // Straßen, die Dörfer verbinden
+}
+
 /// A graph node located at a specific coordinate
 #[derive(Debug, Serialize)]
 pub struct Node {
@@ -53,7 +72,7 @@ pub struct Node {
     pub id: usize,
     pub lat: f64,
     pub lon: f64,
-    //pub info: String,
+    pub info: String,
 }
 
 impl PartialEq<Self> for Node {
@@ -82,9 +101,6 @@ pub struct Edge {
     /// The edge's weight, i.e., the distance between its source and target
     pub dist: usize,
 }
-
-/// Type alias for a vector containing sight tags with a key and value
-pub type Tags = Vec<(String, String)>; // TODO are tags needed or just categories
 
 /// A sight node mapped on its nearest node
 #[derive(Debug, Serialize)]
@@ -164,6 +180,7 @@ impl Graph {
                     .expect(&format!("Unexpected EOL while parsing node longitude in line {}",
                                      line_no))
                     .parse()?,
+                info: "".to_string()
             };
             graph.nodes.push(node);
         }
@@ -309,7 +326,7 @@ impl Graph {
 
 /// Calculates the distance between two given coordinates (latitude / longitude) in metres. TODO make metre changeable later?
 pub(crate) fn calc_dist(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> usize {
-    let mut r: f64 = 6371000.0;
+    let r: f64 = 6371000.0;
 
     let d_lat: f64 = (lat2 - lat1).to_radians();
     let d_lon: f64 = (lon2 - lon1).to_radians();
