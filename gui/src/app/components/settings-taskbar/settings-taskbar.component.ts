@@ -1,6 +1,6 @@
 import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { NgbTimeStruct } from '@ng-bootstrap/ng-bootstrap';
-import { Settings, Sight, SightsPrios, TagCheckboxResponse } from 'src/app/types.utils';
+import { Settings } from 'src/app/types.utils';
 import { SightsServiceService } from '../../services/sights-service.service';
 import { CookieHandlerService } from '../../services/cookie-handler.service';
 import {Category} from "../../data/Category";
@@ -13,21 +13,18 @@ import {Category} from "../../data/Category";
 export class SettingsTaskbarComponent implements OnInit {
 
   @Input() width: number = 200;
-  @Input() sights: Sight[] = [];
-  @Input() sightsWithPrio?: SightsPrios;
   @Input() startPointSet = false;
   @Input() startRadius? :number;
 
-  @Output() settings = new EventEmitter;
   @Output() radiusChange = new EventEmitter;
   @Output() closeButton = new EventEmitter;
+  @Output() drawSightsEvent = new EventEmitter;
 
   public _radius!: number;
   private _startTime: NgbTimeStruct;
   private _walkTime?: NgbTimeStruct;
   private _endTime?: NgbTimeStruct;
   private currentDate: Date;
-  private selectedSights: Map<string, number> = new Map<string, number>();
 
   constructor(private sightsService: SightsServiceService,
               private cookieService: CookieHandlerService) {
@@ -95,14 +92,13 @@ export class SettingsTaskbarComponent implements OnInit {
   }
 
   calculate(){
+    // TODO: Routen Request wird hier gestartet
     const result: Settings = {
       radius: this.radius,
       startTime: this.startTime,
       walkTime: this.walkTime,
-      endTime: this.endTime,
-      sights: this.selectedSights
+      endTime: this.endTime
     }
-    this.settings.emit(result)
   }
 
   ngbTimeStructToMinutes(time: NgbTimeStruct) {
@@ -112,12 +108,12 @@ export class SettingsTaskbarComponent implements OnInit {
     return time.minute + time.hour * 60;
   }
 
-  checkedTag(response: TagCheckboxResponse) {
-    if (response.checked) {
-      this.selectedSights.set(response.sight.id, response.prio);
-    } else {
-      this.selectedSights.delete(response.sight.id);
+  drawSights(drawSight: boolean, category: Category) {
+    const response = {
+      "drawSight": drawSight,
+      "category": category
     }
+    this.drawSightsEvent.emit(response);
   }
 
   close() {

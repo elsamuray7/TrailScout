@@ -12,11 +12,8 @@
     <div class="wrapper">
         <div #collapse="ngbCollapse" [(ngbCollapse)]="isCollapsed" id="collapse" [animation]="false">
             <app-settings-taskbar
-            [sights]="sights"
-            [sightsWithPrio]="sightsWithPrio"
             [startRadius]="radius"
             [startPointSet]="marker"
-            (settings)="getSettings($event)"
             (radiusChange)="radiusChange($event)"
             (drawSightsEvent)="drawSights($event)"
             (closeButton)="collapse.toggle()"></app-settings-taskbar>

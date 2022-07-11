@@ -46,6 +46,7 @@ export class SettingsTaskbarTagItemComponent implements OnInit {
   }
 
   getImage() {
+    //TODO: fix - rename images to fit the category names
     return {'background-image' : 'url(assets/sights/' + this.category.name + '.jpg)' };
   }
 }
