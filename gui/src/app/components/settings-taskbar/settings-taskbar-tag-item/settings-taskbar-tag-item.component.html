@@ -1,19 +1,19 @@
 <div class="row item" [ngStyle]="getImage()">
     <div class="col-13 tag">
         <button class="btn" [class.clicked]="checked" (click)="checkedTag()">
-          <span>{{sight.name}}</span></button>
+          <span>{{this.categoryLabels.get(category.name)}} ({{this.category.sights.length}})</span></button>
     </div>
     <div [hidden]="!checked" class="col rating">
       <div ngbDropdown class="d-inline-block">
-        <button type="button" class="btn btn-outline-primary" id="dropdownBasic1" ngbDropdownToggle>Priorität - {{priorityLabels.get(prio)}}</button>
+        <button type="button" class="btn btn-outline-primary" id="dropdownBasic1" ngbDropdownToggle>Priorität - {{priorityLabels.get(this.category.preference)}}</button>
         <div ngbDropdownMenu aria-labelledby="dropdownBasic1">
           <!--<button *ngFor='let value of priorityLabels.values()'ngbDropdownItem>{{value}}</button>-->
-          <button (click)='prio = 0;' ngbDropdownItem>Gar nicht</button>
-          <button (click)='prio = 1;' ngbDropdownItem>Niedriger</button>
-          <button (click)='prio = 2;' ngbDropdownItem>Niedrig</button>
-          <button (click)='prio = 3;' ngbDropdownItem>Neutral</button>
-          <button (click)='prio = 4;' ngbDropdownItem>Hoch</button>
-          <button (click)='prio = 5;' ngbDropdownItem>Höher</button>
+          <button (click)='this.category.preference = 0;' ngbDropdownItem>Gar nicht</button>
+          <button (click)='this.category.preference = 1;' ngbDropdownItem>Niedriger</button>
+          <button (click)='this.category.preference = 2;' ngbDropdownItem>Niedrig</button>
+          <button (click)='this.category.preference = 3;' ngbDropdownItem>Neutral</button>
+          <button (click)='this.category.preference = 4;' ngbDropdownItem>Hoch</button>
+          <button (click)='this.category.preference = 5;' ngbDropdownItem>Höher</button>
         </div>
       </div>
     </div>

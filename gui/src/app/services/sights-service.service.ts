@@ -46,4 +46,8 @@ export class SightsServiceService {
   public getSights() {
     return this.sights;
   }
+
+  public getCategories(): Category[] {
+    return this.categories;
+  }
 }

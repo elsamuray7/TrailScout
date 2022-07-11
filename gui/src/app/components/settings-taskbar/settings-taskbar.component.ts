@@ -3,6 +3,7 @@ import { NgbTimeStruct } from '@ng-bootstrap/ng-bootstrap';
 import { Settings, Sight, SightsPrios, TagCheckboxResponse } from 'src/app/types.utils';
 import { SightsServiceService } from '../../services/sights-service.service';
 import { CookieHandlerService } from '../../services/cookie-handler.service';
+import {Category} from "../../data/Category";
 
 @Component({
   selector: 'app-settings-taskbar',
@@ -51,6 +52,10 @@ export class SettingsTaskbarComponent implements OnInit {
 
   get radius() {
     return this._radius;
+  }
+
+  public getCategories(): Category[] {
+    return this.sightsService.getCategories();
   }
 
   set startTime(time: NgbTimeStruct) {
