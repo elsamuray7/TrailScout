@@ -198,6 +198,13 @@ mod test {
     use crate::data::graph::{Category, Graph};
     use crate::data::osm_graph_creator::{parse_osm_data, write_graph_file};
 
+    /// Baba Hotel, ich schwör!!
+    const RADISSON_BLU_HOTEL: Area = Area {
+        lat: 53.074448,
+        lon: 8.805105,
+        radius: 22.0,
+    };
+
     fn get_graph() -> std::io::Result<Graph> {
         let pbf_path = "./osm_graphs/bremen-latest.osm.pbf";
         let fmi_path = "./osm_graphs/bremen-latest.fmi";
@@ -217,20 +224,16 @@ mod test {
     fn test_greedy() -> std::io::Result<()> {
         let graph = get_graph()?;
 
-        let start_time = DateTime::parse_from_rfc3339("2022-06-29T00:00:00+01:00")
+        let start_time = DateTime::parse_from_rfc3339("2022-07-01T10:00:00+01:00")
             .unwrap().with_timezone(&Utc);
-        let end_time = DateTime::parse_from_rfc3339("2022-07-01T00:00:00+01:00")
+        let end_time = DateTime::parse_from_rfc3339("2022-07-01T13:00:00+01:00")
             .unwrap().with_timezone(&Utc);
         let algo = GreedyAlgorithm::new(
             &graph,
             start_time,
             end_time,
             7.0 / 3.6,
-            Area {
-                lat: 53.14519850000001,
-                lon: 8.8384274,
-                radius: 5.0,
-            },
+            RADISSON_BLU_HOTEL,
             UserPreferences {
                 categories: vec![SightCategoryPref { name: "Restaurants".to_string(), pref: 3 },
                                  SightCategoryPref { name: "Sightseeing".to_string(), pref: 5 },

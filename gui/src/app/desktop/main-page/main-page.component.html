@@ -4,8 +4,8 @@
         <app-map-container id='map-container'
         [circleRadius]="radius"
         [startPoint]="markerCoords"
-        [initLat]="markerCoords?.lat ?? 48.7758459"
-        [initLng]="markerCoords?.lng ?? 9.1829321"
+        [initLat]="markerCoords?.lat ?? defaultStartPointLat"
+        [initLng]="markerCoords?.lng ?? defaultStartPointLong"
         (markerLocation)="markerSet($event)"></app-map-container>
     </div>
 
