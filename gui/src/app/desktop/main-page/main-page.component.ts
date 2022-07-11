@@ -2,7 +2,6 @@ import { Component, OnInit, ViewChild } from '@angular/core';
 import { NgbOffcanvas } from '@ng-bootstrap/ng-bootstrap';
 import * as L from 'leaflet';
 import { CookieHandlerService } from 'src/app/services/cookie-handler.service';
-import { Settings, Sight, SightsPrios } from 'src/app/types.utils';
 import { MapContainerComponent } from '../../components/map-container/map-container.component';
 
 @Component({
@@ -12,78 +11,9 @@ import { MapContainerComponent } from '../../components/map-container/map-contai
 })
 export class MainPageComponent implements OnInit {
 
-  //CATEGORIES
-  data = {
-    "categories": [
-        {
-            "id": "0",
-            "name": "Tiere",
-            "pref": 0,
-            "image": "animals.jpg"
-        },
-        {
-            "id": "1",
-            "name": "Gastronomie",
-            "pref": 0,
-            "image": "gastro.jpg"
-        },
-        {
-            "id": "2",
-            "name": "Aktivitäten",
-            "pref": 0,
-            "image": "activity.jpg"
-        },
-        {
-            "id": "3",
-            "name": "Sehenswürdigkeiten",
-            "pref": 0,
-            "image": "sights.jpg"
-        },
-        {
-            "id": "4",
-            "name": "Nachtleben",
-            "pref": 0,
-            "image": "nightlife.jpg"
-        },
-        {
-            "id": "5",
-            "name": "Aussichtspunkte",
-            "pref": 0,
-            "image": "viewpoint.jpg"
-        },
-        {
-            "id": "6",
-            "name": "Shops",
-            "pref": 0,
-            "image": "shops.jpg"
-        },
-        {
-            "id": "7",
-            "name": "Grill-/Picknickplätze",
-            "pref": 0,
-            "image": "grill.jpg"
-        },
-        {
-            "id": "8",
-            "name": "Baden und Seen",
-            "pref": 0,
-            "image": "see.jpg"
-        },
-        {
-            "id": "9",
-            "name": "Kunst und Kultur",
-            "pref": 0,
-            "image": "art.jpg"
-        }
-    ]
-}
-
-  sights: Sight[] = [];
-
   @ViewChild(MapContainerComponent) mapContainer: MapContainerComponent;
   marker = false;
   markerCoords?: L.LatLng;
-  sightsWithPrio?: SightsPrios;
   isCollapsed = true;
 
   defaultStartPointLong = 8.806422;
@@ -94,15 +24,6 @@ export class MainPageComponent implements OnInit {
     private cookieService: CookieHandlerService,
     private offcanvasService: NgbOffcanvas) {
 
-    this.sights = this.mapData();
-
-    const prioCookies = this.cookieService.getPriosCookies();
-    if (prioCookies) {
-      this.sightsWithPrio = {sightWithPrio: new Map<string, number>()};
-      for (const cookie of prioCookies) {
-        this.sightsWithPrio.sightWithPrio.set(cookie.key, cookie.value)
-      }
-    }
     const startCookie = this.cookieService.getLocationCookie();
     if (startCookie.value !== '') {
       const val = startCookie.value as string;
@@ -118,11 +39,6 @@ export class MainPageComponent implements OnInit {
 
   ngOnInit(): void {
 
-  }
-
-  getSettings(result: Settings) {
-    const sightsWithPrios: SightsPrios = {sightWithPrio: result.sights};
-    this.cookieService.setPriosCookie(sightsWithPrios)
   }
 
   radiusChange(radius: number) {
@@ -159,18 +75,6 @@ export class MainPageComponent implements OnInit {
       console.log(result);
     }, (reason) => {
       console.log(reason);
-    })
-  }
-
-  mapData() {
-    return this.data.categories.map(s => {
-      return <Sight> {
-        id: s.id,
-        name: s.name,
-        description: s.name,
-        pref: s.pref,
-        imagePath: s.image
-      }
     })
   }
 }
