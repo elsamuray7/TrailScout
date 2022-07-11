@@ -28,7 +28,7 @@ export class SettingsTaskbarTagItemComponent implements OnInit {
     ["Nightlife", "Nachtleben"],
     ["Restaurants", "Restaurants"],
     ["Shopping", "Shopping"],
-    ["PicnicBarbequeSpot", "Picnic Plätze"],
+    ["PicnicBarbequeSpot", "Picknick & Grillen"],
     ["MuseumExhibition", "Museen"],
     ["Nature", "Natur"],
     ["Swimming", "Badeplätze"]
@@ -42,13 +42,7 @@ export class SettingsTaskbarTagItemComponent implements OnInit {
 
   checkedTag() {
     this.checked = !this.checked;
-    //const response: TagCheckboxResponse = {checked: this.checked, sight: this.sight, prio: 0};
-    //this.checkedEvent.emit(response);
-  }
-
-  prioChanged() {
-    //const response: TagCheckboxResponse = {checked: this.checked, sight: this.sight, prio: this.prio};
-    //this.checkedEvent.emit(response);
+    this.checkedEvent.emit(this.checked);
   }
 
   getImage() {

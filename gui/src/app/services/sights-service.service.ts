@@ -12,9 +12,14 @@ export class SightsServiceService {
   private sights: Sight[];
   private categories: Category[] = [];
   public sightsChanged = new EventEmitter<Sight[]>();
+  private presetCategories = ["Sightseeing", "Other", "Nightlife", "Restaurants", "Shopping", "PicnicBarbequeSpot",
+    "MuseumExhibition", "Nature", "Swimming"];
 
   constructor(private http: HttpClient) {
-    this.backendUrl = environment.backendUrl
+    this.backendUrl = environment.backendUrl;
+    this.presetCategories.forEach((category) => {
+      this.categories.push(new Category(category));
+    });
   }
 
   public updateSights(coords: L.LatLng, radius: number) {

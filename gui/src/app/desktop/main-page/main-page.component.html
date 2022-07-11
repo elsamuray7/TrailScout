@@ -18,6 +18,7 @@
             [startPointSet]="marker"
             (settings)="getSettings($event)"
             (radiusChange)="radiusChange($event)"
+            (drawSightsEvent)="drawSights($event)"
             (closeButton)="collapse.toggle()"></app-settings-taskbar>
         </div>
         <i class="btn btn-primary"

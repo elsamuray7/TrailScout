@@ -139,6 +139,14 @@ export class MainPageComponent implements OnInit {
     this.cookieService.setLocationCookie(latlng);
   }
 
+  drawSights(response: any) {
+    if (response.drawSight) {
+      this.mapContainer.drawSights(response.category);
+    } else {
+      this.mapContainer.hideSights(response.category);
+    }
+  }
+
   collapse() {
     this.isCollapsed = !this.isCollapsed;
   }
