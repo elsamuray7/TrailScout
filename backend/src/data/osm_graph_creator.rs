@@ -66,9 +66,7 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
 
     let reader = BlobReader::from_path(osmpbf_file_path)?;    
 
-    let mut progress_counter = 0;
-
-    let mut osm_id_to_node_id: HashMap<usize, usize> = HashMap::new();
+    let osm_id_to_node_id: HashMap<usize, usize> = HashMap::new();
     let mut is_street_node: BTreeMap<usize, bool> = BTreeMap::new(); // TODO when parsing ways mark street ndoes, filter nodes that are neither street nodes nor sight nodes
 
  
@@ -86,7 +84,6 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
             info!("required Features: {:?}", header.required_features());
             info!("optional Features: {:?}", header.optional_features());
         } else if blob_type == BlobType::OsmData {
-            info!("Processing Block");
             let sight_config = &sight_config_orig;
             let thread_result = s.spawn(move |d| {
                 let data = blob.to_primitiveblock().unwrap();
@@ -323,7 +320,7 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
     info!("Finished building osm_id_to_node_id after {} seconds!", time_duration.as_secs());
 
     //post processing of edges
-    for edge in edges {
+    for edge in edges.iter_mut() {
         let src = *osm_id_to_node_id.get(&edge.osm_src).unwrap();
         let src_node = nodes.get(src).unwrap();
 
@@ -337,362 +334,9 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
     }
 
     let time_duration = time_start.elapsed();
-    info!("Finished processing the edges after {} seconds!", time_duration.as_secs());
-    
-    let time_duration = time_start.elapsed();
-    info!("Finished processing the PBF data after {} seconds!", time_duration.as_secs());
+    info!("Finished post processing of edges after {} seconds!", time_duration.as_secs());
 
-
-    /*info!("Start reading the PBF file!");
-    let time_start = Instant::now();
-    //this is single threaded
-    let entries = reader.for_each(|result|{
-        let blob = result.unwrap();
-        let blob_type = blob.get_type();
-        if blob_type == BlobType::OsmHeader {
-            info!("This is a Header");
-            let header = blob.to_headerblock().unwrap();
-            info!("required Features: {:?}", header.required_features());
-            info!("optional Features: {:?}", header.optional_features())
-        } else if blob_type == BlobType::OsmData {
-            println!("This is a Block");
-            let data = blob.to_primitiveblock().unwrap();
-            let mut x = 0;
-            data.for_each_element(|element| {
-                x += 1;
-            });
-            info!("x is {}", x);
-        }
-        println!("This is a blob");
-    });
-    let time_duration = time_start.elapsed();
-    info!("Finished reading PBF file in {} seconds!", time_duration.as_secs());*/
-
-    /*let entries:(Vec<GraphNode>, Vec<Edge>) = reader.par_map_reduce(
-        |element| {
-
-            let mut result = (Vec::<GraphNode>::new(), Vec::<Edge>::new());
-
-
-            /*match element {
-                Element::Way(_) => trace!("Way"),
-                Element::DenseNode(_) => trace!("DenseNode"),
-                Element::Node(_) => trace!("Node"),
-                Element::Relation(_) => trace!("Relation"),
-                _ => error!("Unrecognized Element")
-            }*/
-            if let Element::Node(n) = element {
-                // TODO if no tags corrects tags for category + category enum
-                let node = GraphNode {
-                    osm_id: n.id() as usize,
-                    id: num_nodes,
-                    lat: n.lat(),
-                    lon: n.lon(),
-                };
-                result.0.push(node);
-            } else if let Element::DenseNode(n) = element {
-                // TODO if no tags corrects tags for category + category enum + compare node ids from denseNode and Node !!!
-                let node = GraphNode {
-                    osm_id: n.id() as usize,
-                    id: num_nodes,
-                    lat: n.lat(),
-                    lon: n.lon(),
-                    //info: "".to_string()
-                };
-                result.0.push(node);
-            } else if let Element::Way(w) = element {
-                // TODO way id; check way tags
-                /*let mut way_ref_iter = w.refs();
-                let mut osm_src = way_ref_iter.next().unwrap() as usize;
-                for node_id  in way_ref_iter {
-                    let osm_tgt = node_id as usize;
-                    let mut edge = Edge {
-                        osm_id: w.id() as usize,
-                        osm_src: osm_src,
-                        osm_tgt: osm_tgt,
-                        src: *osm_id_to_node_id.get(&osm_src).unwrap(),
-                        tgt: *osm_id_to_node_id.get(&osm_tgt).unwrap(),
-                        dist: 0
-                    };
-                    let src_node = &nodes[edge.src];
-                    let tgt_node = &nodes[edge.tgt];
-                    edge.dist = calc_dist(src_node.lat, src_node.lon, tgt_node.lat, tgt_node.lon);
-                    result.1.push(edge);
-                    osm_src = osm_tgt;
-                }*/
-            }
-            return result
-        },
-        ||(Vec::<GraphNode>::new(), Vec::<Edge>::new()),      // Zero is the identity value for addition
-        |mut m1, m2| {
-            for k in m2.0 {
-                m1.0.push(k);
-            }
-            for k in m2.1 {
-                m1.1.push(k);
-            }
-            m1
-        }
-    )?;*/
-
-    
-
-    /*reader.for_each(|element| {
-        if let Element::Node(n) = element {
-            let tags = n.tags();
-            let lat = n.lat();
-            let lon = n.lon();
-            let id = n.id();
-            // TODO if no tags corrects tags for category + category enum
-            /*
-            let mut isSight = false;
-            for (key, value) in n.tags() {
-                match key {
-                    "amenity" => {
-                        isSight = true;
-                        match value {
-                            "restaurant" | "biergarten" | "cafe" | "fast_food" | "food_court" => {
-                                let mut sight = Sight {
-                                    node_id: n.id() as usize,
-                                    lat: n.lat(),
-                                    lon: n.lon(),
-                                    category: Category::Restaurants,
-                                };
-                                sights.push(sight);
-                                num_sights += 1;
-                                node_count += 1;
-                            }
-                            _ => {}
-                        }
-                    }
-                    _ => {}
-                }
-            }
-            if(!isSight) {
-                let mut node = GraphNode {
-                    osm_id: n.id() as usize,
-                    id: num_nodes,
-                    lat: n.lat(),
-                    lon: n.lon(),
-                    //info: "".to_string()
-                };
-                osm_id_to_node_id.entry(node.osm_id)
-                    .or_insert(num_nodes);
-                nodes.push(node);
-                num_nodes += 1;
-                node_count += 1;
-            }
-
-             */
-
-            let mut is_sight = false;
-            for (key, value) in n.tags() {
-                /*
-                node.info.push_str("key: (");
-                node.info.push_str(key);
-                node.info.push_str(") value: (");
-                node.info.push_str(value);
-                node.info.push_str(")\n");
-
-                 */
-                for cat_tag_map in &sight_config.category_tag_map {
-                    for tag in &cat_tag_map.tags {
-                        if key.eq(&tag.key) {
-                            if value.eq(&tag.value) {
-                                is_sight = true;
-                                let sight = Sight {
-                                    node_id: num_nodes, // TODO change to nearest node
-                                    lat: n.lat(),
-                                    lon: n.lon(),
-                                    category: cat_tag_map.category.parse::<Category>().unwrap(),
-                                };
-                                sights.push(sight);
-                                num_sights += 1;
-
-                                let node = GraphNode {
-                                    osm_id: n.id() as usize,
-                                    id: num_nodes,
-                                    lat: n.lat(),
-                                    lon: n.lon(),
-                                    info: "".to_string()
-                                };
-
-                                osm_id_to_node_id.entry(node.osm_id)
-                                    .or_insert(num_nodes);
-                                nodes.push(node);
-                                num_nodes += 1;
-                                node_count += 1;
-                            }
-                        }
-                    }
-                }
-            }
-            if !is_sight {
-                let node = GraphNode {
-                    osm_id: n.id() as usize,
-                    id: num_nodes,
-                    lat: n.lat(),
-                    lon: n.lon(),
-                    info: "".to_string()
-                };
-
-                osm_id_to_node_id.entry(node.osm_id)
-                    .or_insert(num_nodes);
-                nodes.push(node);
-                num_nodes += 1;
-                node_count += 1;
-            }
-        } else if let Element::DenseNode(n) = element {
-            // TODO if no tags corrects tags for category + category enum + compare node ids from denseNode and Node !!!
-            /*
-            let mut isSight = false;
-            for (key, value) in n.tags() {
-                match key {
-                    "amenity" => {
-                        isSight = true;
-                        match value {
-                            "restaurant" | "biergarten" | "cafe" | "fast_food" | "food_court" => {
-                                let mut sight = Sight {
-                                    node_id: n.id() as usize,
-                                    lat: n.lat(),
-                                    lon: n.lon(),
-                                    category: Category::Restaurants,
-                                };
-                                sights.push(sight);
-                                num_sights += 1;
-                                node_count += 1;
-                            }
-                            _ => {}
-                        }
-                    }
-                    _ => {}
-                }
-            }
-            if(!isSight) {
-                let mut node = GraphNode {
-                    osm_id: n.id() as usize,
-                    id: num_nodes,
-                    lat: n.lat(),
-                    lon: n.lon(),
-                    //info: "".to_string()
-                };
-                osm_id_to_node_id.entry(node.osm_id)
-                    .or_insert(num_nodes);
-                nodes.push(node);
-                num_nodes += 1;
-                node_count += 1;
-            }
-
-             */
-            
-            let mut is_sight = false;
-            for (key, value) in n.tags() {
-                /*
-                node.info.push_str("key: (");
-                node.info.push_str(key);
-                node.info.push_str(") value: (");
-                node.info.push_str(value);
-                node.info.push_str(")\n");
-
-                 */
-                for cat_tag_map in &sight_config.category_tag_map {
-                    for tag in &cat_tag_map.tags {
-                        if key.eq(&tag.key) {
-                            if value.eq(&tag.value) {
-                                is_sight = true;
-                                let sight = Sight {
-                                    node_id: num_nodes, // TODO change to nearest node
-                                    lat: n.lat(),
-                                    lon: n.lon(),
-                                    category: cat_tag_map.category.parse::<Category>().unwrap(),
-                                };
-                                sights.push(sight);
-                                num_sights += 1;
-
-                                let node = GraphNode {
-                                    osm_id: n.id() as usize,
-                                    id: num_nodes,
-                                    lat: n.lat(),
-                                    lon: n.lon(),
-                                    info: "".to_string()
-                                };
-
-                                osm_id_to_node_id.entry(node.osm_id)
-                                    .or_insert(num_nodes);
-                                nodes.push(node);
-                                num_nodes += 1;
-                                node_count += 1;
-                            }
-                        }
-                    }
-                }
-            }
-            if !is_sight {
-                let node = GraphNode {
-                    osm_id: n.id() as usize,
-                    id: num_nodes,
-                    lat: n.lat(),
-                    lon: n.lon(),
-                    info: "".to_string()
-                };
-
-                osm_id_to_node_id.entry(node.osm_id)
-                    .or_insert(num_nodes);
-                nodes.push(node);
-                num_nodes += 1;
-                node_count += 1;
-            }
-        } else if let Element::Way(w) = element {
-            // TODO way id; check way tags for edge type
-            let mut way_ref_iter = w.refs();
-            let mut osm_src = way_ref_iter.next().unwrap() as usize;
-            for node_id  in way_ref_iter {
-                let osm_tgt = node_id as usize;
-                let mut edge = Edge {
-                    osm_id: w.id() as usize,
-                    osm_src: osm_src,
-                    osm_tgt: osm_tgt,
-                    src: *osm_id_to_node_id.get(&osm_src).unwrap(),
-                    tgt: *osm_id_to_node_id.get(&osm_tgt).unwrap(),
-                    dist: 0
-                };
-                // TODO set edge_type
-                let src_node = &nodes[edge.src];
-                let tgt_node = &nodes[edge.tgt];
-                edge.dist = calc_dist(src_node.lat, src_node.lon, tgt_node.lat, tgt_node.lon);
-                //let srcNode = &nodes[edge.src];
-                //let tgtNode = &nodes[edge.tgt];
-                //let dist = calc_dist(srcNode.lat, srcNode.lon), tgt.;
-
-                //let src_node = &nodes[edge.src];
-                //let tgt_node = &nodes[edge.tgt];
-                //edge.dist = calc_dist(&src_node.lat, &src_node.lon, &tgt_node.lat, &tgt_node.lon);
-
-                edges.push(edge);
-                num_edges += 1;
-                way_count += 1;
-
-                osm_src = osm_tgt;
-            }
-            /*
-            if(w.id() == 3999579) {
-                println!("way id 3999579:");
-                for val in w.refs() {
-                    println!("{}", val);
-                }
-            }
-            */
-        } else if let Element::Relation(_) = element {
-            relation_count += 1;
-        }
-        if progress_counter % 40000 == 0 {
-            trace!("finished processing {} elements", progress_counter);
-        }
-        progress_counter += 1;
-        //println!("nodes {} ways {} denses {} relations {}", node_count, way_count, dense_count, relation_count);
-    })?;*/
-
-    /*edges.sort_unstable_by(|e1, e2| {
+    edges.sort_unstable_by(|e1, e2| {
         let id1 = e1.src;
         let id2 = e2.src;
         id1.cmp(&id2).then_with(||{
@@ -700,7 +344,13 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
             let id2 = e2.tgt;
             id1.cmp(&id2)
         })
-    });*/
+    });
+
+    let time_duration = time_start.elapsed();
+    info!("Finished sorting edges after {} seconds!", time_duration.as_secs());
+
+    let time_duration = time_start.elapsed();
+    info!("End of PBF data parsing after {} seconds!", time_duration.as_secs());
     Ok(())
 }
 
