@@ -5,7 +5,7 @@ use std::io::{LineWriter, Write};
 use crossbeam::thread;
 use serde::Deserialize;
 use std::time::{Instant};
-use log::{info, error};
+use log::{info, error, trace};
 use osmpbf::{Element, BlobReader, BlobType};
 use crate::data::graph::{calc_dist, Category, Edge, Node as GraphNode, Sight};
 
@@ -293,7 +293,7 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
                         _ => error!("Unrecognized Element")
                     }
                 });
-                info!("Finished processing one blob!");
+                trace!("Finished processing one blob!");
                 result
             });
             threads.push(thread_result);
