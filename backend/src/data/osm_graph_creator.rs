@@ -66,7 +66,7 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
 
     let reader = BlobReader::from_path(osmpbf_file_path)?;    
 
-    let osm_id_to_node_id: HashMap<usize, usize> = HashMap::new();
+    let mut osm_id_to_node_id: HashMap<usize, usize> = HashMap::new();
     let mut is_street_node: BTreeMap<usize, bool> = BTreeMap::new(); // TODO when parsing ways mark street ndoes, filter nodes that are neither street nodes nor sight nodes
 
  
