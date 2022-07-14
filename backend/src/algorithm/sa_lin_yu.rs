@@ -64,7 +64,7 @@ impl SimAnnealingLinYu<'_> {
     pub const ALGORITHM_NAME: &'static str = "DerAllerbesteste";
 
     fn calculate_score(&self, current_solution: &Vec<(&Sight, usize)>) -> usize {
-        let mut rng = rand::thread_rng();
+        let mut rng = thread_rng();
         rng.gen_range(0..100)
     }
 }
@@ -142,7 +142,7 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
         let mut f_best = self.calculate_score(&x);
 
         let start_time = Instant::now();
-        let old_score = self.calculate_score(&x);
+        let mut old_score = self.calculate_score(&x);
         loop {
             let p = rng.gen::<f64>();
 
@@ -157,14 +157,16 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
 
             i = i + 1;
 
-            let new_score = self.calculate_score(&x);
+            let new_score = self.calculate_score(&y);
 
             let score_dif = new_score as isize - old_score as isize;
             if score_dif >= 0 {
+                old_score = new_score;
                 x = y;
             } else {
                 let r = rng.gen::<f64>();
                 if r < std::f64::consts::E.powf(score_dif as f64 / t) {
+                    old_score = new_score;
                     x = y;
                 } else {
                     continue;
@@ -189,9 +191,19 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
             }
         }
 
-        let route = Route::new();
+        let mut route = Route::new();
         let mut time_budget = self.end_time.timestamp() - self.start_time.timestamp();
 
+        // for i in 0..(x.len() - 1) {
+        //     let concrete_distance_map = &distance_map[&x[i].0.node_id];
+        //     let sector = Sector::new(concrete_distance_map[&x[i+1].0].1, pathfinding::directed::dijkstra::build_path());
+        //     time_budget = time_budget - concrete_distance_map[&x[i+1].0].1 as i64;
+        //     if time_budget > 0 {
+        //         route.push(RouteSector::Intermediate(sector));
+        //     }
+        // }
+        //
+        // return route;
         todo!()
     }
 }
@@ -225,7 +237,7 @@ fn insert<'a>(current_solution: &Vec<(&'a Sight, usize)>) -> Vec<(&'a Sight, usi
 }
 
 fn reverse<'a>(current_solution: &Vec<(&'a Sight, usize)>) -> Vec<(&'a Sight, usize)> {
-    let mut rng = rand::thread_rng();
+    let mut rng = thread_rng();
     let size = current_solution.len();
     let i = rng.gen_range(0..size);
     let j = rng.gen_range(0..size);
