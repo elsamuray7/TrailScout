@@ -12,14 +12,11 @@
     <div class="wrapper">
         <div #collapse="ngbCollapse" [(ngbCollapse)]="isCollapsed" id="collapse" [animation]="false">
             <app-settings-taskbar
-            [sights]="sights"
-            [sightsWithPrio]="sightsWithPrio"
             [startRadius]="radius"
             [startPointSet]="marker"
-            (settings)="getSettings($event)"
             (radiusChange)="radiusChange($event)"
-            (closeButton)="collapse.toggle()"
-            (sightsReceived)='placeSightMarkers($event)'></app-settings-taskbar>
+            (drawSightsEvent)="drawSights($event)"
+            (closeButton)="collapse.toggle()"></app-settings-taskbar>
         </div>
         <i class="btn btn-primary"
             [class.disabled]="!markerCoords"

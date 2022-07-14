@@ -1,31 +1,31 @@
-mod route_provider;
-
 use actix_cors::Cors;
-use actix_web::{web, App, HttpServer, Result, Responder, get, post, HttpResponse, http};
+use actix_web::{App, get, http, HttpResponse, HttpServer, post, Responder, Result, web};
 use actix_files;
 use chrono::DateTime;
 use serde::Deserialize;
 use serde_json::json;
 use std::{env, path::PathBuf};
+use std::any::Any;
 use std::str;
 use std::fs;
+use log::{info, debug, error};
 use serde_json;
 
-use trailscout_lib::algorithm::Algorithm;
+use trailscout_lib::algorithm::{Algorithm, AlgorithmError};
 use trailscout_lib::data::graph::{Graph, Sight};
-use crate::route_provider::RouteProviderRes;
-//TODO cleanup imports
+use trailscout_lib::server_utils::requests::{RouteProviderReq, RouteProviderRes, SightsRequest};
+use trailscout_lib::server_utils::custom_errors::{TailScoutError};
 
+///Location of the application config file
 const CONFIG_PATH :&str = "./config.json";
 
-// This struct represents state
+///Represents state containing the config and appstate
 struct AppState {
     graph: Graph,
     config: Config,
 }
 
-
-//Deserialization of config
+///Deserialization of config file
 #[derive(Deserialize, Debug, Clone)]
 struct Config {
     ip: String,
@@ -35,52 +35,42 @@ struct Config {
     routing_algorithm: String,
 }
 
-//read config at CONFIG_PATH and return it
+///read config.json at CONFIG_PATH and return it
 fn get_config() -> Config {
 
-    let data = fs::read_to_string(CONFIG_PATH).expect("Unable to read file");
-    let config: Config = serde_json::from_str(&data).expect("Unable to parse");
-    log::info!("Read config:\n{:#?}", &config);
+    //using println instead of logging because this runs before logger can be initialized
+    println!("Trying to read config at {}", CONFIG_PATH);
+
+    let data = fs::read_to_string(CONFIG_PATH).expect(&format!("Unable to read config at {}", CONFIG_PATH));
+    let config: Config = serde_json::from_str(&data).expect("Unable to parse config files");
+
+    println!("Read config:\n{:#?}", &config);
 
     return config;
 }
 
-//struct to contain parameters from get_sights request
-//ToDo possibly refactor -> move somewhere else
-#[derive(Deserialize)]
-pub struct SightsRequest {
-   lat: f64,
-   lon: f64,
-   radius: f64
-}
-
-//Default service: sends all not differently handled requests to angular index.html
-async fn index() -> Result<actix_files::NamedFile> {
-    let path: PathBuf = "../../gui/dist/index.html".parse().unwrap();
-    Ok(actix_files::NamedFile::open(path)?)
-}
-
-
 ///Responds to post request asking for sights
 #[post("/sights")]
-async fn post_sights(request:  web::Json<SightsRequest>, data: web::Data<AppState>) -> impl Responder {
+async fn post_sights(request:  web::Json<SightsRequest>, data: web::Data<AppState>) -> Result<HttpResponse, TailScoutError> {
 
-    println!("Placeholder Sights Request for lat={}, lon={} and radius={}.", request.lat, request.lon, request.radius);
+    debug!("Got Sights Request for lat={}, lon={} and radius={}.",
+        request.lat, request.lon, request.radius);
 
-    let sights = data.graph.get_sights_in_area(request.lat, request.lon, request.radius).values().cloned().collect::<Vec<&Sight>>();
+    //TODO does not yet produce any Result with error to handle
+    let sights = data.graph.get_sights_in_area(
+        request.lat, request.lon, request.radius).values().cloned().collect::<Vec<&Sight>>();
 
-    //TODO does this serialize correctly according to interface definition?
-    let mut res = HttpResponse::Ok();
-    res.json(json!(sights))
+
+    Ok(HttpResponse::Ok().json(sights))
 }
-
 
 
 ///Responds to post request asking for routing
 #[post("/route")]
-async fn post_route(request:  web::Json<route_provider::RouteProviderReq>, data: web::Data<AppState>) -> impl Responder {
+async fn post_route(request:  web::Json<RouteProviderReq>, data: web::Data<AppState>) -> Result<HttpResponse, TailScoutError> {
+    debug!("Received route request");
+
     let route_request = request.into_inner();
-    log::debug!("Received route request");
 
     //parse start and end from Iso 8601 (rfc3339)
     let start = DateTime::parse_from_rfc3339(&route_request.start)
@@ -91,26 +81,46 @@ async fn post_route(request:  web::Json<route_provider::RouteProviderReq>, data:
     //convert km/h to m/s
     let speed_mps = route_request.walking_speed_kmh as f64 / 3.6;
 
-    let algo = Algorithm::from_name(&data.config.routing_algorithm,
+    //get configured algorithm
+    let algo_result = Algorithm::from_name(&data.config.routing_algorithm,
                                     &data.graph,
                                     DateTime::from(start),
                                     DateTime::from(end),
                                     speed_mps,
                                     route_request.area,
-                                    route_request.user_prefs).unwrap();
-    let route = algo.compute_route();
-    log::debug!("Computed route. Sending response...");
+                                    route_request.user_prefs);
 
-    HttpResponse::Ok().json(RouteProviderRes {
+    let algo = match algo_result {
+        Ok(algo) => algo,
+        Err(error) => {
+            //Mein intellij mekert hier wegen "doesn't implement Display". Geht aber -> intellij bug?
+            error!("Error in post_route: {}",error);
+            return Err(TailScoutError::InternalError {message: format!("Error in post_route: {}",error)})
+        }
+
+    };
+
+    let route = algo.compute_route();
+    debug!("Computed route with {}. Sending response...", &data.config.routing_algorithm);
+
+    Ok(HttpResponse::Ok().json(RouteProviderRes {
         route,
-    })
+    }))
+
+
+}
+
+/// TODO Function to kickoff a parse of a new pbf file to fmi graph
+/// TODO Should also update the appstate if possible
+async fn update_graph(){
+    unimplemented!();
 }
 
 
 
 //server main
 #[actix_web::main]
-async fn main() -> std::io::Result<()> { 
+async fn main() -> std::io::Result<()> {
     let config: Config = get_config();
 
     // Initialize logger
@@ -118,24 +128,17 @@ async fn main() -> std::io::Result<()> {
     env::set_var("RUST_BACKTRACE", "1");
     env_logger::init();
 
-    //TODO fix state - Arc RWlock?
 
-    //TODO probably remove
-    //let graph_result: Result<Graph, ParseError> = Graph::parse_from_file(&config.graph_file_path);
-    //let currentGraph = graph_result.expect("Error parsing graph from file");
-    //let graph_result: Graph = Graph::new();
-    //let rw_lock_graph = Arc::new(RwLock::new(graph_result));
-
-
+    debug!("Starting to parsed graph from: {}", &config.graph_file_path);
     let graph = Graph::parse_from_file(&config.graph_file_path).expect("Error parsing graph from file");
-    log::info!("Parsed graph: {}", &config.graph_file_path);
+    debug!("Parsed graph from: {}", &config.graph_file_path);
+
     let data = web::Data::new(AppState {
         graph,
         config: config.clone(),
         //rw_lock_graph : Arc::new(RwLock::new(Graph::new())),
     });
 
-    //move
     HttpServer::new(move|| {
         let cors = Cors::default()
             .allow_any_origin()
@@ -148,9 +151,6 @@ async fn main() -> std::io::Result<()> {
             .wrap(cors)
             .service(post_sights)
             .service(post_route)
-            .service(actix_files::Files::new("/static", "../../gui/dist/").show_files_listing())
-            .service(actix_files::Files::new("/assets", "../../gui/dist/assets").show_files_listing())
-            .default_service(web::get().to(index))
             .app_data(data.clone())
 
     })

@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { CookieService } from 'ngx-cookie-service';
-import { Cookie, SightsPrios } from '../types.utils';
+import { Cookie } from '../types.utils';
 import { environment } from 'src/environments/environment';
 
 @Injectable({
@@ -17,24 +17,6 @@ export class CookieHandlerService {
     if (this.cookiesAllowed) {
       this.cookieService.deleteAll();
     }
-  }
-
-  setPriosCookie(prios: SightsPrios) {
-    if (!this.cookiesAllowed) {
-      return;
-    }
-    for (const prio of prios.sightWithPrio) {
-      const cookie = prio[0];
-      this.cookieService.set(cookie, prio[1].toString());
-    }
-  }
-  getPriosCookies(): Cookie[] {
-    const result =  this.cookieService.getAll();
-    const prioCookies: Cookie[] = [];
-    Object.entries(result).forEach(res => {
-      prioCookies.push({key: res[0], value: res[1] as any})
-    });
-    return prioCookies;
   }
 
   setLocationCookie(latlng: L.LatLng) {
