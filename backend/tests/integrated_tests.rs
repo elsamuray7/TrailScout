@@ -1,15 +1,15 @@
-use std::fs::File;
-use file_diff::{diff_files, diff};
 use log::info;
+use trailscout_lib::data::graph::Graph;
 
 mod common;
 
 #[test]
-fn test_compare_created_fmi_file_to_previous_version() {
+fn test_parsing_process_to_produce_graph_with_proper_number_of_elements() {
     common::parse_pbf_to_fmi_file();
-    info!("Testing for differences between the old and new fmi file");  
-    assert!(diff("./tests_data/output/test-bremen-latest.fmi", "./tests_data/old-bremen-latest.fmi"), 
-        "The newly parsed bremen fmi file is different from the previous fmi file. 
-        Something probably changed in the parsing method. 
-        Update the comparison fmi file if these changes were intended.");
+    info!("Creating graph"); 
+    let graph = Graph::parse_from_file("./tests_data/output/test-bremen-latest.fmi").unwrap();
+    info!("Asserting graph properties"); 
+    assert_eq!(graph.num_nodes, 1565587);
+    assert_eq!(graph.num_sights, 3014);
+    assert_eq!(graph.num_edges, 1942587);
 }
