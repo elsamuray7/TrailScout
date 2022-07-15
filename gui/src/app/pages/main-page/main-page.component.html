@@ -10,7 +10,7 @@
     </div>
 
     <div class="wrapper">
-        <div #collapse="ngbCollapse" [(ngbCollapse)]="isCollapsed" id="collapse" [animation]="false">
+        <div #collapse="ngbCollapse" [(ngbCollapse)]="isCollapsed" id="collapse" [class.mobile]="mobile" [animation]="false">
             <app-settings-taskbar
             [startRadius]="radius"
             [startPointSet]="marker"

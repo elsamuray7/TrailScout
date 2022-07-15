@@ -14,7 +14,7 @@ export class CookieHandlerService {
 
   allowCookies(value: boolean) {
     this.cookiesAllowed = value;
-    if (this.cookiesAllowed) {
+    if (!this.cookiesAllowed) {
       this.cookieService.deleteAll();
     }
   }
