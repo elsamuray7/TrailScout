@@ -154,7 +154,7 @@ impl Graph {
             .expect("Unexpected EOF while parsing number of nodes")?
             .parse()?;
         graph.num_sights = lines.next()
-            .expect("Unexpected EOF while parsing number of nodes")?
+            .expect("Unexpected EOF while parsing number of sights")?
             .parse()?;
         graph.num_edges = lines.next()
             .expect("Unexpected EOF while parsing number of edges")?

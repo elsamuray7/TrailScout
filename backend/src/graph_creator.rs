@@ -1,4 +1,5 @@
 use std::io;
+use std::time::Instant;
 use env_logger::Env;
 use trailscout_lib::data::graph::{Edge, Sight, Node, Graph};
 use trailscout_lib::data::osm_graph_creator::{parse_osm_data, write_graph_file};
@@ -21,7 +22,13 @@ fn main() -> Result<(), io::Error> {
     parse_osm_data(in_graph, &mut nodes, &mut edges, &mut sights);
     write_graph_file( out_graph, &mut nodes, &mut edges, &mut sights);
 
+    info!("Start creating the graph from fmi file!");
+    let time_start = Instant::now();
+
     let graph = Graph::parse_from_file(out_graph).unwrap();
+
+    let time_duration = time_start.elapsed();
+    info!("End graph creation after {} seconds!", time_duration.as_secs());
 
     println!("{}", graph.num_nodes);
     println!("{}", graph.num_sights);

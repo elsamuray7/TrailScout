@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, HashMap};
 use std::fs::File;
 use std::{fs, io};
-use std::io::{LineWriter, Write};
+use std::io::{LineWriter, Write, BufWriter};
 use crossbeam::thread;
 use serde::Deserialize;
 use std::time::{Instant};
@@ -356,8 +356,6 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
 
 
 pub fn write_graph_file(graph_file_path_out: &str, nodes: &mut Vec<GraphNode>, edges: &mut Vec<Edge>, sights: &mut Vec<Sight>) -> std::io::Result<()> {
-    let file = File::create(graph_file_path_out)?;
-    let mut file = LineWriter::new(file);
     /*
     file.write((format!("Number of Nodes: {}\n", nodes.len())).as_bytes())?;
     file.write((format!("Number of Edges: {}\n", edges.len())).as_bytes())?;
@@ -371,17 +369,34 @@ pub fn write_graph_file(graph_file_path_out: &str, nodes: &mut Vec<GraphNode>, e
         file.write((format!("{} {} {} {} {} {}\n", edge.osm_id, edge.osm_src, edge.osm_tgt, edge.src, edge.tgt, edge.dist)).as_bytes())?;
     }
      */
+    info!("Start writing the fmi file!");
+    let time_start = Instant::now();
+
+    let mut text = "".to_owned();
+
+    for node in &*nodes {
+        text.push_str(&format!("{} {} {}\n", node.id, node.lat, node.lon));
+    }
+    for sight in &*sights {
+        text.push_str(&format!("{} {} {} {}\n", sight.node_id, sight.lat, sight.lon, sight.category.to_string()));
+    }
+    for edge in &*edges {
+        text.push_str(&format!("{} {} {}\n", edge.src, edge.tgt, edge.dist));
+    }
+    
+    let time_duration = time_start.elapsed();
+    info!("Created text after {} seconds!", time_duration.as_secs());
+
+    let file = File::create(graph_file_path_out)?;
+    let mut file = BufWriter::new(file);
+
     file.write((format!("{}\n", nodes.len())).as_bytes())?;
     file.write((format!("{}\n", sights.len())).as_bytes())?;
     file.write((format!("{}\n", edges.len())).as_bytes())?;
-    for node in &*nodes {
-        file.write(format!("{} {} {}\n", node.id, node.lat, node.lon).as_bytes())?;
-    }
-    for sight in &*sights {
-        file.write(format!("{} {} {} {}\n", sight.node_id, sight.lat, sight.lon, sight.category.to_string()).as_bytes())?;
-    }
-    for edge in &*edges {
-        file.write(format!("{} {} {}\n", edge.src, edge.tgt, edge.dist).as_bytes())?;
-    }
+
+    file.write(text.as_bytes());
+
+    let time_duration = time_start.elapsed();
+    info!("End of writing fmi file after {} seconds!", time_duration.as_secs());
     Ok(())
 }
