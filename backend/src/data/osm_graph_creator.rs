@@ -1,5 +1,5 @@
 use std::collections::{BTreeMap, HashMap};
-use std::fs::File;
+use std::fs::{File, create_dir_all};
 use std::{fs, io};
 use std::io::{LineWriter, Write, BufWriter};
 use crossbeam::thread;
@@ -387,6 +387,9 @@ pub fn write_graph_file(graph_file_path_out: &str, nodes: &mut Vec<GraphNode>, e
     let time_duration = time_start.elapsed();
     info!("Created text after {} seconds!", time_duration.as_secs());
 
+    let path = std::path::Path::new(graph_file_path_out);
+    let prefix = path.parent().unwrap();
+    create_dir_all(prefix)?;
     let file = File::create(graph_file_path_out)?;
     let mut file = BufWriter::new(file);
 
@@ -394,7 +397,7 @@ pub fn write_graph_file(graph_file_path_out: &str, nodes: &mut Vec<GraphNode>, e
     file.write((format!("{}\n", sights.len())).as_bytes())?;
     file.write((format!("{}\n", edges.len())).as_bytes())?;
 
-    file.write(text.as_bytes());
+    file.write(text.as_bytes())?;
 
     let time_duration = time_start.elapsed();
     info!("End of writing fmi file after {} seconds!", time_duration.as_secs());
