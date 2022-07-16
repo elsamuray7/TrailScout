@@ -3,7 +3,7 @@ import { BrowserModule } from '@angular/platform-browser';
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
-import { DesktopModule } from './pages/desktop.module';
+import { PagesModule } from './pages/pages.module';
 import { NavigationModule } from './pages/navigation/navigation.module';
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 import { CookieService } from 'ngx-cookie-service';
@@ -34,7 +34,7 @@ const cookieConfig:NgcCookieConsentConfig = {
   imports: [
     BrowserModule,
     AppRoutingModule,
-    DesktopModule,
+    PagesModule,
     HttpClientModule,
     NavigationModule,
     NgbModule,
