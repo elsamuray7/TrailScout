@@ -41,9 +41,12 @@
 #collapse {
     width: 20vw;
     float: left;
-    z-index: 0;
 }
 
 .mobile {
-    width: 100vw !important;
+    width: 101vw !important;
+}
+
+.hidden {
+    display: none;
 }

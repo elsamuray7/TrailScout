@@ -23,6 +23,7 @@
             [class.bi]="markerCoords"
             [class.bi-chevron-right]="isCollapsed"
             [class.bi-chevron-left]="!isCollapsed"
+            [class.hidden]="!isCollapsed"
             id="settings"
             (click)="collapse.toggle()"
             ngbTooltip="Click on Map to select startpoint first"
