@@ -21,7 +21,7 @@ services:
   trailscout-backend:
     container_name: trailscout-backend
     build:
-      context: ./backend/server/
+      context: ./backend/
       dockerfile: Dockerfile
     image: trailscout-backend:latest
     ports:
