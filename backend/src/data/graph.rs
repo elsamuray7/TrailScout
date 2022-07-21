@@ -105,6 +105,7 @@ pub struct Edge {
 /// A sight node mapped on its nearest node
 #[derive(Debug, Serialize)]
 pub struct Sight {
+    pub osm_id: usize,
     pub node_id: usize,
     pub lat: f64,
     pub lon: f64,
@@ -193,6 +194,7 @@ impl Graph {
             line_no += 1;
 
             let sight = Sight {
+                osm_id: 0,
                 node_id: split.next()
                     .expect(&format!("Unexpected EOL while parsing sight node id in line {}",
                                      line_no))

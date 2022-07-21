@@ -149,8 +149,10 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
                                         if key.eq(&tag.key) {
                                             if value.eq(&tag.value) {
                                                 is_sight = true;
+                                                //we are saving the osm id because it's needed in the post processing
                                                 let sight = Sight {
-                                                    node_id: 0, // TODO change to nearest node
+                                                    osm_id: n.id() as usize,
+                                                    node_id: 0,
                                                     lat: n.lat(),
                                                     lon: n.lon(),
                                                     category: cat_tag_map.category.parse::<Category>().unwrap(),
@@ -239,8 +241,10 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
                                         if key.eq(&tag.key) {
                                             if value.eq(&tag.value) {
                                                 is_sight = true;
+                                                //we are saving the osm id because it's needed in the post processing
                                                 let sight = Sight {
-                                                    node_id: 0, // TODO change to nearest node
+                                                    osm_id: n.id() as usize,
+                                                    node_id: 0,
                                                     lat: n.lat(),
                                                     lon: n.lon(),
                                                     category: cat_tag_map.category.parse::<Category>().unwrap(),
@@ -309,16 +313,24 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
     let time_duration = time_start.elapsed();
     info!("Finished reading PBF file after {} seconds!", time_duration.as_secs());
     }).ok();
-    //post processing of nodes
+    //post processing of nodes and sights
     let mut id_counter = 0;
     for node in nodes.iter_mut() {
         node.id = id_counter;
+        //check for duplicate nodes
+        if(osm_id_to_node_id.contains_key(&node.osm_id)) {
+            info!("duplicate node with id {} and osm_id {}", node.id, node.osm_id);
+        }
         osm_id_to_node_id.insert(node.osm_id, node.id);
         id_counter += 1;
     }
+    //assign the same id as the corresponding node (sight and node should have the same osm_id)
+    for sight in sights.iter_mut() {
+        sight.node_id = *osm_id_to_node_id.get(&sight.osm_id).unwrap();
+    }
     let time_duration = time_start.elapsed();
     info!("Finished building osm_id_to_node_id after {} seconds!", time_duration.as_secs());
-
+    
     //post processing of edges
     for edge in edges.iter_mut() {
         let src = *osm_id_to_node_id.get(&edge.osm_src).unwrap();
