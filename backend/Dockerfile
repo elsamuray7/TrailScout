@@ -1,31 +1,17 @@
-FROM rust:latest as builder
+FROM rust:latest as build
 
-# create a new empty shell project
-RUN USER=root cargo new --bin rust-backend
-WORKDIR ./rust-backend
-
-# copy over your manifests
-COPY ./Cargo.lock ./Cargo.lock
-COPY ./Cargo.toml ./Cargo.toml
-
-# this build step will cache your dependencies
-RUN cargo build --release
-RUN rm src/*.rs
-
-# copy your source tree
-COPY ./src ./src
-
-# build for release
-RUN rm ./target/release/deps/trailscout*
+COPY . .
 RUN cargo build --release
 
 # our final base
-FROM rust:latest
-
+FROM debian:buster-slim
 # copy the build artifact from the build stage
-COPY --from=build /trailscout/target/release/trailscout .
+COPY --from=build ./target/release/trailscout_service ./
+COPY ./osm_graphs ./osm_graphs
+COPY config.json config.json
+COPY sights_config.json sights_config.json
 
 EXPOSE 8080
 
 # set the startup command to run your binary
-CMD ["./trailscout"]
+CMD ["./trailscout_service"]
