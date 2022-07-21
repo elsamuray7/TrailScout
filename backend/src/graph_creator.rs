@@ -14,8 +14,8 @@ fn main() -> Result<(), io::Error> {
     env_logger::init_from_env(env);
     info!("starting up");
 
-    let in_graph = "./osm_graphs/bremen-latest.osm.pbf";
-    let out_graph = "./osm_graphs/bremen-latest.fmi";
+    let in_graph = "./osm_graphs/germany-latest.osm.pbf";
+    let out_graph = "./osm_graphs/germany-latest.fmi";
     let mut nodes : Vec<Node> = Vec::new();
     let mut edges : Vec<Edge> = Vec::new();
     let mut sights : Vec<Sight> = Vec::new();

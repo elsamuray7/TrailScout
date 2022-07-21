@@ -15,7 +15,7 @@ pub fn parse_pbf_to_fmi_file() {
         write_graph_file( out_graph, &mut nodes, &mut edges, &mut sights);
 }
 
-fn initializeLogger() {
+pub fn initializeLogger() {
     //initializing the logger
     let env = Env::default()
     .filter_or("TRAILSCOUT_LOG_LEVEL", "trace")
