@@ -17,4 +17,4 @@ import { PageNotFoundComponent } from './page-not-found/page-not-found.component
     MainPageModule
   ]
 })
-export class DesktopModule { }
+export class PagesModule { }

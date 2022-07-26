@@ -10,7 +10,7 @@
     </div>
 
     <div class="wrapper">
-        <div #collapse="ngbCollapse" [(ngbCollapse)]="isCollapsed" id="collapse" [animation]="false">
+        <div #collapse="ngbCollapse" [(ngbCollapse)]="isCollapsed" id="collapse" [class.mobile]="mobile" [animation]="false">
             <app-settings-taskbar
             [startRadius]="radius"
             [startPointSet]="marker"
@@ -23,6 +23,7 @@
             [class.bi]="markerCoords"
             [class.bi-chevron-right]="isCollapsed"
             [class.bi-chevron-left]="!isCollapsed"
+            [class.hidden]="!isCollapsed"
             id="settings"
             (click)="collapse.toggle()"
             ngbTooltip="Click on Map to select startpoint first"

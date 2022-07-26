@@ -31,7 +31,7 @@
   background-color: inherit;
   color: white;
   padding: 14px 28px;
-  font-size: 1vw;
+  font-size: 2vh;
   font-style: italic;
   cursor: pointer;
   display: inline-block;
@@ -43,3 +43,7 @@
   .clicked {
       color: wheat;
   }
+
+.selected {
+  color: red !important;
+}

@@ -36,7 +36,7 @@
                         </div>
                     </ng-template>
                 </ngb-panel>
-                <ngb-panel [title]="'Tags'" [disabled]="!startPointSet">
+                <ngb-panel [title]="'Tags'" [disabled]="!startPointSet" >
                     <ng-template class="row" ngbPanelContent>
                         <div *ngFor="let category of this.getCategories()">
                             <app-settings-taskbar-tag-item [category]="category"

@@ -1,18 +1,21 @@
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark" style="height: 100%;">
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
   <div class="d-flex collapse navbar-collapse justify-content-between" id='navbarColor2'>
     <a class="navbar-brand">Trailscout</a>
-    <div class='col navbar-nav'>
-      <a class="nav-link" type="button" (click)="startButtonClick()" id="start">Start</a>
-      <a class="nav-link" type="button" (click)="mainButtonClick()" id="main">Main</a>
+    <div class='col-4 navbar-nav'>
+      <div class="row nav-buttons">
+        <a class="nav-link" type="button" (click)="startButtonClick()" id="start">Start</a>
+        <a class="nav-link" type="button" (click)="mainButtonClick()" id="main">Main</a>
+      </div>
+
     </div>
     <div class='d-flex justify-content-end col navbar-nav'>
-      <div ngbDropdown class="nav-item dropdown">
+      <!-- <div ngbDropdown class="nav-item dropdown">
         <a type="button" class="nav-link dropdown-toggle" id="dropdownBasic1" ngbDropdownToggle>Select Style</a>
         <div class='dropdown-menu' ngbDropdownMenu aria-labelledby="dropdownBasic1">
           <a *ngFor='let theme of themes' class='dropdown-item' ngbDropdownItem (click)='changeTheme(theme)'>{{theme}}</a>
         </div>
-      </div>
-      <a class='btn default' type='button' onclick="location.href = 'https://github.tik.uni-stuttgart.de/st149207/EnProFMI2022';" style='padding: 0 14px; font-size: 25px'><i class="bi bi-github"></i></a>
+      </div> -->
+      <a class='btn default' type='button' onclick="location.href = 'https://github.tik.uni-stuttgart.de/st149207/EnProFMI2022';" style='padding: 0 14px; font-size: 25px; text-align: right;'><i class="bi bi-github"></i></a>
     </div>
   </div>
 </nav>

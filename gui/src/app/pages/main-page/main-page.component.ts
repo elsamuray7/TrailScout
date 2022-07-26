@@ -1,6 +1,7 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { NgbOffcanvas } from '@ng-bootstrap/ng-bootstrap';
 import * as L from 'leaflet';
+import { ApplicationStateService } from 'src/app/services/application-state.service';
 import { CookieHandlerService } from 'src/app/services/cookie-handler.service';
 import { MapContainerComponent } from '../../components/map-container/map-container.component';
 
@@ -16,13 +17,18 @@ export class MainPageComponent implements OnInit {
   markerCoords?: L.LatLng;
   isCollapsed = true;
 
+  mobile = false;
+
   defaultStartPointLong = 8.806422;
   defaultStartPointLat = 53.073635;
 
   radius?: number;
   constructor(
     private cookieService: CookieHandlerService,
-    private offcanvasService: NgbOffcanvas) {
+    private offcanvasService: NgbOffcanvas,
+    private applicationStateService: ApplicationStateService) {
+
+    this.mobile =  applicationStateService.getIsMobileResolution();
 
     const startCookie = this.cookieService.getLocationCookie();
     if (startCookie.value !== '') {
