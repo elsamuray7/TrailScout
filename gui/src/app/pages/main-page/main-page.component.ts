@@ -2,8 +2,8 @@ import { Component, OnInit, ViewChild } from '@angular/core';
 import { NgbOffcanvas } from '@ng-bootstrap/ng-bootstrap';
 import * as L from 'leaflet';
 import { ApplicationStateService } from 'src/app/services/application-state.service';
-import { CookieHandlerService } from 'src/app/services/cookie-handler.service';
 import { MapContainerComponent } from '../../components/map-container/map-container.component';
+import {MapService} from "../../services/map.service";
 
 @Component({
   selector: 'app-main-page',
@@ -24,22 +24,20 @@ export class MainPageComponent implements OnInit {
 
   radius?: number;
   constructor(
-    private cookieService: CookieHandlerService,
+    private mapService: MapService,
     private offcanvasService: NgbOffcanvas,
     private applicationStateService: ApplicationStateService) {
 
     this.mobile =  applicationStateService.getIsMobileResolution();
 
-    const startCookie = this.cookieService.getLocationCookie();
-    if (startCookie.value !== '') {
-      const val = startCookie.value as string;
-      const coords = JSON.parse(val);
+    const coords = this.mapService.getCoordniates();
+    if (coords) {
       this.markerSet(new L.LatLng(coords["lat"] as any, coords["lng"] as any))
     }
 
-    const radiusCookie = this.cookieService.getRadiusCookie();
-    if (radiusCookie && !this.radius) {
-      this.radiusChange(radiusCookie.value as number);
+    const radius = this.mapService.getRadius();
+    if (radius && !this.radius) {
+      this.radiusChange(radius);
     }
   }
 
@@ -52,13 +50,13 @@ export class MainPageComponent implements OnInit {
     if (!this.radius) {
       this.radius = 0;
     }
-    this.cookieService.setRadiusCookie(this.radius);
+    this.mapService.setRadius(radius);
   }
 
   markerSet(latlng: L.LatLng) {
     this.marker = true;
     this.markerCoords = latlng;
-    this.cookieService.setLocationCookie(latlng);
+    this.mapService.setCoordinates(latlng);
   }
 
   drawSights(response: any) {

@@ -1,9 +1,9 @@
 import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { NgbTimeStruct } from '@ng-bootstrap/ng-bootstrap';
-import { Settings } from 'src/app/types.utils';
 import { SightsServiceService } from '../../services/sights-service.service';
-import { CookieHandlerService } from '../../services/cookie-handler.service';
 import {Category} from "../../data/Category";
+import {MapService} from "../../services/map.service";
+import {RouteService} from "../../services/route.service";
 
 @Component({
   selector: 'app-settings-taskbar',
@@ -22,14 +22,16 @@ export class SettingsTaskbarComponent implements OnInit {
 
   public _radius!: number;
   private _startTime: NgbTimeStruct;
-  private _walkTime?: NgbTimeStruct;
-  private _endTime?: NgbTimeStruct;
+  private _walkTime: NgbTimeStruct;
+  private _endTime: NgbTimeStruct;
   private currentDate: Date;
 
   constructor(private sightsService: SightsServiceService,
-              private cookieService: CookieHandlerService) {
+              private mapService: MapService,
+              private routeService: RouteService) {
     this.currentDate = new Date();
     this._startTime = {hour: this.currentDate.getHours(), minute: this.currentDate.getMinutes(), second: 0};
+    this._walkTime = {hour: 1, minute: 0, second: 0};
    }
 
   ngOnInit(): void {
@@ -92,13 +94,25 @@ export class SettingsTaskbarComponent implements OnInit {
   }
 
   calculate(){
-    // TODO: Routen Request wird hier gestartet
-    const result: Settings = {
-      radius: this.radius,
-      startTime: this.startTime,
-      walkTime: this.walkTime,
-      endTime: this.endTime
+    const request = {
+      "start": this.transformTimeToISO8601Date(this._startTime),
+      "end": this.transformTimeToISO8601Date(this._endTime),
+      "walking_speed_kmh": 5,
+      "area": {
+        "lat": this.mapService.getCoordniates().lat,
+        "lon": this.mapService.getCoordniates().lng,
+        "radius": this.mapService.getRadius()
+      },
+      "user_prefs": {
+        "categories": this.sightsService.getCategories()
+      }
     }
+    this.routeService.calculateRoute(request);
+  }
+
+  transformTimeToISO8601Date(time: NgbTimeStruct): string {
+    return this.currentDate.getFullYear() + "-" + this.currentDate.getMonth() + "-" + this.currentDate.getDate() + "T" +
+      time.hour + ":" + time.minute + ":" + time.second + "Z";
   }
 
   ngbTimeStructToMinutes(time: NgbTimeStruct) {
@@ -121,11 +135,6 @@ export class SettingsTaskbarComponent implements OnInit {
   }
 
   refreshSights() {
-    const startCookie = this.cookieService.getLocationCookie();
-    if (startCookie.value !== '' && this.radius > 0) {
-      const val = startCookie.value as string;
-      const coords = JSON.parse(val);
-      this.sightsService.updateSights(coords, this.radius);
-    }
+    this.sightsService.updateSights(this.mapService.getCoordniates(), this.mapService.getRadius());
   }
 }
