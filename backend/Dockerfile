@@ -1,9 +1,9 @@
 FROM rust:latest as build
 
+#copy could be more specific but not that important unless target already exsits in which case you should probably delete it before building
 COPY . .
 RUN cargo build --release
 
-# our final base
 FROM debian:buster-slim
 # copy the build artifact from the build stage
 COPY --from=build ./target/release/trailscout_service ./
