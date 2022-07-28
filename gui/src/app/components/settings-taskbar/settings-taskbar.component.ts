@@ -94,25 +94,60 @@ export class SettingsTaskbarComponent implements OnInit {
   }
 
   calculate(){
+    var categories: any[] = [];
+    this.sightsService.getCategories().forEach((category) => {
+      if (category.pref > 0) {
+        categories.push({
+          "name": category.name,
+          "pref": category.pref
+        })
+      }
+    })
     const request = {
       "start": this.transformTimeToISO8601Date(this._startTime),
       "end": this.transformTimeToISO8601Date(this._endTime),
-      "walking_speed_kmh": 5,
+      "walking_speed_kmh": 50,
       "area": {
         "lat": this.mapService.getCoordniates().lat,
         "lon": this.mapService.getCoordniates().lng,
         "radius": this.mapService.getRadius()
       },
       "user_prefs": {
-        "categories": this.sightsService.getCategories()
+        "categories": categories,
+        "sights": []
       }
     }
     this.routeService.calculateRoute(request);
   }
 
   transformTimeToISO8601Date(time: NgbTimeStruct): string {
-    return this.currentDate.getFullYear() + "-" + this.currentDate.getMonth() + "-" + this.currentDate.getDate() + "T" +
-      time.hour + ":" + time.minute + ":" + time.second + "Z";
+    var result = this.currentDate.getFullYear().toString() + "-";
+    if (this.currentDate.getMonth() < 10) {
+      result += "0" + this.currentDate.getMonth().toString() + "-";
+    } else {
+      result += this.currentDate.getMonth().toString() + "-";
+    }
+    if (this.currentDate.getDate() < 10) {
+      result += "0" + this.currentDate.getDate().toString() + "T";
+    } else {
+      result += this.currentDate.getDate().toString() + "T";
+    }
+    if (time.hour < 10) {
+      result += "0" + time.hour + ":";
+    } else {
+      result += time.hour + ":";
+    }
+    if (time.minute < 10) {
+      result += "0" + time.minute + ":";
+    } else {
+      result += time.minute + ":";
+    }
+    if (time.second < 10) {
+      result += "0" + time.second + "Z";
+    } else {
+      result += time.second + "Z";
+    }
+    return result;
   }
 
   ngbTimeStructToMinutes(time: NgbTimeStruct) {
