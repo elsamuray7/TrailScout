@@ -8,6 +8,8 @@ services:
     build:
       context: ./gui/
       dockerfile: Dockerfile
+      args:
+        ENV: dev
     image: trailscout-frontend:latest
     ports:
       - 80:80
