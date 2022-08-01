@@ -7,7 +7,9 @@ Hierfür muss Docker installiert werden:
 * Windows: https://docs.docker.com/desktop/windows/install/
 * Linux: https://docs.docker.com/engine/install/#server (select your installed Linux distribution)
 
-Ist Docker installiert kann das Projekt gestartet werden über: 
+### Development Build 
+
+Ist Docker installiert kann das Projekt in dev modus gestartet werden über: 
 
 ``docker compose up``
 
@@ -20,6 +22,19 @@ Das Bauen der images kann einige Minuten dauern.
 Wurde das compose-file gestartet ist das frontend über den Port 80 erreichbar und das backend über den Port 8080.
 
 Es lassen sich die images auch einzeln starten, hierzu sollte man sich aber an das Docker Wiki wenden.
+
+### Production Build auf Linux
+
+Download Repository:
+
+`git clone https://github.tik.uni-stuttgart.de/st149207/EnProFMI2022.git`
+
+Um das Projekt in Production Environment auszuführen:
+
+`docker compose -f docker-compose.yml -f production.yml up`
+
+bzw. um es auch neu zu bauen `docker compose -f docker-compose.yml -f production.yml up --build`
+
 
 ## Graph Erstellung
 

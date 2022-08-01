@@ -8,6 +8,8 @@ services:
     build:
       context: ./gui/
       dockerfile: Dockerfile
+      args:
+        ENV: dev
     image: trailscout-frontend:latest
     ports:
       - 80:80
@@ -20,12 +22,14 @@ services:
   # Backend
   trailscout-backend:
     container_name: trailscout-backend
+    hostname: localhost
     build:
-      context: ./backend/server/
+      context: ./backend/
       dockerfile: Dockerfile
     image: trailscout-backend:latest
     ports:
       - 8080:8080
+    command: [./trailscout_service]
     restart: always
 #    volumes:
 #      - ./graphs:/app/data

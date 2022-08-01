@@ -40,7 +40,7 @@ export class CookieHandlerService {
   }
 
   getRadiusCookie(): Cookie {
-    const result = this.cookieService.get(environment.cookieRadius);
+    const result = parseInt(this.cookieService.get(environment.cookieRadius));
     return {key: environment.cookieRadius, value: result} as Cookie;
   }
 }
