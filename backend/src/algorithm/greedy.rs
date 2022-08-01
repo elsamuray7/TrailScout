@@ -19,12 +19,12 @@ fn compute_scores(sights: &HashMap<usize, &Sight>, user_prefs: UserPreferences) 
         sights.iter()
             .filter(|(_, sight)| sight.category == category_enum)
             .for_each(|(&sight_id, _)| {
-                scores.insert(sight_id, category.pref);
+                scores.insert(sight_id, category.get_valid_pref());
             });
     }
     for sight in &user_prefs.sights {
         // TODO implement check whether SightPref really corresponds to sight
-        scores.insert(sight.id, sight.pref);
+        scores.insert(sight.id, sight.get_valid_pref());
     }
     log::debug!("Computed scores: {:?}", &scores);
 
