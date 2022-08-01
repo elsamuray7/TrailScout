@@ -2,6 +2,7 @@ import { Component, OnInit, ViewChild } from '@angular/core';
 import { NgbOffcanvas } from '@ng-bootstrap/ng-bootstrap';
 import * as L from 'leaflet';
 import { ApplicationStateService } from 'src/app/services/application-state.service';
+import { RouteService } from 'src/app/services/route.service';
 import { MapContainerComponent } from '../../components/map-container/map-container.component';
 import {MapService} from "../../services/map.service";
 
@@ -26,7 +27,8 @@ export class MainPageComponent implements OnInit {
   constructor(
     private mapService: MapService,
     private offcanvasService: NgbOffcanvas,
-    private applicationStateService: ApplicationStateService) {
+    private applicationStateService: ApplicationStateService,
+    private routeService: RouteService) {
 
     this.mobile =  applicationStateService.getIsMobileResolution();
 
@@ -80,5 +82,11 @@ export class MainPageComponent implements OnInit {
     }, (reason) => {
       console.log(reason);
     })
+  }
+
+  async showRoute() {
+    await new Promise(f => setTimeout(f, 11000));
+      this.mapContainer.drawRoute();
+    
   }
 }

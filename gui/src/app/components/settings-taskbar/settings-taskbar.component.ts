@@ -19,6 +19,7 @@ export class SettingsTaskbarComponent implements OnInit {
   @Output() radiusChange = new EventEmitter;
   @Output() closeButton = new EventEmitter;
   @Output() drawSightsEvent = new EventEmitter;
+  @Output() routeCalculated = new EventEmitter;
 
   public _radius!: number;
   private _startTime: NgbTimeStruct;
@@ -93,7 +94,7 @@ export class SettingsTaskbarComponent implements OnInit {
     return (this.radius > 0 || this.walkTime) && this.startPointSet;
   }
 
-  calculate(){
+  async calculate(){
     var categories: any[] = [];
     this.sightsService.getCategories().forEach((category) => {
       if (category.pref > 0) {
@@ -117,7 +118,8 @@ export class SettingsTaskbarComponent implements OnInit {
         "sights": []
       }
     }
-    this.routeService.calculateRoute(request);
+    await this.routeService.calculateRoute(request);
+    this.routeCalculated.emit();
   }
 
   transformTimeToISO8601Date(time: NgbTimeStruct): string {
