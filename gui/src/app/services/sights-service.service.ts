@@ -29,6 +29,9 @@ export class SightsServiceService {
       "radius": radius
     }
     this.http.post(this.backendUrl + "/sights", body).subscribe((sights ) => {
+      for (let category of this.categories) {
+        category.sights = [];
+      }
       this.sights = sights as Sight[];
       this.sightsChanged.emit(this.sights);
       for (let sight of sights as Sight[]) {
