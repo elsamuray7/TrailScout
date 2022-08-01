@@ -1,4 +1,4 @@
-FROM rust:latest as build
+FROM rust:1.62 as build
 
 #copy could be more specific but not that important unless target already exsits in which case you should probably delete it before building
 COPY . .
