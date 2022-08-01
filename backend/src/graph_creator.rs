@@ -4,7 +4,6 @@ use env_logger::Env;
 use std::env;
 use trailscout_lib::data::graph::{Edge, Sight, Node, Graph};
 use trailscout_lib::data::osm_graph_creator::{create_fmi_graph, parse_osm_data, write_graph_file};
-use clap::Parser;
 #[macro_use]
 extern crate log;
 
