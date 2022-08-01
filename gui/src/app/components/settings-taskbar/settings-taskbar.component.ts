@@ -25,6 +25,7 @@ export class SettingsTaskbarComponent implements OnInit {
   private _walkTime?: NgbTimeStruct;
   private _endTime?: NgbTimeStruct;
   private currentDate: Date;
+  refreshing: boolean = false;
 
   constructor(private sightsService: SightsServiceService,
               private cookieService: CookieHandlerService) {
@@ -40,6 +41,9 @@ export class SettingsTaskbarComponent implements OnInit {
       }
   }, 0);
 
+    this.sightsService.updateSuccessful.subscribe((success) => {
+      this.refreshing = false;
+    });
   }
 
   set radius(r: number) {
@@ -125,6 +129,7 @@ export class SettingsTaskbarComponent implements OnInit {
     if (startCookie.value !== '' && this.radius > 0) {
       const val = startCookie.value as string;
       const coords = JSON.parse(val);
+      this.refreshing = true;
       this.sightsService.updateSights(coords, this.radius);
     }
   }
