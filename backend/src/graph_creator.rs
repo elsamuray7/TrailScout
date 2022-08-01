@@ -20,10 +20,7 @@ pub fn main() -> Result<(), io::Error> {
 
     println!("Input file is {}.", &args[1]);
     println!("Output file is {}.", &args[2]);
-
-    //let in_graph = "./osm_graphs/bremen-latest.osm.pbf";
-    //let out_graph = "./osm_graphs/bremen-latest.fmi";
-
+    
     let in_graph = &args[1];
     let out_graph = &args[2];
     create_fmi_graph(in_graph,out_graph)

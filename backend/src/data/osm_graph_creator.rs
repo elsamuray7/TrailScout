@@ -62,8 +62,6 @@ pub fn create_fmi_graph(in_graph: &String, out_graph: &String)-> Result<(), io::
 
     info!("Starting to Parse OSM File");
 
-    //let in_graph = "./osm_graphs/bremen-latest.osm.pbf";
-    //let out_graph = "./osm_graphs/bremen-latest.fmi";
     let mut nodes : Vec<Node> = Vec::new();
     let mut edges : Vec<Edge> = Vec::new();
     let mut sights : Vec<Sight> = Vec::new();
