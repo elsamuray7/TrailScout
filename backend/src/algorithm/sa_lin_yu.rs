@@ -64,6 +64,7 @@ impl SimAnnealingLinYu<'_> {
     pub const ALGORITHM_NAME: &'static str = "DerAllerbesteste";
 
     fn calculate_score(&self, current_solution: &Vec<&Sight>, distance_map: &HashMap<usize, HashMap<&Node, (&Node, usize)>>) -> usize {
+        // TODO compute scores according to issue #145
         let mut rng = thread_rng();
         rng.gen_range(0..100)
     }
@@ -107,18 +108,24 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
         let mut sights_and_root = self.sights.iter().map(|(&sight_id, _)| sight_id)
             .collect_vec();
         sights_and_root.push(self.root_id);
+        let mut count = 0;
+        let total = sights_and_root.len();
         for node_id in sights_and_root {
+            count += 1;
+            log::debug!("Pre-computing distances from node {} ({} / {})", node_id, count, total);
             let dijkstra_result = dijkstra_all(
                 &self.graph.get_node(node_id),
                 |node| successors(node));
             distance_map.insert(node_id, dijkstra_result);
         }
+        log::debug!("Done");
 
         // Create a random initial route
         let mut rng = thread_rng();
         let mut randomized_sights: Vec<_> = self.sights.iter()
             .map(|(_, &sight)| sight).collect();
         randomized_sights.shuffle(&mut rng);
+        log::debug!("Computed randomized initial solution");
 
         // // Enrich sight data with distance from previous sight or root, respectively
         // let mut initial_route = Vec::with_capacity(self.sights.len());
@@ -133,6 +140,8 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
         //         initial_route.push((sight, dist));
         //     }
         // }
+
+        log::debug!("Starting simulated annealing");
 
         let i_iter = randomized_sights.len() * 5000;
         let start_time = Instant::now();
