@@ -27,12 +27,29 @@ pub struct SightCategoryPref {
     pref: usize,
 }
 
+/// Maximum value for user sight preferences
+const USER_PREF_MAX: usize = 5;
+
+impl SightCategoryPref {
+    /// Returns a valid preference value for this sight category
+    fn get_valid_pref(&self) -> usize {
+        self.pref.min(USER_PREF_MAX)
+    }
+}
+
 /// User preference for a specific sight
 #[derive(Deserialize)]
 pub struct SightPref {
     id: usize,
     category: String,
     pref: usize,
+}
+
+impl SightPref {
+    /// Returns a valid preference value for this sight
+    fn get_valid_pref(&self) -> usize {
+        self.pref.min(USER_PREF_MAX)
+    }
 }
 
 /// User preferences for sights and sight categories

@@ -105,6 +105,7 @@ pub struct Edge {
 /// A sight node mapped on its nearest node
 #[derive(Debug, Serialize)]
 pub struct Sight {
+    pub osm_id: usize,
     pub node_id: usize,
     pub lat: f64,
     pub lon: f64,
@@ -154,7 +155,7 @@ impl Graph {
             .expect("Unexpected EOF while parsing number of nodes")?
             .parse()?;
         graph.num_sights = lines.next()
-            .expect("Unexpected EOF while parsing number of nodes")?
+            .expect("Unexpected EOF while parsing number of sights")?
             .parse()?;
         graph.num_edges = lines.next()
             .expect("Unexpected EOF while parsing number of edges")?
@@ -193,6 +194,7 @@ impl Graph {
             line_no += 1;
 
             let sight = Sight {
+                osm_id: 0,
                 node_id: split.next()
                     .expect(&format!("Unexpected EOL while parsing sight node id in line {}",
                                      line_no))

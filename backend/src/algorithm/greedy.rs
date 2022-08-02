@@ -3,7 +3,11 @@ use chrono::{DateTime, Utc};
 use crate::data::graph::{Category, Graph, Node, Sight};
 use itertools::Itertools;
 use pathfinding::prelude::*;
-use crate::algorithm::{_Algorithm, AlgorithmError, Area, Route, RouteSector, ScoreMap, Sector, UserPreferences};
+use crate::algorithm::{_Algorithm, AlgorithmError, Area, Route, RouteSector, ScoreMap, Sector, UserPreferences,
+                       USER_PREF_MAX};
+
+/// Greedy internal user preference to score mapping
+const USER_PREF_TO_SCORE: [usize; USER_PREF_MAX + 1] = [0, 1, 2, 4, 8, 16];
 
 /// Compute scores for tourist attractions based on user preferences for categories or specific
 /// tourist attractions, respectively
@@ -19,12 +23,12 @@ fn compute_scores(sights: &HashMap<usize, &Sight>, user_prefs: UserPreferences) 
         sights.iter()
             .filter(|(_, sight)| sight.category == category_enum)
             .for_each(|(&sight_id, _)| {
-                scores.insert(sight_id, category.pref);
+                scores.insert(sight_id, USER_PREF_TO_SCORE[category.get_valid_pref()]);
             });
     }
     for sight in &user_prefs.sights {
         // TODO implement check whether SightPref really corresponds to sight
-        scores.insert(sight.id, sight.pref);
+        scores.insert(sight.id, USER_PREF_TO_SCORE[sight.get_valid_pref()]);
     }
     log::debug!("Computed scores: {:?}", &scores);
 
@@ -110,7 +114,9 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
                      log::debug!("Node1: score: {}, distance to current position: {}", score1, dist1);
                      log::debug!("Node2: score: {}, distance to current position: {}", score2, dist2);
 
-                     (score1 / dist1.max(&1)).cmp(&(score2 / dist2.max(&2)))
+                     let metric2 = score2 as f64 / *dist2.max(&1) as f64;
+                     let metric1 = score1 as f64 / *dist1.max(&1) as f64;
+                     metric2.total_cmp(&metric1)
                  })
                  .collect();
              log::debug!("Sorted sights:\n{:?}", &sorted_dist_vec);

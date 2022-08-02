@@ -1,6 +1,9 @@
 import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { NgbTimeStruct } from '@ng-bootstrap/ng-bootstrap';
-import { Settings, Sight, SightsPrios, TagCheckboxResponse } from 'src/app/types.utils';
+import { SightsServiceService } from '../../services/sights-service.service';
+import {Category} from "../../data/Category";
+import {MapService} from "../../services/map.service";
+import {RouteService} from "../../services/route.service";
 
 @Component({
   selector: 'app-settings-taskbar',
@@ -10,25 +13,26 @@ import { Settings, Sight, SightsPrios, TagCheckboxResponse } from 'src/app/types
 export class SettingsTaskbarComponent implements OnInit {
 
   @Input() width: number = 200;
-  @Input() sights: Sight[] = [];
-  @Input() sightsWithPrio?: SightsPrios;
   @Input() startPointSet = false;
   @Input() startRadius? :number;
 
-  @Output() settings = new EventEmitter;
   @Output() radiusChange = new EventEmitter;
   @Output() closeButton = new EventEmitter;
+  @Output() drawSightsEvent = new EventEmitter;
+  @Output() routeCalculated = new EventEmitter;
 
-  private _radius!: number;
+  public _radius!: number;
   private _startTime: NgbTimeStruct;
-  private _walkTime?: NgbTimeStruct;
-  private _endTime?: NgbTimeStruct;
+  private _walkTime: NgbTimeStruct;
+  private _endTime: NgbTimeStruct;
   private currentDate: Date;
-  private selectedSights: Map<string, number> = new Map<string, number>();
 
-  constructor() {
+  constructor(private sightsService: SightsServiceService,
+              private mapService: MapService,
+              private routeService: RouteService) {
     this.currentDate = new Date();
     this._startTime = {hour: this.currentDate.getHours(), minute: this.currentDate.getMinutes(), second: 0};
+    this._walkTime = {hour: 1, minute: 0, second: 0};
    }
 
   ngOnInit(): void {
@@ -38,7 +42,7 @@ export class SettingsTaskbarComponent implements OnInit {
         this.radius = this.startRadius;
       }
   }, 0);
-    
+
   }
 
   set radius(r: number) {
@@ -48,6 +52,10 @@ export class SettingsTaskbarComponent implements OnInit {
 
   get radius() {
     return this._radius;
+  }
+
+  public getCategories(): Category[] {
+    return this.sightsService.getCategories();
   }
 
   set startTime(time: NgbTimeStruct) {
@@ -83,21 +91,65 @@ export class SettingsTaskbarComponent implements OnInit {
   }
 
   calculationAllowed() {
-    if ((this.radius > 0 || this.walkTime) && this.startPointSet) {
-      return true;
-    }
-    return false;
+    return (this.radius > 0 || this.walkTime) && this.startPointSet;
   }
 
-  calculate(){
-    const result: Settings = {
-      radius: this.radius,
-      startTime: this.startTime,
-      walkTime: this.walkTime,
-      endTime: this.endTime,
-      sights: this.selectedSights
+  async calculate(){
+    var categories: any[] = [];
+    this.sightsService.getCategories().forEach((category) => {
+      if (category.pref > 0) {
+        categories.push({
+          "name": category.name,
+          "pref": category.pref
+        })
+      }
+    })
+    const request = {
+      "start": this.transformTimeToISO8601Date(this._startTime),
+      "end": this.transformTimeToISO8601Date(this._endTime),
+      "walking_speed_kmh": 50,
+      "area": {
+        "lat": this.mapService.getCoordniates().lat,
+        "lon": this.mapService.getCoordniates().lng,
+        "radius": this.mapService.getRadius()
+      },
+      "user_prefs": {
+        "categories": categories,
+        "sights": []
+      }
     }
-    this.settings.emit(result)
+    await this.routeService.calculateRoute(request);
+    this.routeCalculated.emit();
+  }
+
+  transformTimeToISO8601Date(time: NgbTimeStruct): string {
+    var result = this.currentDate.getFullYear().toString() + "-";
+    if (this.currentDate.getMonth() < 10) {
+      result += "0" + this.currentDate.getMonth().toString() + "-";
+    } else {
+      result += this.currentDate.getMonth().toString() + "-";
+    }
+    if (this.currentDate.getDate() < 10) {
+      result += "0" + this.currentDate.getDate().toString() + "T";
+    } else {
+      result += this.currentDate.getDate().toString() + "T";
+    }
+    if (time.hour < 10) {
+      result += "0" + time.hour + ":";
+    } else {
+      result += time.hour + ":";
+    }
+    if (time.minute < 10) {
+      result += "0" + time.minute + ":";
+    } else {
+      result += time.minute + ":";
+    }
+    if (time.second < 10) {
+      result += "0" + time.second + "Z";
+    } else {
+      result += time.second + "Z";
+    }
+    return result;
   }
 
   ngbTimeStructToMinutes(time: NgbTimeStruct) {
@@ -107,16 +159,19 @@ export class SettingsTaskbarComponent implements OnInit {
     return time.minute + time.hour * 60;
   }
 
-  checkedTag(response: TagCheckboxResponse) {
-    if (response.checked) {
-      this.selectedSights.set(response.sight.id, response.prio);
-    } else {
-      this.selectedSights.delete(response.sight.id);
+  drawSights(drawSight: boolean, category: Category) {
+    const response = {
+      "drawSight": drawSight,
+      "category": category
     }
+    this.drawSightsEvent.emit(response);
   }
 
   close() {
     this.closeButton.emit();
   }
 
+  refreshSights() {
+    this.sightsService.updateSights(this.mapService.getCoordniates(), this.mapService.getRadius());
+  }
 }

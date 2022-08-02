@@ -1,14 +1,21 @@
 <div class="row item" [ngStyle]="getImage()">
     <div class="col-13 tag">
-        <button class="btn" [class.clicked]="checked"(click)="checkedTag()">
-          <span>{{sight.name}}</span></button>
+        <button class="btn" [class.clicked]="checked" (click)="checkedTag()">
+          <span>{{this.categoryLabels.get(category.name)}} ({{this.category.sights.length}})</span></button>
     </div>
     <div [hidden]="!checked" class="col rating">
-        <ngb-rating [(rate)]="prio" [max]="5" (rateChange)="prioChanged()">
-            <ng-template let-fill="fill" let-index="index">
-              <span class="star" [class.filled]="fill === 100" [class.xs]="index === 0" [class.s]="index === 1" [class.m]="index === 2" [class.l]="index === 3" >&#9733;</span>
-            </ng-template>
-          </ngb-rating>
+      <div ngbDropdown class="d-inline-block">
+        <button type="button" class="btn btn-outline-primary" id="dropdownBasic1" ngbDropdownToggle>Priorität - {{priorityLabels.get(this.category.pref)}}</button>
+        <div ngbDropdownMenu aria-labelledby="dropdownBasic1">
+          <!--<button *ngFor='let value of priorityLabels.values()'ngbDropdownItem>{{value}}</button>-->
+          <button (click)='this.category.pref = 0;' ngbDropdownItem [class.selected]="this.category.pref === 0">Gar nicht</button>
+          <button (click)='this.category.pref = 1;' ngbDropdownItem [class.selected]="this.category.pref === 1">Niedriger</button>
+          <button (click)='this.category.pref = 2;' ngbDropdownItem [class.selected]="this.category.pref === 2">Niedrig</button>
+          <button (click)='this.category.pref = 3;' ngbDropdownItem [class.selected]="this.category.pref === 3">Neutral</button>
+          <button (click)='this.category.pref = 4;' ngbDropdownItem [class.selected]="this.category.pref === 4">Hoch</button>
+          <button (click)='this.category.pref = 5;' ngbDropdownItem [class.selected]="this.category.pref === 5">Höher</button>
+        </div>
+      </div>
     </div>
 </div>
 <hr>

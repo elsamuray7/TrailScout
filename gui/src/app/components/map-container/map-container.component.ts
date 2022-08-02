@@ -1,6 +1,9 @@
-import { AfterViewInit, Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
+import { AfterViewInit, Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
 import * as L from 'leaflet';
 import { GeoSearchControl, OpenStreetMapProvider } from 'leaflet-geosearch';
+import { LatLngExpression } from 'leaflet';
+import {Category} from "../../data/Category";
+import { RouteService } from 'src/app/services/route.service';
 
 const iconRetinaUrl = 'assets/marker-icon-2x.png';
 const iconUrl = 'assets/marker-icon.png';
@@ -34,8 +37,9 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
   @Output() markerLocation = new EventEmitter;
   private marker?: L.Marker;
   private circle?: L.Circle;
+  private activeLayers = new Map<string, any>();
 
-  constructor() { 
+  constructor(private routeService : RouteService) {
   }
   ngOnChanges(changes: SimpleChanges): void {
     this.addCircle(this.marker?.getLatLng()!);
@@ -111,4 +115,31 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
     }
   }
 
+  drawSights(category: Category) {
+    var newLayer = new L.LayerGroup<any>();
+    category.sights.forEach((sight) => {
+      var latlng: LatLngExpression = {
+        lat: sight.lat,
+        lng: sight.lon
+      }
+      var newMarker = new L.Marker(latlng).addTo(newLayer);
+      newLayer.addTo(this.map);
+    });
+    this.activeLayers.set(category.name, newLayer);
+  }
+
+  hideSights(category: Category) {
+    if (this.activeLayers.has(category.name)) {
+      this.map.removeLayer(this.activeLayers.get(category.name));
+    }
+  }
+
+  drawRoute() {
+    const _route = this.routeService.getRoute();
+    console.log(_route);
+    const route: L.LatLng[] = [];
+    _route?.route.map(nodes => nodes.nodes.map(node => route.push(new L.LatLng(node.lat, node.lon))) );
+    console.log(route);
+    const leafRoute: L.Polyline = new L.Polyline(route).addTo(this.map);
+  }
 }

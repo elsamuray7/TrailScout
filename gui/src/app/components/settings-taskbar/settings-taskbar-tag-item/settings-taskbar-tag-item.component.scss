@@ -1,42 +1,17 @@
-.star {
-    font-size: 2rem;
-    color: #ffebee;
-    border: black;
-  }
-  .filled {
-    color: #d50000;
-  }
-  .l {
-    color: #ffebee
-  }
-  .m {
-    color: #ffebee;
-  }
-  .s {
-    color: #ffebee
-  }
-  .xs {
-    color: #ffebee;
-  }
-  .filled.l {
-      color: #c62828
-  }
-  .filled.m {
-    color: #ef5350
-  }
-  .filled.s {
-    color: #ef9a9a
-  }
-  .filled.xs {
-    color: #ffcdd2;
-  }
 .tag {
-    padding: 0px;
+    padding: 0;
+}
+
+.dropdown {
+  width: 100%;
+}
+
+.dropdown-menu {
+  width: 100%;
 }
 
 .rating {
     text-align: left;
-    margin-left: 0.7vw;
 }
 
 .item {
@@ -46,8 +21,7 @@
     rgba(0, 0, 0, 0) 60%,
     rgba(0, 0, 0, 0.8) 100%
   );
-  background-size: 100%;   
-  background-size: cover; 
+  background-size: cover;
 }
 
 .btn {
@@ -57,15 +31,19 @@
   background-color: inherit;
   color: white;
   padding: 14px 28px;
-  font-size: 1vw;
+  font-size: 2vh;
   font-style: italic;
   cursor: pointer;
   display: inline-block;
   }
-  
+
   /* On mouse-over */
   .btn:hover {
     background: linear-gradient(to bottom, rgba(0, 0, 0, 0.85), transparent)}
   .clicked {
       color: wheat;
   }
+
+.selected {
+  color: red !important;
+}

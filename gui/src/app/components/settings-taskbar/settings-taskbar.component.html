@@ -4,9 +4,13 @@
             <ngb-accordion #acc="ngbAccordion" [closeOthers]="true" activeIds="radius" [destroyOnHide]="false">
                 <ngb-panel id="radius" [title]="radius > 0 ? 'Radius: ' + radius + 'km' : 'Radius'" [disabled]="!startPointSet"
                     [class.disabled]="!startPointSet">
-                    <ng-template class="row" ngbPanelContent>
-                        <input mbdInput type="number" placeholder="Enter radius in km..." class="form-control"
-                            [(ngModel)]="radius" />
+                    <ng-template ngbPanelContent >
+                      <div class='d-flex justify-content-between'>
+                        <input id='radiusInput' type="number" placeholder="Enter radius in km..." class="form-control"
+                               [(ngModel)]="radius" />
+                        <button class="btn-primary btn" id="refresh" type="submit"
+                                (click)="refreshSights()">Refresh</button>
+                      </div>
                     </ng-template>
                 </ngb-panel>
                 <ngb-panel
@@ -15,29 +19,28 @@
                     <ng-template class="row" ngbPanelContent>
                         <div>
                             <h5>Start Time</h5>
-                            <ngb-timepicker mbdInput placeholder="Enter starting time..." class="form-control"
+                            <ngb-timepicker class="form-control"
                                 [(ngModel)]="startTime"></ngb-timepicker>
                         </div>
                         <br>
                         <div>
                             <h5>Walking Time</h5>
-                            <ngb-timepicker mbdInput placeholder="Enter starting time..." class="form-control"
+                            <ngb-timepicker class="form-control"
                                 [(ngModel)]="walkTime"></ngb-timepicker>
                         </div>
                         <br>
                         <div>
                             <h5>End Time</h5>
-                            <ngb-timepicker mbdInput placeholder="Enter starting time..." class="form-control"
+                            <ngb-timepicker class="form-control"
                                 [(ngModel)]="endTime" [disabled]="true"></ngb-timepicker>
                         </div>
                     </ng-template>
                 </ngb-panel>
-                <ngb-panel [title]="'Tags'" [disabled]="!startPointSet">
+                <ngb-panel [title]="'Tags'" [disabled]="!startPointSet" >
                     <ng-template class="row" ngbPanelContent>
-                        <div *ngFor="let sight of sights">
-                            <app-settings-taskbar-tag-item [sight]="sight"
-                                [cookiePrio]="sightsWithPrio?.sightWithPrio?.get(sight.id)"
-                                (checked)="checkedTag($event)"></app-settings-taskbar-tag-item>
+                        <div *ngFor="let category of this.getCategories()">
+                            <app-settings-taskbar-tag-item [category]="category"
+                                (checked)="drawSights($event, category)"></app-settings-taskbar-tag-item>
                         </div>
 
                     </ng-template>

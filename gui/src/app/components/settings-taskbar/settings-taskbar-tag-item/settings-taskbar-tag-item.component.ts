@@ -1,5 +1,5 @@
 import { Component, Input, OnInit, Output, EventEmitter } from '@angular/core';
-import { Sight, SightsPrios, TagCheckboxResponse } from 'src/app/types.utils';
+import {Category} from "../../../data/Category";
 
 @Component({
   selector: 'app-settings-taskbar-tag-item',
@@ -8,39 +8,44 @@ import { Sight, SightsPrios, TagCheckboxResponse } from 'src/app/types.utils';
 })
 export class SettingsTaskbarTagItemComponent implements OnInit {
 
-  @Input() sight!: Sight;
-  @Input() cookiePrio?: number
+  @Input() category!: Category;
   @Output('checked') checkedEvent = new EventEmitter;
 
-  imagePath?: string;
-
   checked = false;
-  prio: number = 0;
+  prio: number = 3;
+  readonly priorityLabels = new Map<number, string>([
+    [0, "Gar Nicht"],
+    [1, "Niedriger"],
+    [2, "Niedrig"],
+    [3, "Neutral"],
+    [4, "Hoch"],
+    [5, "Höher"]
+  ]);
+
+  readonly categoryLabels = new Map<string, string>([
+    ["Sightseeing", "Sehenswürdigkeiten"],
+    ["Other", "Andere"],
+    ["Nightlife", "Nachtleben"],
+    ["Restaurants", "Restaurants"],
+    ["Shopping", "Shopping"],
+    ["PicnicBarbequeSpot", "Picknick & Grillen"],
+    ["MuseumExhibition", "Museen"],
+    ["Nature", "Natur"],
+    ["Swimming", "Badeplätze"]
+  ]);
+
   constructor() {
    }
 
   ngOnInit(): void {
-    if (this.cookiePrio) {
-      this.prio = this.cookiePrio;
-      this.checked = true;
-      this.prioChanged();
-    }
-    this.imagePath = this.sight.imagePath;
   }
 
   checkedTag() {
     this.checked = !this.checked;
-    const response: TagCheckboxResponse = {checked: this.checked, sight: this.sight, prio: 0};
-    this.checkedEvent.emit(response);
-  }
-
-  prioChanged() {
-    const response: TagCheckboxResponse = {checked: this.checked, sight: this.sight, prio: this.prio};
-    this.checkedEvent.emit(response);
+    this.checkedEvent.emit(this.checked);
   }
 
   getImage() {
-    const image = {'background-image' : 'url(assets/sights/' + this.imagePath + ')' };
-    return image;
+    return {'background-image' : 'url(assets/sights/' + this.category.name + '.jpg)' };
   }
 }
