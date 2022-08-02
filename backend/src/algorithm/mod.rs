@@ -7,6 +7,7 @@ use crate::data::graph::{Graph, Node, Sight};
 use serde::{Serialize, Deserialize};
 use derive_more::{Display, Error};
 use crate::algorithm::greedy::GreedyAlgorithm;
+use crate::algorithm::sa_lin_yu::SimAnnealingLinYu;
 
 /// Type alias for a mapping from node id's to scores, where the nodes represent sights / tourist
 /// attractions
@@ -150,6 +151,7 @@ trait _Algorithm<'a> {
 
 pub enum Algorithm<'a> {
     Greedy(GreedyAlgorithm<'a>),
+    SimAnnealing(SimAnnealingLinYu<'a>),
 }
 
 impl<'a> Algorithm<'a> {
@@ -178,6 +180,8 @@ impl<'a> Algorithm<'a> {
         match algorithm_name {
             GreedyAlgorithm::ALGORITHM_NAME => Ok(Self::Greedy(GreedyAlgorithm::new(
                 graph, start_time, end_time, walking_speed_mps, area, user_prefs)?)),
+            SimAnnealingLinYu::ALGORITHM_NAME => Ok(Self::SimAnnealing(SimAnnealingLinYu::new(
+                graph, start_time, end_time, walking_speed_mps, area, user_prefs)?)),
             unknown_name => Err(AlgorithmError::UnknownAlgorithm {
                 unknown_name: unknown_name.to_string(),
             })
@@ -189,6 +193,7 @@ impl<'a> Algorithm<'a> {
     pub fn compute_route(&self) -> Route {
         match self {
             Self::Greedy(inner) => inner.as_algorithm(),
+            Self::SimAnnealing(inner) => inner.as_algorithm(),
         }.compute_route()
     }
 }
