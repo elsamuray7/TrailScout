@@ -39,6 +39,9 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
   private circle?: L.Circle;
   private activeLayers = new Map<string, any>();
 
+  leafRoute_1?: L.Polyline;
+  leafRoute_2?: L.Polyline
+
   constructor(private routeService : RouteService) {
   }
   ngOnChanges(changes: SimpleChanges): void {
@@ -148,9 +151,7 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
       }
       
     }) );
-    console.log(route_1);
-    console.log(route_2);
-    const leafRoute_1: L.Polyline = new L.Polyline(route_1, {color: 'red'}).addTo(this.map);
-    const leafRoute_2: L.Polyline = new L.Polyline(route_2, {color: 'green'}).addTo(this.map);
+    this.leafRoute_1 = new L.Polyline(route_1, {color: 'red'}).addTo(this.map);
+    this.leafRoute_2 = new L.Polyline(route_2, {color: 'green'}).addTo(this.map);
   }
 }

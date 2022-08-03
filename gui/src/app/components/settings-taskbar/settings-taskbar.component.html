@@ -5,11 +5,15 @@
                 <ngb-panel id="radius" [title]="radius > 0 ? 'Radius: ' + radius + 'km' : 'Radius'" [disabled]="!startPointSet"
                     [class.disabled]="!startPointSet">
                     <ng-template ngbPanelContent >
-                      <div class='d-flex justify-content-between'>
+                      <div class='d-flex justify-content-between col' style='gap: 10px'>
                         <input id='radiusInput' type="number" placeholder="Enter radius in km..." class="form-control"
                                [(ngModel)]="radius" />
-                        <button class="btn-primary btn" id="refresh" type="submit"
-                                (click)="refreshSights()">Refresh</button>
+                        <button class="btn-primary btn" id="refresh" type="submit" [disabled]='refreshing'
+                                (click)="refreshSights()" style='flex-grow:1;'>
+                          <span *ngIf='!refreshing'>Refresh</span>
+                          <div *ngIf='refreshing' class="spinner-border" role="status">
+                          </div>
+                        </button>
                       </div>
                     </ng-template>
                 </ngb-panel>

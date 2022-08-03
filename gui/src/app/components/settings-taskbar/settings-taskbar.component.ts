@@ -4,6 +4,8 @@ import { SightsServiceService } from '../../services/sights-service.service';
 import {Category} from "../../data/Category";
 import {MapService} from "../../services/map.service";
 import {RouteService} from "../../services/route.service";
+import { ToastService } from '../../services/toast.service';
+import { CookieHandlerService } from 'src/app/services/cookie-handler.service';
 
 @Component({
   selector: 'app-settings-taskbar',
@@ -25,10 +27,13 @@ export class SettingsTaskbarComponent implements OnInit {
   private _walkTime: NgbTimeStruct;
   private _endTime: NgbTimeStruct;
   private currentDate: Date;
+  refreshing: boolean = false;
 
   constructor(private sightsService: SightsServiceService,
               private mapService: MapService,
-              private routeService: RouteService) {
+              private routeService: RouteService,
+              private cookieService: CookieHandlerService,
+              private toastService: ToastService) {
     this.currentDate = new Date();
     this._startTime = {hour: this.currentDate.getHours(), minute: this.currentDate.getMinutes(), second: 0};
     this._walkTime = {hour: 1, minute: 0, second: 0};
@@ -42,6 +47,14 @@ export class SettingsTaskbarComponent implements OnInit {
       }
   }, 0);
 
+    this.sightsService.updateSuccessful.subscribe((success) => {
+      this.refreshing = false;
+      if (success) {
+        this.toastService.showSuccess('Successfully updated sights!');
+      } else {
+        this.toastService.showDanger('Something went wrong!');
+      }
+    });
   }
 
   set radius(r: number) {
@@ -170,6 +183,13 @@ export class SettingsTaskbarComponent implements OnInit {
   }
 
   refreshSights() {
-    this.sightsService.updateSights(this.mapService.getCoordniates(), this.mapService.getRadius());
+    const startCookie = this.cookieService.getLocationCookie();
+    if (startCookie.value !== '' && this.radius > 0) {
+      const val = startCookie.value as string;
+      const coords = JSON.parse(val);
+      this.refreshing = true;
+      this.toastService.showStandard('Updating sights...');
+      this.sightsService.updateSights(coords, this.radius);
+    }
   }
 }

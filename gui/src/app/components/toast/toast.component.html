@@ -1,0 +1,15 @@
+<div class='toast-container position-fixed bottom-0 start-50 translate-middle-x p-3' style='z-index: 10000; opacity: 90%'>
+  <ngb-toast
+    *ngFor="let toast of getToasts()"
+    [class]="toast.classname"
+    [autohide]="true"
+    [delay]="5000"
+    (hidden)="hideToast(toast)"
+  >
+    <ng-template [ngIf]="isTemplate(toast)" [ngIfElse]="text">
+      <ng-template [ngTemplateOutlet]="toast.textOrTpl"></ng-template>
+    </ng-template>
+
+    <ng-template #text>{{ toast.textOrTpl }}</ng-template>
+  </ngb-toast>
+</div>
