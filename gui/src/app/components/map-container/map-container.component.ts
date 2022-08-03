@@ -3,6 +3,8 @@ import * as L from 'leaflet';
 import { GeoSearchControl, OpenStreetMapProvider } from 'leaflet-geosearch';
 import { LatLngExpression } from 'leaflet';
 import {Category} from "../../data/Category";
+import * as Icons from './icons';
+import { Sight } from 'src/app/data/Sight';
 
 const iconRetinaUrl = 'assets/marker-icon-2x.png';
 const iconUrl = 'assets/marker-icon.png';
@@ -121,7 +123,9 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
         lat: sight.lat,
         lng: sight.lon
       }
-      var newMarker = new L.Marker(latlng).addTo(newLayer);
+      const icon = this.getIcon(sight);
+
+      var newMarker = new L.Marker(latlng, {icon: icon}).addTo(newLayer);
       newLayer.addTo(this.map);
     });
     this.activeLayers.set(category.name, newLayer);
@@ -130,6 +134,32 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
   hideSights(category: Category) {
     if (this.activeLayers.has(category.name)) {
       this.map.removeLayer(this.activeLayers.get(category.name));
+    }
+  }
+
+  getIcon(sight: Sight) {
+    ["Sightseeing", "Other", "Nightlife", "Restaurants", "Shopping", "PicnicBarbequeSpot",
+    "MuseumExhibition", "Nature", "Swimming"];
+    const cat = sight.category;
+    switch(cat) {
+      case "Sightseeing":
+        return Icons.sightsIcon;
+      case "Nightlife":
+        return Icons.nightIcon;
+      case "Restaurants":
+        return Icons.restaurantIcon;
+      case "Shopping":
+        return Icons.shoppingIcon;
+      case "PicnicBarbequeSpot":
+        return Icons.grillIcon;
+      case "MuseumExhibition":
+        return Icons.museumIcon;
+      case "Nature":
+        return Icons.natureIcon;
+      case "Swimming":
+        return Icons.seaIcon;
+      default:
+        return iconDefault;
     }
   }
 }
