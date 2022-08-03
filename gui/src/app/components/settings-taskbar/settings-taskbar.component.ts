@@ -37,6 +37,7 @@ export class SettingsTaskbarComponent implements OnInit {
     this.currentDate = new Date();
     this._startTime = {hour: this.currentDate.getHours(), minute: this.currentDate.getMinutes(), second: 0};
     this._walkTime = {hour: 1, minute: 0, second: 0};
+    this._endTime = {hour: this.startTime.hour + 1, minute: this.startTime.minute, second: this.startTime.second};
    }
 
   ngOnInit(): void {
