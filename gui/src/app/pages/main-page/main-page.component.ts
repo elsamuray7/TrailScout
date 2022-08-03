@@ -1,6 +1,7 @@
 import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { NgbOffcanvas } from '@ng-bootstrap/ng-bootstrap';
 import * as L from 'leaflet';
+import { BlockUI, NgBlockUI } from 'ng-block-ui';
 import { Subscription } from 'rxjs';
 import { ApplicationStateService } from 'src/app/services/application-state.service';
 import { RouteResponse, RouteService } from 'src/app/services/route.service';
@@ -15,6 +16,7 @@ import {MapService} from "../../services/map.service";
 export class MainPageComponent implements OnInit, OnDestroy {
 
   @ViewChild(MapContainerComponent) mapContainer: MapContainerComponent;
+  @BlockUI('map') blockUIMap: NgBlockUI;
   marker = false;
   markerCoords?: L.LatLng;
   isCollapsed = true;
@@ -25,6 +27,7 @@ export class MainPageComponent implements OnInit, OnDestroy {
   defaultStartPointLat = 53.073635;
 
   sub?: Subscription;
+  blockSub?: Subscription;
 
   radius?: number;
   constructor(
@@ -35,7 +38,11 @@ export class MainPageComponent implements OnInit, OnDestroy {
 
     this.mobile =  applicationStateService.getIsMobileResolution();
 
-    this.sub = this.routeService.routeUpdated.subscribe(route => this.showRoute(route));
+    this.sub = this.routeService.routeUpdated.subscribe(route => {
+      this.showRoute(route);
+      this.blockUIMap.stop();
+    });
+    this.blockSub = this.routeService.startRouteCall.subscribe(() => this.blockUIMap.start('Loading route...'));
 
     const coords = this.mapService.getCoordniates();
     if (coords) {

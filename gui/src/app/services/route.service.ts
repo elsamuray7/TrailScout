@@ -32,12 +32,14 @@ export class RouteService {
   private readonly backendUrl: String;
   private route?: RouteResponse;
   public routeUpdated = new EventEmitter<any>();
+  public startRouteCall = new EventEmitter<any>();
 
   constructor(private http: HttpClient) {
     this.backendUrl = environment.backendUrl;
   }
 
   public async calculateRoute(request: any) {
+    this.startRouteCall.emit();
     this.http.post(this.backendUrl + "/route", request).subscribe((route ) => {
       this.route = route as RouteResponse;
       if (this.route)  {
