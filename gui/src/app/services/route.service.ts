@@ -9,11 +9,19 @@ interface latlng {
 }
 
 interface sight {
-  sight?: latlng;
+  node_id: number;
+  latlng: latlng;
+  category: string;
+}
+
+interface route {
+  type: string;
+  time_budget: number;
+  sight: sight | null;
   nodes: latlng[];
 }
 export interface RouteResponse {
-  route: sight[];
+  route: route[];
 }
 
 @Injectable({
@@ -33,7 +41,7 @@ export class RouteService {
     this.http.post(this.backendUrl + "/route", request).subscribe((route ) => {
       this.route = route as RouteResponse;
       if (this.route)  {
-        console.log(route);
+        console.log(this.route)
         this.routeUpdated.emit(route);
       }
       

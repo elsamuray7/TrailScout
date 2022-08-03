@@ -1,8 +1,9 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { NgbOffcanvas } from '@ng-bootstrap/ng-bootstrap';
 import * as L from 'leaflet';
+import { Subscription } from 'rxjs';
 import { ApplicationStateService } from 'src/app/services/application-state.service';
-import { RouteService } from 'src/app/services/route.service';
+import { RouteResponse, RouteService } from 'src/app/services/route.service';
 import { MapContainerComponent } from '../../components/map-container/map-container.component';
 import {MapService} from "../../services/map.service";
 
@@ -11,7 +12,7 @@ import {MapService} from "../../services/map.service";
   templateUrl: './main-page.component.html',
   styleUrls: ['./main-page.component.scss']
 })
-export class MainPageComponent implements OnInit {
+export class MainPageComponent implements OnInit, OnDestroy {
 
   @ViewChild(MapContainerComponent) mapContainer: MapContainerComponent;
   marker = false;
@@ -23,6 +24,8 @@ export class MainPageComponent implements OnInit {
   defaultStartPointLong = 8.806422;
   defaultStartPointLat = 53.073635;
 
+  sub?: Subscription;
+
   radius?: number;
   constructor(
     private mapService: MapService,
@@ -31,6 +34,8 @@ export class MainPageComponent implements OnInit {
     private routeService: RouteService) {
 
     this.mobile =  applicationStateService.getIsMobileResolution();
+
+    this.sub = this.routeService.routeUpdated.subscribe(route => this.showRoute(route));
 
     const coords = this.mapService.getCoordniates();
     if (coords) {
@@ -41,6 +46,9 @@ export class MainPageComponent implements OnInit {
     if (radius && !this.radius) {
       this.radiusChange(radius);
     }
+  }
+  ngOnDestroy(): void {
+    this.sub?.unsubscribe();
   }
 
   ngOnInit(): void {
@@ -84,9 +92,11 @@ export class MainPageComponent implements OnInit {
     })
   }
 
-  async showRoute() {
-    await new Promise(f => setTimeout(f, 11000));
-      this.mapContainer.drawRoute();
+  async showRoute(route: RouteResponse | undefined) {
+    if (!route) {
+      return;
+    }
+    this.mapContainer.drawRoute(route);
     
   }
 }

@@ -3,7 +3,7 @@ import * as L from 'leaflet';
 import { GeoSearchControl, OpenStreetMapProvider } from 'leaflet-geosearch';
 import { LatLngExpression } from 'leaflet';
 import {Category} from "../../data/Category";
-import { RouteService } from 'src/app/services/route.service';
+import { RouteResponse, RouteService } from 'src/app/services/route.service';
 
 const iconRetinaUrl = 'assets/marker-icon-2x.png';
 const iconUrl = 'assets/marker-icon.png';
@@ -134,12 +134,23 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
     }
   }
 
-  drawRoute() {
-    const _route = this.routeService.getRoute();
-    console.log(_route);
-    const route: L.LatLng[] = [];
-    _route?.route.map(nodes => nodes.nodes.map(node => route.push(new L.LatLng(node.lat, node.lon))) );
-    console.log(route);
-    const leafRoute: L.Polyline = new L.Polyline(route).addTo(this.map);
+  drawRoute(_route: RouteResponse) {
+    const route_1: L.LatLng[] = [];
+    const route_2: L.LatLng[] = [];
+
+    _route.route.map(nodes => nodes.nodes.map(node => {
+      if (nodes.type === 'Start') {
+        route_1.push(new L.LatLng(node.lat, node.lon))
+        return;
+      }
+      if (nodes.type === 'End') {
+        route_2.push(new L.LatLng(node.lat, node.lon))
+      }
+      
+    }) );
+    console.log(route_1);
+    console.log(route_2);
+    const leafRoute_1: L.Polyline = new L.Polyline(route_1, {color: 'red'}).addTo(this.map);
+    const leafRoute_2: L.Polyline = new L.Polyline(route_2, {color: 'green'}).addTo(this.map);
   }
 }
