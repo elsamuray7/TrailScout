@@ -5,6 +5,7 @@ import { BlockUI, NgBlockUI } from 'ng-block-ui';
 import { Subscription } from 'rxjs';
 import { ApplicationStateService } from 'src/app/services/application-state.service';
 import { RouteResponse, RouteService } from 'src/app/services/route.service';
+import { ToastService } from 'src/app/services/toast.service';
 import { MapContainerComponent } from '../../components/map-container/map-container.component';
 import {MapService} from "../../services/map.service";
 
@@ -34,7 +35,8 @@ export class MainPageComponent implements OnInit, OnDestroy {
     private mapService: MapService,
     private offcanvasService: NgbOffcanvas,
     private applicationStateService: ApplicationStateService,
-    private routeService: RouteService) {
+    private routeService: RouteService,
+    private toastService: ToastService) {
 
     this.mobile =  applicationStateService.getIsMobileResolution();
 
@@ -42,7 +44,9 @@ export class MainPageComponent implements OnInit, OnDestroy {
       this.showRoute(route);
       this.blockUIMap.stop();
     });
-    this.blockSub = this.routeService.startRouteCall.subscribe(() => this.blockUIMap.start('Loading route...'));
+    this.blockSub = this.routeService.startRouteCall.subscribe(() => {
+      this.blockUIMap.start('Loading route...');
+    });
 
     const coords = this.mapService.getCoordniates();
     if (coords) {
@@ -99,8 +103,9 @@ export class MainPageComponent implements OnInit, OnDestroy {
     })
   }
 
-  async showRoute(route: RouteResponse | undefined) {
-    if (!route) {
+  async showRoute(route: RouteResponse) {
+    if (route.error && !route.route) {
+      this.toastService.showDanger(route.error.message ?? 'Something went wrong!');
       return;
     }
     this.mapContainer.drawRoute(route);

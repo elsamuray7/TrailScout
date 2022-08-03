@@ -1,6 +1,7 @@
 import {EventEmitter, Injectable} from '@angular/core';
 import {HttpClient} from "@angular/common/http";
 import {environment} from "../../environments/environment";
+import { catchError, of, timeout } from 'rxjs';
 
 
 interface latlng {
@@ -21,8 +22,10 @@ interface route {
   nodes: latlng[];
 }
 export interface RouteResponse {
-  route: route[];
+  route?: route[];
+  error?: any
 }
+
 
 @Injectable({
   providedIn: 'root'
@@ -40,10 +43,16 @@ export class RouteService {
 
   public async calculateRoute(request: any) {
     this.startRouteCall.emit();
-    this.http.post(this.backendUrl + "/route", request).subscribe((route ) => {
+    this.http.post(this.backendUrl + "/route", request).pipe(
+      timeout(20000),
+      catchError(e => {
+        console.log(e);
+        this.routeUpdated.emit({error: e, route: undefined} as RouteResponse);
+        return of(null)
+      })
+      ).subscribe((route ) => {
       this.route = route as RouteResponse;
       if (this.route)  {
-        console.log(this.route)
         this.routeUpdated.emit(route);
       }
       

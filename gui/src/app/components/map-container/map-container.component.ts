@@ -141,7 +141,7 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
     const route_1: L.LatLng[] = [];
     const route_2: L.LatLng[] = [];
 
-    _route.route.map(nodes => nodes.nodes.map(node => {
+    _route.route!.map(nodes => nodes.nodes.map(node => {
       if (nodes.type === 'Start') {
         route_1.push(new L.LatLng(node.lat, node.lon))
         return;
