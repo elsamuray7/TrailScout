@@ -8,14 +8,14 @@ use crate::data::graph::{Category, Graph, Node, Sight};
 use std::time::Instant;
 
 // Constant parameters
-// Initial temperature
+/// Initial temperature
 const T_0: f64 = 1.;
-// Number of cooldowns that do not improve the result
+/// Number of cooldowns that do not improve the result
 const N_NON_IMPROVING: usize = 30;
-// Factor by which the temperature is cooled down
+/// Factor by which the temperature is cooled down
 const ALPHA: f64 = 0.97;
-// Maximum allowed calculation time
-const MAX_T: u128 = 5000;
+/// Maximum allowed calculation time
+const MAX_TIME: u128 = 5000;
 
 /// Compute scores for tourist attractions based on user preferences for categories or specific
 /// tourist attractions, respectively
@@ -43,6 +43,89 @@ fn compute_scores(sights: &HashMap<usize, &Sight>, user_prefs: UserPreferences) 
     scores
 }
 
+/// Build a distance map with distances from relevant nodes, i.e. the root node and all sight nodes
+/// with a non-zero score, to all other nodes
+fn build_distance_map<'a>(graph: &'a Graph,
+                          area: &Area,
+                          sights: &HashMap<usize, &'a Sight>,
+                          root_id: usize,
+                          scores: &ScoreMap) -> HashMap<usize, HashMap<&'a Node, (&'a Node, usize)>> {
+    let successors = |node: &Node|
+        graph.get_outgoing_edges_in_area(node.id, area.lat, area.lon, area.radius)
+            .into_iter()
+            .map(|edge| (graph.get_node(edge.tgt), edge.dist))
+            .collect::<Vec<(&Node, usize)>>();
+
+    let mut distance_map = HashMap::with_capacity(sights.len());
+    let mut sights_and_root = sights.iter().map(|(&sight_id, _)| sight_id)
+        .filter(|sight_id| scores[sight_id] > 0).collect_vec();
+    sights_and_root.push(root_id);
+
+    let mut count = 0;
+    let total = sights_and_root.len();
+    for node_id in sights_and_root {
+        count += 1;
+        log::trace!("Pre-computing distances from node {} ({} / {})", node_id, count, total);
+        let dijkstra_result = dijkstra_all(
+            &graph.get_node(node_id),
+            |node| successors(node));
+        distance_map.insert(node_id, dijkstra_result);
+    }
+    log::debug!("Pre-computed distances from relevant nodes");
+
+    distance_map
+}
+
+/// Select two indices by random and swap the elements of `current_solution` at these indices
+fn swap<'a>(current_solution: &Vec<&'a Sight>) -> Vec<&'a Sight> {
+    let mut rng = thread_rng();
+    let size = current_solution.len();
+    let i = rng.gen_range(0..size);
+    let j = rng.gen_range(0..size);
+
+    let mut result = current_solution.clone();
+    result.swap(i, j);
+    result
+}
+
+/// Select two indices `i` and `j` by random and insert the element at position `i` at position `j`
+/// in `current_solution`
+fn insert<'a>(current_solution: &Vec<&'a Sight>) -> Vec<&'a Sight> {
+    let mut rng = thread_rng();
+    let size = current_solution.len();
+    let i = rng.gen_range(0..size);
+    let j = rng.gen_range(0..size);
+
+    let mut result = current_solution.clone();
+    if j < i {
+        result.insert(j, current_solution[i]);
+        result.remove(i + 1);
+    } else if j > i {
+        result.insert(j, current_solution[i]);
+        result.remove(i);
+    }
+    result
+}
+
+/// Select two indices by random and reverse the slice of `current_solution` between these two
+/// indices
+fn reverse<'a>(current_solution: &Vec<&'a Sight>) -> Vec<&'a Sight> {
+    let mut rng = thread_rng();
+    let size = current_solution.len();
+    let i = rng.gen_range(0..size);
+    let j = rng.gen_range(0..size);
+
+    let mut result = current_solution.clone();
+    let partial_solution;
+    if j < i {
+        partial_solution = &mut result[j..=i];
+    } else {
+        partial_solution = &mut result[i..=j];
+    }
+    partial_solution.reverse();
+    result
+}
+
 /// Greedy implementation of the `Algorithm` trait.
 ///
 /// The greedy algorithm tries to find the best route by including sights into the route based on
@@ -57,16 +140,82 @@ pub struct SimAnnealingLinYu<'a> {
     sights: HashMap<usize, &'a Sight>,
     root_id: usize,
     scores: ScoreMap,
+    distance_map: HashMap<usize, HashMap<&'a Node, (&'a Node, usize)>>,
 }
 
-impl SimAnnealingLinYu<'_> {
+impl<'a> SimAnnealingLinYu<'a> {
     /// Unique string identifier of this algorithm implementation
     pub const ALGORITHM_NAME: &'static str = "DerAllerbesteste";
 
-    fn calculate_score(&self, current_solution: &Vec<&Sight>, distance_map: &HashMap<usize, HashMap<&Node, (&Node, usize)>>) -> usize {
+    /// Get the total score of `current_solution`.
+    /// The total score is computed as the sum of the individual scores of all sights that can be
+    /// included in the route without violating the time budget.
+    fn get_total_score(&self, current_solution: &Vec<&'a Sight>) -> usize {
         // TODO compute scores according to issue #145
-        let mut rng = thread_rng();
-        rng.gen_range(0..100)
+        let mut score = 0;
+        let mut time_budget = (self.end_time.timestamp() - self.start_time.timestamp()) as usize;
+        let mut curr_node_id = self.root_id;
+
+        for &sight in current_solution {
+            let curr_distance_map = &self.distance_map[&curr_node_id];
+            let (_, sight_travel_dist) = curr_distance_map[&self.graph.get_node(sight.node_id)];
+            let sight_travel_time = (sight_travel_dist as f64 / self.walking_speed_mps) as usize + 1;
+
+            let sight_distance_map = &self.distance_map[&sight.node_id];
+            let (_, root_travel_dist) = sight_distance_map[&self.graph.get_node(self.root_id)];
+            let root_travel_time = (root_travel_dist as f64 / self.walking_speed_mps) as usize + 1;
+
+            if time_budget >= (sight_travel_time + root_travel_time) {
+                score += self.scores[&sight.node_id];
+                time_budget -= sight_travel_time;
+                curr_node_id = sight.node_id;
+            } else {
+                break;
+            }
+        }
+
+        score
+    }
+
+    /// Build a walking route from the best solution found so far
+    fn build_route(&self, best_solution: Vec<&'a Sight>) -> Route {
+        let mut route = Route::new();
+        let mut time_budget = (self.end_time.timestamp() - self.start_time.timestamp()) as usize;
+        let mut curr_node_id = self.root_id;
+
+        for sight in best_solution {
+            let curr_distance_map = &self.distance_map[&curr_node_id];
+            let (_, sight_travel_dist) = curr_distance_map[&self.graph.get_node(sight.node_id)];
+            let sight_travel_time = (sight_travel_dist as f64 / self.walking_speed_mps) as usize + 1;
+
+            let sight_distance_map = &self.distance_map[&sight.node_id];
+            let (_, root_travel_dist) = sight_distance_map[&self.graph.get_node(self.root_id)];
+            let root_travel_time = (root_travel_dist as f64 / self.walking_speed_mps) as usize + 1;
+
+            if time_budget >= (sight_travel_time + root_travel_time) {
+                let sector =
+                    Sector::with_sight(sight_travel_time, sight, build_path(
+                        &self.graph.get_node(sight.node_id), curr_distance_map));
+                if route.is_empty() {
+                    route.push(RouteSector::Start(sector));
+                } else {
+                    route.push(RouteSector::Intermediate(sector));
+                }
+                curr_node_id = sight.node_id;
+                time_budget -= sight_travel_time;
+            } else {
+                let curr_distance_map = &self.distance_map[&curr_node_id];
+                let (_, root_travel_dist) = curr_distance_map[&self.graph.get_node(self.root_id)];
+                let root_travel_time = (root_travel_dist as f64 / self.walking_speed_mps) as usize + 1;
+
+                let sector = Sector::new(root_travel_time, build_path(
+                    &self.graph.get_node(self.root_id), curr_distance_map));
+                route.push(RouteSector::End(sector));
+            }
+        }
+        log::debug!("Computed walking route");
+
+        route
     }
 }
 
@@ -84,6 +233,7 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
         let sights = graph.get_sights_in_area(area.lat, area.lon, area.radius);
         let root_id = graph.get_nearest_node(area.lat, area.lon);
         let scores = compute_scores(&sights, user_prefs);
+        let distance_map = build_distance_map(graph, &area, &sights, root_id, &scores);
         Ok(Self {
             graph,
             start_time,
@@ -93,37 +243,16 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
             sights,
             root_id,
             scores,
+            distance_map,
         })
     }
 
     fn compute_route(&self) -> Route {
-        let successors = |node: &Node|
-            self.graph.get_outgoing_edges_in_area(node.id, self.area.lat, self.area.lon, self.area.radius)
-                .into_iter()
-                .map(|edge| (self.graph.get_node(edge.tgt), edge.dist))
-                .collect::<Vec<(&Node, usize)>>();
-
-        // Get the distances from the root and all sights to all other nodes
-        let mut distance_map = HashMap::with_capacity(self.sights.len());
-        let mut sights_and_root = self.sights.iter().map(|(&sight_id, _)| sight_id)
-            .filter(|sight_id| self.scores[sight_id] > 0).collect_vec();
-        sights_and_root.push(self.root_id);
-        let mut count = 0;
-        let total = sights_and_root.len();
-        for node_id in sights_and_root {
-            count += 1;
-            log::trace!("Pre-computing distances from node {} ({} / {})", node_id, count, total);
-            let dijkstra_result = dijkstra_all(
-                &self.graph.get_node(node_id),
-                |node| successors(node));
-            distance_map.insert(node_id, dijkstra_result);
-        }
-        log::debug!("Pre-computed distances from relevant nodes");
-
         // Create a random initial route
         let mut rng = thread_rng();
-        let mut randomized_sights: Vec<_> = self.sights.iter()
-            .map(|(_, &sight)| sight).collect();
+        let mut randomized_sights = self.sights.iter()
+            .filter(|(sight_id, _)| self.scores[*sight_id] > 0)
+            .map(|(_, &sight)| sight).collect_vec();
         randomized_sights.shuffle(&mut rng);
         log::debug!("Computed randomized initial solution");
 
@@ -147,7 +276,7 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
         let start_time = Instant::now();
 
         let mut x = randomized_sights;
-        let mut old_score = self.calculate_score(&x, &distance_map);
+        let mut old_score = self.get_total_score(&x);
         let mut x_best = x.clone();
         let mut f_best = old_score;
 
@@ -166,7 +295,7 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
             } else {
                 y = reverse(&x);
             }
-            let new_score = self.calculate_score(&y, &distance_map);
+            let new_score = self.get_total_score(&y);
             log::trace!("Computed new solution from current solution (old score: {}, new score: {})",
                 old_score, new_score);
 
@@ -201,8 +330,8 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
                 //TODO: PERFORM LOCAL SEARCH WHATEVER THAT MEANS
 
                 let elapsed = start_time.elapsed().as_millis();
-                if elapsed > MAX_T {
-                    log::trace!("Reached time limit (elapsed {} > limit: {})", elapsed, MAX_T);
+                if elapsed > MAX_TIME {
+                    log::trace!("Reached time limit (elapsed {} > limit: {})", elapsed, MAX_TIME);
                     break;
                 }
             }
@@ -210,99 +339,6 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
 
         log::debug!("Finished simulated annealing");
 
-        let mut route = Route::new();
-        let mut time_budget = (self.end_time.timestamp() - self.start_time.timestamp()) as usize;
-        let mut curr_node_id = self.root_id;
-
-        for sight in x_best {
-            let sight_distance_map = &distance_map[&curr_node_id];
-            let (_, dist) = sight_distance_map[&self.graph.get_node(sight.node_id)];
-            let tb = (dist as f64 / self.walking_speed_mps) as usize + 1;
-            let result_sight_to_root =
-                dijkstra(&self.graph.get_node(sight.node_id),
-                         |&node| successors(node),
-                         |&node| node.id == self.root_id)
-                    .expect("No route from sight to be included to end point");
-            let back = (result_sight_to_root.1 as f64 / self.walking_speed_mps) as usize + 1;
-            if time_budget >= (tb + back) {
-                let sector = Sector::with_sight(tb, sight, build_path(
-                    &self.graph.get_node(sight.node_id), sight_distance_map));
-                if route.is_empty() {
-                    route.push(RouteSector::Start(sector));
-                } else {
-                    route.push(RouteSector::Intermediate(sector));
-                }
-                curr_node_id = sight.node_id;
-                time_budget -= tb;
-            } else {
-                let result_sight_to_root =
-                    dijkstra(&self.graph.get_node(curr_node_id),
-                             |&node| successors(node),
-                             |&node| node.id == self.root_id)
-                        .expect("No route from current sight to end point");
-                let tb = (result_sight_to_root.1 as f64 / self.walking_speed_mps) as usize + 1;
-                let sector = Sector::new(tb, result_sight_to_root.0);
-                route.push(RouteSector::End(sector));
-            }
-        }
-        log::debug!("Computed walking route");
-
-        route
-    }
-}
-
-fn swap<'a>(current_solution: &Vec<&'a Sight>) -> Vec<&'a Sight> {
-    let mut rng = thread_rng();
-    let size = current_solution.len();
-    let i = rng.gen_range(0..size);
-    let j = rng.gen_range(0..size);
-
-    let mut result = current_solution.clone();
-    result.swap(i, j);
-    result
-}
-
-fn insert<'a>(current_solution: &Vec<&'a Sight>) -> Vec<&'a Sight> {
-    let mut rng = thread_rng();
-    let size = current_solution.len();
-    let i = rng.gen_range(0..size);
-    let j = rng.gen_range(0..size);
-
-    let mut result = current_solution.clone();
-    if j < i {
-        result.insert(j, current_solution[i]);
-        result.remove(i + 1);
-    } else if j > i {
-        result.insert(j, current_solution[i]);
-        result.remove(i);
-    }
-    result
-}
-
-fn reverse<'a>(current_solution: &Vec<&'a Sight>) -> Vec<&'a Sight> {
-    let mut rng = thread_rng();
-    let size = current_solution.len();
-    let i = rng.gen_range(0..size);
-    let j = rng.gen_range(0..size);
-
-    let mut result = current_solution.clone();
-    let partial_solution;
-    if j < i {
-        partial_solution = &mut result[j..=i];
-    } else {
-        partial_solution = &mut result[i..=j];
-    }
-    partial_solution.reverse();
-    result
-}
-
-#[cfg(test)]
-mod example {
-    #[test]
-    fn test() {
-        let mut myvec = vec![1, 2, 3, 4, 5, 6];
-        let mut my_slice = &mut myvec[1..=4];
-        my_slice.reverse();
-        println!("{:?}", &myvec);
+        self.build_route(x_best)
     }
 }
