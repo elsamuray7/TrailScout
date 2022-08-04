@@ -14,7 +14,7 @@ use serde_json;
 use trailscout_lib::algorithm::{Algorithm, AlgorithmError};
 use trailscout_lib::data::graph::{Graph, Sight};
 use trailscout_lib::server_utils::requests::{RouteProviderReq, RouteProviderRes, SightsRequest};
-use trailscout_lib::server_utils::custom_errors::{TailScoutError};
+use trailscout_lib::server_utils::custom_errors::{TrailScoutError};
 
 ///Location of the application config file
 const CONFIG_PATH :&str = "./config.json";
@@ -51,7 +51,7 @@ fn get_config() -> Config {
 
 ///Responds to post request asking for sights
 #[post("/sights")]
-async fn post_sights(request:  web::Json<SightsRequest>, data: web::Data<AppState>) -> Result<HttpResponse, TailScoutError> {
+async fn post_sights(request:  web::Json<SightsRequest>, data: web::Data<AppState>) -> Result<HttpResponse, TrailScoutError> {
 
     debug!("Got Sights Request for lat={}, lon={} and radius={}.",
         request.lat, request.lon, request.radius);
@@ -67,7 +67,7 @@ async fn post_sights(request:  web::Json<SightsRequest>, data: web::Data<AppStat
 
 ///Responds to post request asking for routing
 #[post("/route")]
-async fn post_route(request:  web::Json<RouteProviderReq>, data: web::Data<AppState>) -> Result<HttpResponse, TailScoutError> {
+async fn post_route(request:  web::Json<RouteProviderReq>, data: web::Data<AppState>) -> Result<HttpResponse, TrailScoutError> {
     debug!("Received route request");
 
     let route_request = request.into_inner();
@@ -95,12 +95,18 @@ async fn post_route(request:  web::Json<RouteProviderReq>, data: web::Data<AppSt
         Err(error) => {
             //Mein intellij mekert hier wegen "doesn't implement Display". Geht aber -> intellij bug?
             error!("Error in post_route: {}",error);
-            return Err(TailScoutError::InternalError {message: format!("Error in post_route: {}",error)})
+            return Err(TrailScoutError::InternalError {message: format!("Error in post_route: {}", error)})
         }
 
     };
 
-    let route = algo.compute_route();
+    let route = match algo.compute_route() {
+        Ok(route) => route,
+        Err(error) => {
+            error!("Error in post_route: {}", error);
+            return Err(TrailScoutError::InternalError { message: format!("Error in post_route: {}", error) })
+        }
+    };
     debug!("Computed route with {}. Sending response...", &data.config.routing_algorithm);
 
     Ok(HttpResponse::Ok().json(RouteProviderRes {

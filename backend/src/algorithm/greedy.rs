@@ -82,7 +82,7 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
         })
     }
 
-     fn compute_route(&self) -> Route {
+     fn compute_route(&self) -> Result<Route, AlgorithmError> {
          let successors = |node: &Node|
              self.graph.get_outgoing_edges_in_area(node.id, self.area.lat, self.area.lon, self.area.radius)
                  .into_iter()
@@ -182,6 +182,6 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
             }
         }
 
-        route
+        Ok(route)
     }
 }

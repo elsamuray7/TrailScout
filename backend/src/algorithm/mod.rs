@@ -140,7 +140,11 @@ trait _Algorithm<'a> {
 
     /// Compute a route on a graph that visits tourist attractions in a specific area based on
     /// user preferences for these tourist attractions
-    fn compute_route(&self) -> Route;
+    ///
+    /// # Returns
+    /// * an `Ok` containing the computed route in case of no errors, or
+    /// * an `Err` containing an `AlgorithmError`, otherwise
+    fn compute_route(&self) -> Result<Route, AlgorithmError>;
 
     /// Returns a reference to this concrete implementation of the `_Algorithm` trait
     /// as a generic trait object
@@ -190,7 +194,11 @@ impl<'a> Algorithm<'a> {
 
     /// Compute a route on a graph that visits tourist attractions in a specific area based on
     /// user preferences for these tourist attractions
-    pub fn compute_route(&self) -> Route {
+    ///
+    /// # Returns
+    /// * an `Ok` containing the computed route in case of no errors, or
+    /// * an `Err` containing an `AlgorithmError`, otherwise
+    pub fn compute_route(&self) -> Result<Route, AlgorithmError> {
         match self {
             Self::Greedy(inner) => inner.as_algorithm(),
             Self::SimAnnealing(inner) => inner.as_algorithm(),
@@ -210,6 +218,12 @@ pub enum AlgorithmError {
     /// i.e., a negative time interval
     #[display(fmt = "End time is before start time")]
     NegativeTimeInterval,
+    /// Error indicating that no route between two nodes could be determined
+    #[display(fmt = "No route found from node {} to {}", from, to)]
+    NoRouteFound {
+        from: usize,
+        to: usize,
+    },
 }
 
 #[cfg(test)]
