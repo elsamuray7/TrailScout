@@ -126,10 +126,15 @@ fn reverse<'a>(current_solution: &Vec<&'a Sight>) -> Vec<&'a Sight> {
     result
 }
 
-/// Greedy implementation of the `Algorithm` trait.
+/// Implementation of the `Algorithm` trait based on Lin and Yu's Simulated Annealing algorithm
+/// (2012).
 ///
-/// The greedy algorithm tries to find the best route by including sights into the route based on
-/// their score-distance ratio at that time until the time budget is used up.
+/// The simulated annealing algorithm tries to find the best route by generating a random initial
+/// solution and improve it with the local operations `swap`, `insert` and `reverse`.
+/// Therefore, we start with the initial temperature `T_0`, which represents the probability with
+/// which we escape from local maxima.
+/// The temperature will always cool down after a certain amount of iterations and the algorithm
+/// stops and outputs the best solution found so far if it already ran more than `MAX_TIME` seconds.
 pub struct SimAnnealingLinYu<'a> {
     graph: &'a Graph,
     start_time: DateTime<Utc>,
