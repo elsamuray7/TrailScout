@@ -341,7 +341,7 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
 
                 let elapsed = start_time.elapsed().as_millis();
                 if elapsed > MAX_TIME {
-                    log::trace!("Reached time limit (elapsed {} > limit: {})", elapsed, MAX_TIME);
+                    log::trace!("Reached time limit (elapsed: {} > limit: {})", elapsed, MAX_TIME);
                     break;
                 }
             }
