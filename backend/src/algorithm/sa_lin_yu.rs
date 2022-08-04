@@ -106,19 +106,19 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
         // Get the distances from the root and all sights to all other nodes
         let mut distance_map = HashMap::with_capacity(self.sights.len());
         let mut sights_and_root = self.sights.iter().map(|(&sight_id, _)| sight_id)
-            .collect_vec();
+            .filter(|sight_id| self.scores[sight_id] > 0).collect_vec();
         sights_and_root.push(self.root_id);
         let mut count = 0;
         let total = sights_and_root.len();
         for node_id in sights_and_root {
             count += 1;
-            log::debug!("Pre-computing distances from node {} ({} / {})", node_id, count, total);
+            log::trace!("Pre-computing distances from node {} ({} / {})", node_id, count, total);
             let dijkstra_result = dijkstra_all(
                 &self.graph.get_node(node_id),
                 |node| successors(node));
             distance_map.insert(node_id, dijkstra_result);
         }
-        log::debug!("Done");
+        log::debug!("Pre-computed distances from relevant nodes");
 
         // Create a random initial route
         let mut rng = thread_rng();
@@ -156,6 +156,7 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
 
         loop {
             let p = rng.gen::<f64>();
+            log::trace!("Computed p-value: {}", p);
 
             let y;
             if p <= 1./3. {
@@ -166,15 +167,20 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
                 y = reverse(&x);
             }
             let new_score = self.calculate_score(&y, &distance_map);
+            log::trace!("Computed new solution from current solution (old score: {}, new score: {})",
+                old_score, new_score);
 
             i += 1;
+            log::trace!("Iteration {} / {}", i, i_iter);
 
             if old_score > new_score {
                 let score_dif = old_score - new_score;
                 let r = rng.gen::<f64>();
-                if r >= std::f64::consts::E.powf(-(score_dif as f64) / t) {
+                let heur = std::f64::consts::E.powf(-(score_dif as f64) / t);
+                if r >= heur {
+                    log::trace!("Continue with next iteration (r-value: {} >= heuristic: {})",
+                        r, heur);
                     continue;
-
                 }
             }
             old_score = new_score;
@@ -183,20 +189,26 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
             if new_score > f_best {
                 f_best = new_score;
                 x_best = x.clone();
+                log::trace!("Updated best score (new score: {} > best score so far: {})",
+                    new_score, f_best);
             }
 
             if i == i_iter {
                 t *= ALPHA;
+                log::trace!("Updated temperature: {}", t);
                 i = 0;
 
                 //TODO: PERFORM LOCAL SEARCH WHATEVER THAT MEANS
 
                 let elapsed = start_time.elapsed().as_millis();
                 if elapsed > MAX_T {
+                    log::trace!("Reached time limit (elapsed {} > limit: {})", elapsed, MAX_T);
                     break;
                 }
             }
         }
+
+        log::debug!("Finished simulated annealing");
 
         let mut route = Route::new();
         let mut time_budget = (self.end_time.timestamp() - self.start_time.timestamp()) as usize;
@@ -233,6 +245,7 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
                 route.push(RouteSector::End(sector));
             }
         }
+        log::debug!("Computed walking route");
 
         route
     }
