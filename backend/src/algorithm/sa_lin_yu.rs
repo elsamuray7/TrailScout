@@ -273,7 +273,12 @@ fn reverse<'a>(current_solution: &Vec<&'a Sight>) -> Vec<&'a Sight> {
     let j = rng.gen_range(0..size);
 
     let mut result = current_solution.clone();
-    let partial_solution = &mut result[i..=j];
+    let partial_solution;
+    if j < i {
+        partial_solution = &mut result[j..=i];
+    } else {
+        partial_solution = &mut result[i..=j];
+    }
     partial_solution.reverse();
     result
 }
