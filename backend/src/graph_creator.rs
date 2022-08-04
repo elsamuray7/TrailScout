@@ -15,12 +15,11 @@ pub fn main() -> Result<(), io::Error> {
     env_logger::init_from_env(env_logger);
     info!("starting up");
 
-    let args: Vec<String> = env::args().collect();
+    let in_graph = env::var("i").unwrap_or("./osm_graphs/bremen-latest.osm.pbf".to_string());
+    let out_graph = env::var("o").unwrap_or("./osm_graphs/bremen-latest.fmi".to_string());
 
-    println!("Input file is {}.", &args[1]);
-    println!("Output file is {}.", &args[2]);
+    println!("Input file is {}.", &in_graph);
+    println!("Output file is {}.", &out_graph);
     
-    let in_graph = &args[1];
-    let out_graph = &args[2];
-    create_fmi_graph(in_graph,out_graph)
+    create_fmi_graph(&in_graph,&out_graph)
 }

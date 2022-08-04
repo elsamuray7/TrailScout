@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Run Graph Creator" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
-    <option name="command" value="run --bin osm_graph_creator ./osm_graphs/bremen-latest.osm.pbf ./osm_graphs/bremen-latest.fmi" />
+    <option name="command" value="run --bin osm_graph_creator ./2osm_graphs/bremen-latest.osm.pbf ./2osm_graphs/bremen-latest.fmi" />
     <option name="workingDirectory" value="file://$PROJECT_DIR$" />
     <option name="channel" value="DEFAULT" />
     <option name="requiredFeatures" value="true" />
@@ -9,7 +9,10 @@
     <option name="withSudo" value="false" />
     <option name="buildTarget" value="REMOTE" />
     <option name="backtrace" value="SHORT" />
-    <envs />
+    <envs>
+      <env name="i" value="./osm_graphs/bremen-latest.osm.pbf" />
+      <env name="o" value="./osm_graphs/bremen-latest.fmi" />
+    </envs>
     <option name="isRedirectInput" value="false" />
     <option name="redirectInputPath" value="" />
     <method v="2">
