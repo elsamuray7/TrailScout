@@ -9,13 +9,16 @@ use std::time::Instant;
 
 // Constant parameters
 /// Initial temperature
-const T_0: f64 = 1.;
-/// Number of cooldowns that do not improve the result
-const N_NON_IMPROVING: usize = 30;
+const T_0: f64 = 0.1;
+/// Multiplier for iterations on a temperature
+const B: usize = 3000;
 /// Factor by which the temperature is cooled down
-const ALPHA: f64 = 0.97;
-/// Maximum allowed calculation time
+const ALPHA: f64 = 0.999;
+/// Maximum allowed computation time
 const MAX_TIME: u128 = 5000;
+/// Number of cooldowns that do not improve the result
+#[allow(dead_code)]
+const N_NON_IMPROVING: usize = 30;
 
 /// Compute scores for tourist attractions based on user preferences for categories or specific
 /// tourist attractions, respectively
@@ -282,7 +285,7 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
 
         log::debug!("Starting simulated annealing");
 
-        let i_iter = randomized_sights.len() * 5000;
+        let i_iter = randomized_sights.len() * B;
         let start_time = Instant::now();
 
         let mut x = randomized_sights;
