@@ -338,15 +338,35 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
     }).ok();
     //post processing of nodes and sights
     let mut id_counter = 0;
+    let mut duplicate_position_list : Vec<usize> = Vec::new();
     for node in nodes.iter_mut() {
         node.id = id_counter;
         //check for duplicate nodes
         if(osm_id_to_node_id.contains_key(&node.osm_id)) {
-            info!("duplicate node with id {} and osm_id {}", node.id, node.osm_id);
+            // info!("duplicate node with id {} and osm_id {}", node.id, node.osm_id);
+            // safe position of duplicate (position is for all wright, when deleting starts with first one)
+            duplicate_position_list.push(id_counter);
+        } else {
+            // add new node and increase counter for id
+            osm_id_to_node_id.insert(node.osm_id, node.id);
+            id_counter += 1;
         }
-        osm_id_to_node_id.insert(node.osm_id, node.id);
-        id_counter += 1;
     }
+
+    for current_id in duplicate_position_list {
+        /* only for testing and debugging:
+        checks whether the duplicates got the same lat and lon values
+        let old_node = nodes.get(current_id).unwrap();
+        let node = nodes.get(*osm_id_to_node_id.get_mut(&old_node.osm_id).unwrap()).unwrap();
+        if (old_node.lat == node.lat && old_node.lon == node.lon){
+            info!("normaler Fall aufgetreten");
+        } else {
+            info!("komischer Fall aufgetreten");
+        }*/
+        nodes.remove(current_id);
+        //info!("deleted entry {}",current_id)
+    }
+
     //assign the same id as the corresponding node (sight and node should have the same osm_id)
     for sight in sights.iter_mut() {
         sight.node_id = *osm_id_to_node_id.get(&sight.osm_id).unwrap();
