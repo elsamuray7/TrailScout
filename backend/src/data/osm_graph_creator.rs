@@ -7,7 +7,7 @@ use serde::Deserialize;
 use std::time::{Instant};
 use log::{info, error, trace};
 use osmpbf::{Element, BlobReader, BlobType};
-use crate::data::graph::{calc_dist, Category, Edge, Node as GraphNode, Sight};
+use crate::data::graph::{calc_dist, Category, Edge, Node as GraphNode, Node, Sight};
 
 use super::graph::Graph;
 
@@ -58,6 +58,29 @@ fn get_edge_type_config() -> EdgeTypeConfig {
     return edge_type_config;
 }
 
+pub fn create_fmi_graph(in_graph: &String, out_graph: &String)-> Result<(), io::Error> {
+
+    info!("Starting to Parse OSM File");
+
+    let mut nodes : Vec<Node> = Vec::new();
+    let mut edges : Vec<Edge> = Vec::new();
+    let mut sights : Vec<Sight> = Vec::new();
+    parse_osm_data(in_graph, &mut nodes, &mut edges, &mut sights);
+    write_graph_file( out_graph, &mut nodes, &mut edges, &mut sights);
+
+    info!("Start creating the graph from fmi file!");
+    let time_start = Instant::now();
+
+    let graph = Graph::parse_from_file(out_graph).unwrap();
+
+    let time_duration = time_start.elapsed();
+    info!("End graph creation after {} seconds!", time_duration.as_secs());
+
+    info!("Nodes: {}", graph.num_nodes);
+    info!("Sights: {}", graph.num_sights);
+    info!("Edges: {}", graph.num_edges);
+    Ok(())
+}
 
 pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges: &mut Vec<Edge>, sights: &mut Vec<Sight>) -> Result<(), io::Error> {
 
