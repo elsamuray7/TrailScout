@@ -159,7 +159,6 @@ impl<'a> SimAnnealingLinYu<'a> {
     /// The total score is computed as the sum of the individual scores of all sights that can be
     /// included in the route without violating the time budget.
     fn get_total_score(&self, current_solution: &Vec<&'a Sight>) -> Result<usize, AlgorithmError> {
-        // TODO compute scores according to issue #145
         let mut score = 0;
         let mut time_budget = (self.end_time.timestamp() - self.start_time.timestamp()) as usize;
         let mut curr_node_id = self.root_id;
@@ -185,6 +184,64 @@ impl<'a> SimAnnealingLinYu<'a> {
         }
 
         Ok(score)
+    }
+
+    /// Perform all possible swap moves on `best_solution` and output the indices to swap to get
+    /// the maximum improvement on this solution
+    fn perform_all_possible_swaps(&self, best_solution: &mut Vec<&'a Sight>) -> Result<Option<(usize, usize)>, AlgorithmError> {
+        let len = best_solution.len();
+        let mut best_score = self.get_total_score(best_solution)?;
+        let mut best_swap = None;
+
+        for i in 0..len-1 {
+            for j in i+1..len {
+                best_solution.swap(i, j);
+                let new_score = self.get_total_score(best_solution)?;
+                if new_score > best_score {
+                    best_score = new_score;
+                    best_swap = Some((i, j));
+                }
+                best_solution.swap(j, i);
+            }
+        }
+
+        Ok(best_swap)
+    }
+
+    /// Perform all possible insertion moves on `best_solution` and output the indices to perform
+    /// the insertion with the maximum improvement on this solution
+    fn perform_all_possible_inserts(&self, best_solution: &mut Vec<&'a Sight>) -> Result<Option<(usize, usize)>, AlgorithmError> {
+        let len = best_solution.len();
+        let mut best_score = self.get_total_score(best_solution)?;
+        let mut best_insert = None;
+
+        for i in 0..len-1 {
+            for j in i+1..len {
+                best_solution.insert(j, best_solution[i]);
+                best_solution.remove(i);
+                let new_score = self.get_total_score(best_solution)?;
+                if new_score > best_score {
+                    best_score = new_score;
+                    best_insert = Some((i,j));
+                }
+                best_solution.insert(i, best_solution[j]);
+                best_solution.remove(j + 1);
+            }
+        }
+
+        Ok(best_insert)
+    }
+
+    /// Perform a local search on `best_solution` in order to further improve it
+    fn local_search(&self, best_solution: &mut Vec<&'a Sight>) -> Result<(), AlgorithmError> {
+        if let Some((i, j)) = self.perform_all_possible_swaps(best_solution)? {
+            best_solution.swap(i, j);
+        }
+        if let Some((i, j)) = self.perform_all_possible_inserts(best_solution)? {
+            best_solution.insert(j, best_solution[i]);
+            best_solution.remove(i);
+        }
+        Ok(())
     }
 
     /// Build a walking route from the best solution found so far
@@ -340,7 +397,7 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
                 log::trace!("Updated temperature: {}", t);
                 i = 0;
 
-                //TODO: PERFORM LOCAL SEARCH WHATEVER THAT MEANS
+                self.local_search(&mut x_best)?;
 
                 let elapsed = start_time.elapsed().as_millis();
                 if elapsed > MAX_TIME {
