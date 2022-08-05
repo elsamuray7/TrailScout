@@ -13,8 +13,12 @@ COPY ./ /usr/local/app/
 RUN npm install
 
 # Generate the build of the application
-RUN npm run build
+# Depends on the build-arg ENV
+# Possible values in gui/package.json "scripts"
+# We use either build or dev
 
+ARG ENV
+RUN npm run $ENV
 
 # Stage 2: Serve app with nginx server
 

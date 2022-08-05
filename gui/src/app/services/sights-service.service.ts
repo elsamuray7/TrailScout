@@ -1,4 +1,4 @@
-import { EventEmitter, Injectable } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { environment } from '../../environments/environment';
 import { HttpClient } from '@angular/common/http';
 import { Sight } from '../data/Sight';
@@ -11,7 +11,6 @@ export class SightsServiceService {
   private readonly backendUrl: String;
   private sights: Sight[];
   private categories: Category[] = [];
-  public sightsChanged = new EventEmitter<Sight[]>();
   private presetCategories = ["Sightseeing", "Other", "Nightlife", "Restaurants", "Shopping", "PicnicBarbequeSpot",
     "MuseumExhibition", "Nature", "Swimming"];
 
@@ -29,8 +28,10 @@ export class SightsServiceService {
       "radius": radius
     }
     this.http.post(this.backendUrl + "/sights", body).subscribe((sights ) => {
+      for (let category of this.categories) {
+        category.sights = [];
+      }
       this.sights = sights as Sight[];
-      this.sightsChanged.emit(this.sights);
       for (let sight of sights as Sight[]) {
         var categoryFound = false;
         for (let category of this.categories) {
