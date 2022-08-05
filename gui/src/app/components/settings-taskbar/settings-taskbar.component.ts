@@ -4,6 +4,7 @@ import { Settings } from 'src/app/types.utils';
 import { SightsServiceService } from '../../services/sights-service.service';
 import { CookieHandlerService } from '../../services/cookie-handler.service';
 import {Category} from "../../data/Category";
+import { ToastService } from '../../services/toast.service';
 
 @Component({
   selector: 'app-settings-taskbar',
@@ -25,9 +26,11 @@ export class SettingsTaskbarComponent implements OnInit {
   private _walkTime?: NgbTimeStruct;
   private _endTime?: NgbTimeStruct;
   private currentDate: Date;
+  refreshing: boolean = false;
 
   constructor(private sightsService: SightsServiceService,
-              private cookieService: CookieHandlerService) {
+              private cookieService: CookieHandlerService,
+              private toastService: ToastService) {
     this.currentDate = new Date();
     this._startTime = {hour: this.currentDate.getHours(), minute: this.currentDate.getMinutes(), second: 0};
    }
@@ -40,6 +43,14 @@ export class SettingsTaskbarComponent implements OnInit {
       }
   }, 0);
 
+    this.sightsService.updateSuccessful.subscribe((success) => {
+      this.refreshing = false;
+      if (success) {
+        this.toastService.showSuccess('Successfully updated sights!');
+      } else {
+        this.toastService.showDanger('Something went wrong!');
+      }
+    });
   }
 
   set radius(r: number) {
@@ -125,6 +136,8 @@ export class SettingsTaskbarComponent implements OnInit {
     if (startCookie.value !== '' && this.radius > 0) {
       const val = startCookie.value as string;
       const coords = JSON.parse(val);
+      this.refreshing = true;
+      this.toastService.showStandard('Updating sights...');
       this.sightsService.updateSights(coords, this.radius);
     }
   }

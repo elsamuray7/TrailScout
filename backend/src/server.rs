@@ -6,6 +6,7 @@ use serde::Deserialize;
 use serde_json::json;
 use std::{env, path::PathBuf};
 use std::any::Any;
+use std::path::Path;
 use std::str;
 use std::fs;
 use log::{info, debug, error};
@@ -13,8 +14,10 @@ use serde_json;
 
 use trailscout_lib::algorithm::{Algorithm, AlgorithmError};
 use trailscout_lib::data::graph::{Graph, Sight};
+use trailscout_lib::data::osm_graph_creator;
 use trailscout_lib::server_utils::requests::{RouteProviderReq, RouteProviderRes, SightsRequest};
 use trailscout_lib::server_utils::custom_errors::{TailScoutError};
+
 
 ///Location of the application config file
 const CONFIG_PATH :&str = "./config.json";
@@ -33,6 +36,7 @@ struct Config {
     log_level: String,
     graph_file_path : String,
     routing_algorithm: String,
+    source_file: String,
 }
 
 ///read config.json at CONFIG_PATH and return it
@@ -127,6 +131,12 @@ async fn main() -> std::io::Result<()> {
     env::set_var("RUST_LOG", &config.log_level);
     env::set_var("RUST_BACKTRACE", "1");
     env_logger::init();
+
+    //If Source File exists but FMI graph does not, build it
+    if !Path::new(&config.graph_file_path).exists() & Path::new(&config.source_file).exists() {
+        osm_graph_creator::create_fmi_graph(
+            &config.source_file,&config.graph_file_path).expect("Could Not Parse OSM to Graph");
+    }
 
 
     debug!("Starting to parsed graph from: {}", &config.graph_file_path);

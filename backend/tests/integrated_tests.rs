@@ -18,7 +18,7 @@ fn test_parsing_process_to_produce_graph_with_proper_number_of_elements() {
     info!("Creating graph");
     let graph: &Lazy<Graph> = &GRAPH;
     info!("Asserting graph properties"); 
-    assert_eq!(graph.num_nodes, 1565587, "nodes");
+    assert_eq!(graph.num_nodes, 1565544, "nodes");
     assert_eq!(graph.num_sights, 3014, "sights");
     assert_eq!(graph.num_edges, 1942587, "edges");
     let a = graph.get_sights_in_area(1.0,1.0,1.0);

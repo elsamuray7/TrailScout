@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { EventEmitter, Injectable } from '@angular/core';
 import { environment } from '../../environments/environment';
 import { HttpClient } from '@angular/common/http';
 import { Sight } from '../data/Sight';
@@ -13,6 +13,7 @@ export class SightsServiceService {
   private categories: Category[] = [];
   private presetCategories = ["Sightseeing", "Other", "Nightlife", "Restaurants", "Shopping", "PicnicBarbequeSpot",
     "MuseumExhibition", "Nature", "Swimming"];
+  public updateSuccessful = new EventEmitter<boolean>();
 
   constructor(private http: HttpClient) {
     this.backendUrl = environment.backendUrl;
@@ -46,7 +47,10 @@ export class SightsServiceService {
           this.categories[this.categories.length-1].sights.push(sight);
         }
       }
-    });
+      this.updateSuccessful.emit(true);
+    }, (error => {
+      this.updateSuccessful.emit(false);
+    }));
   }
 
   public getSights() {
