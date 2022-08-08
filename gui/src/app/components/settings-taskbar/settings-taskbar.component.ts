@@ -24,7 +24,6 @@ export class SettingsTaskbarComponent implements OnInit {
 
   public _radius!: number;
   private _startTime: NgbTimeStruct;
-  private _walkTime: NgbTimeStruct;
   private _endTime: NgbTimeStruct;
   private currentDate: Date;
   refreshing: boolean = false;
@@ -36,7 +35,6 @@ export class SettingsTaskbarComponent implements OnInit {
               private toastService: ToastService) {
     this.currentDate = new Date();
     this._startTime = {hour: this.currentDate.getHours(), minute: this.currentDate.getMinutes(), second: 0};
-    this._walkTime = {hour: 1, minute: 0, second: 0};
     this._endTime = {hour: this.startTime.hour + 1, minute: this.startTime.minute, second: this.startTime.second};
    }
 
@@ -73,26 +71,10 @@ export class SettingsTaskbarComponent implements OnInit {
 
   set startTime(time: NgbTimeStruct) {
     this._startTime = time;
-    const totalMinutes = this.ngbTimeStructToMinutes(this.startTime) + this.ngbTimeStructToMinutes(this.walkTime);
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-    this.endTime = {hour: hours, minute: minutes, second: 0 };
   }
 
   get startTime() {
     return this._startTime!;
-  }
-
-  set walkTime(time: NgbTimeStruct) {
-    this._walkTime = time;
-    const totalMinutes = this.ngbTimeStructToMinutes(this.startTime) + this.ngbTimeStructToMinutes(this.walkTime);
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-    this.endTime = {hour: hours, minute: minutes, second: 0 };
-  }
-
-  get walkTime() {
-    return this._walkTime!;
   }
 
   set endTime(time: NgbTimeStruct) {
@@ -104,7 +86,7 @@ export class SettingsTaskbarComponent implements OnInit {
   }
 
   calculationAllowed() {
-    return (this.radius > 0 || this.walkTime) && this.startPointSet;
+    return this.radius > 0 && this.startPointSet;
   }
 
   async calculate(){
@@ -164,11 +146,16 @@ export class SettingsTaskbarComponent implements OnInit {
     return result;
   }
 
-  ngbTimeStructToMinutes(time: NgbTimeStruct) {
-    if (!time) {
-      return 0;
+  getMinutesBetweenStartAndEnd() {
+    if (this._startTime.hour < this._endTime.hour ||
+      (this._startTime.hour == this._endTime.hour && this._startTime.minute < this._endTime.minute)) {
+      // if start before end
+      return (this._endTime.hour - this._startTime.hour) * 60 + this._endTime.minute - this._startTime.minute
+    } else {
+      // if start after end => end is on the next day
+      return (23 - this._startTime.hour) * 60 + (60 - this._startTime.minute)
+        + this._endTime.hour * 60 + this._endTime.minute;
     }
-    return time.minute + time.hour * 60;
   }
 
   drawSights(drawSight: boolean, category: Category) {

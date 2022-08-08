@@ -18,7 +18,7 @@
                     </ng-template>
                 </ngb-panel>
                 <ngb-panel
-                    [title]="walkTime ? 'Hike duration: ' + ngbTimeStructToMinutes(walkTime) + 'mins' : 'Hike duration'"
+                    [title]="'Hike duration: ' + getMinutesBetweenStartAndEnd() + 'mins'"
                     [disabled]="!startPointSet">
                     <ng-template class="row" ngbPanelContent>
                         <div>
@@ -28,15 +28,9 @@
                         </div>
                         <br>
                         <div>
-                            <h5>Walking Time</h5>
-                            <ngb-timepicker class="form-control"
-                                [(ngModel)]="walkTime"></ngb-timepicker>
-                        </div>
-                        <br>
-                        <div>
                             <h5>End Time</h5>
                             <ngb-timepicker class="form-control"
-                                [(ngModel)]="endTime" [disabled]="true"></ngb-timepicker>
+                                [(ngModel)]="endTime"></ngb-timepicker>
                         </div>
                     </ng-template>
                 </ngb-panel>
