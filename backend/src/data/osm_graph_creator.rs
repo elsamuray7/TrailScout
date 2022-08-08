@@ -8,7 +8,7 @@ use serde::Deserialize;
 use std::time::{Instant};
 use log::{info, error, trace, debug};
 use osmpbf::{Element, BlobReader, BlobType};
-use crate::data::graph::{calc_dist, Category, Edge, Graph, Node as GraphNode, Node, Sight};
+use crate::data::graph::{calc_dist, get_nearest_node, Category, Edge, Graph, Node as GraphNode, Node, Sight};
 
 const SIGHTS_CONFIG_PATH :&str = "./sights_config.json";
 const EDGE_CONFIG_PATH :&str = "./edge_type_config.json";
@@ -91,7 +91,9 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
     let mut osm_id_to_node_id: HashMap<usize, usize> = HashMap::new();
     let mut is_street_node: BTreeMap<usize, bool> = BTreeMap::new(); // TODO when parsing ways mark street ndoes, filter nodes that are neither street nodes nor sight nodes
 
- 
+    // hash set to check if a node is a sight
+    let mut is_sight_node = HashSet::new();
+
     info!("Start reading the PBF file!");
     let time_start = Instant::now();
     //read the file into memory with multi threading
@@ -379,8 +381,10 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
     }
 
     //assign the same id as the corresponding node (sight and node should have the same osm_id)
+    is_sight_node.reserve(sights.len());
     for sight in sights.iter_mut() {
         sight.node_id = *osm_id_to_node_id.get(&sight.osm_id).unwrap();
+        is_sight_node.insert(sight.node_id);
     }
     let time_duration = time_start.elapsed();
     info!("Finished building osm_id_to_node_id after {} seconds!", time_duration.as_secs());
@@ -401,6 +405,39 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
 
     let time_duration = time_start.elapsed();
     info!("Finished post processing of edges after {} seconds!", time_duration.as_secs());
+
+    info!("Start mapping sights into graph!");
+
+    // create edges between a sight and the nearest non sight node
+    let mut n = 0 as f64;
+    for sight in sights.iter() {
+        n += 1.0;
+        let nearest_node_id = get_nearest_node(nodes, &is_sight_node, sight.lat, sight.lon);
+        let nearest_node = &nodes[nearest_node_id];
+        let nearest_dist = calc_dist(sight.lat, sight.lon, nearest_node.lat, nearest_node.lon);
+        let out_edge = Edge {
+            osm_id: 0,
+            osm_src: 0,
+            osm_tgt: 0,
+            src: sight.node_id,
+            tgt: nearest_node.id,
+            dist: nearest_dist
+        };
+        let in_edge = Edge {
+            osm_id: 0,
+            osm_src: 0,
+            osm_tgt: 0,
+            src: nearest_node.id,
+            tgt: sight.node_id,
+            dist: nearest_dist
+        };
+        edges.push(out_edge);
+        edges.push(in_edge);
+        trace!("Progress: {}", n / (sights.len() as f64));
+    }
+
+    let time_duration = time_start.elapsed();
+    info!("Finished mapping sights into graph after {} seconds!", time_duration.as_secs());
 
     edges.sort_unstable_by(|e1, e2| {
         let id1 = e1.src;
