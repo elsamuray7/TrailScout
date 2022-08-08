@@ -139,12 +139,19 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
 
   drawRoute(_route: RouteResponse) {
     this.routePoly?.removeFrom(this.map);
-    const routeNodes: L.LatLng[] = [];
+    var r = 55;
+    var g = 255;
+    var colorStepsize = (g-r) / _route.route!.length;
+    _route.route!.map(section => {
+      var sectionNodes: L.LatLng[] = [];
+      section.nodes.map(node => {
+          sectionNodes.push(new L.LatLng(node.lat, node.lon));
+        });
+      this.routePoly = new L.Polyline(sectionNodes, {color: "rgb("+r+" ,"+g+",0)"}).addTo(this.map);
+      r += colorStepsize;
+      g -= colorStepsize;
+      });
 
-    _route.route!.map(section => section.nodes.map(node => {
-      routeNodes.push(new L.LatLng(node.lat, node.lon))
-    }) );
-    this.routePoly = new L.Polyline(routeNodes).addTo(this.map);
   }
 
   drawSightsOnRoute(route: RouteResponse) {
