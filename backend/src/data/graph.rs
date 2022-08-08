@@ -288,19 +288,15 @@ impl Graph {
         &self.nodes[node_id]
     }
 
-    /// Get the nearest node to a given coordinate (latitude / longitude)
+    /// Get the nearest node (which is not a sight) to a given coordinate (latitude / longitude)
     pub fn get_nearest_node(&self, lat: f64, lon: f64) -> usize {
-        // TODO compute nearest node to given coordinate
-        let mut min_dist = usize::MAX;
-        let mut min_id = self.nodes[0].id;
-        for (id, node) in self.nodes.iter().enumerate() {
-            let dist = calc_dist(lat, lon, node.lat, node.lon);
-            if dist < min_dist {
-                min_dist = dist;
-                min_id = id;
-            }
+        // vec to check if a node is a sight
+        let mut is_sight_node: Vec<bool> = Vec::new();
+        is_sight_node.resize(self.nodes.len(), false);
+        for sight in self.sights.iter() {
+            is_sight_node[sight.node_id] = true;
         }
-        min_id
+        get_nearest_node(&self.nodes, &mut is_sight_node, lat, lon)
     }
 
     /// Get the number of outgoing edges of the node with id `node_id`
@@ -376,6 +372,22 @@ pub(crate) fn calc_dist(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> usize {
     let c: f64 = 2.0 * ((a.sqrt()).atan2((1.0-a).sqrt()));
 
     (r * c) as usize
+}
+
+/// Get the nearest node (which is not a sight) to a given coordinate (latitude / longitude)
+pub fn get_nearest_node(nodes: &Vec<Node>, is_sight_node: &mut Vec<bool>, lat: f64, lon: f64) -> usize {
+    let mut min_dist = usize::MAX;
+    let mut min_id = nodes[0].id;
+    for (id, node) in nodes.iter().enumerate() {
+        if !is_sight_node[id] {
+            let dist = calc_dist(lat, lon, node.lat, node.lon);
+            if dist < min_dist {
+                min_dist = dist;
+                min_id = id;
+            }
+        }
+    }
+    min_id
 }
 
 #[derive(Debug)]
