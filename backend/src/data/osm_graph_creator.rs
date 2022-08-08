@@ -1,16 +1,13 @@
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap};
 use std::fs::{File, create_dir_all};
 use std::{fs, io};
-use std::any::Any;
-use std::io::{LineWriter, Write, BufWriter};
+use std::io::{Write, BufWriter};
 use crossbeam::thread;
 use serde::Deserialize;
 use std::time::{Instant};
-use log::{info, error, trace};
+use log::{info, error, trace, debug};
 use osmpbf::{Element, BlobReader, BlobType};
 use crate::data::graph::{calc_dist, Category, Edge, Node as GraphNode, Sight};
-
-use super::graph::Graph;
 
 const SIGHTS_CONFIG_PATH :&str = "./sights_config.json";
 const EDGE_CONFIG_PATH :&str = "./edge_type_config.json";
@@ -378,47 +375,30 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
     info!("Start pruning identical edges!");
 
     // prune double edges
-    let mut prune_edges: HashMap<(usize, usize), Edge> = HashMap::new();
-    let mut edge_a = Edge {
-        osm_id: 0,
-        osm_src: 0,
-        osm_tgt: 0,
-        src: 0,
-        tgt: 0,
-        dist: 0
-    };
+    let prune_edges: HashMap<Edge, usize> =
+    {
+    let mut prune_edges: HashMap<&Edge, usize> = HashMap::new();
+    let mut edge_a = edges.first().unwrap();
     let mut first_edge = true;
     // find all edges to be pruned
     for edge in &*edges {
         if (first_edge) {
-            edge_a = Edge{
-                osm_id: edge.osm_id,
-                osm_src: edge.osm_src,
-                osm_tgt: edge.osm_tgt,
-                src: edge.src,
-                tgt: edge.tgt,
-                dist: edge.dist
-            };
+            edge_a = edge;
             first_edge = false;
         } else {
-            let edge_b = Edge{
-                osm_id: edge.osm_id,
-                osm_src: edge.osm_src,
-                osm_tgt: edge.osm_tgt,
-                src: edge.src,
-                tgt: edge.tgt,
-                dist: edge.dist
-            };;
+            let edge_b = edge;
             // edges are sorted by src, then by tgt, check for same (src, tgt) edges
             if (edge_a.src == edge_b.src) && (edge_a.tgt == edge_b.tgt) {
-                //info!("Found two identical edges! \n Edge a: src: {} tgt: {} dist: {} \n Edge b: src: {} tgt: {} dist: {}", edge_a.src, edge_a.tgt, edge_a.dist, edge_b.src, edge_b.tgt, edge_b.dist);
+                trace!("Found two identical edges! \n Edge a: src: {} tgt: {} dist: {} \n Edge b: src: {} tgt: {} dist: {}", edge_a.src, edge_a.tgt, edge_a.dist, edge_b.src, edge_b.tgt, edge_b.dist);
                 // if several identical edges exist, save the lowest dist
-                if prune_edges.contains_key(&(edge_a.src, edge_a.tgt)) {
-                    let prune_dist = prune_edges.get_key_value(&(edge_a.src, edge_a.tgt)).unwrap().1.dist;
+                if prune_edges.contains_key(&edge_a) {
+                    let prune_dist = prune_edges.get_key_value(&edge_a).unwrap().0.dist;
                     if (edge_a.dist < prune_dist) && (edge_a.dist <= edge_b.dist) {
-                        prune_edges.get_mut(&(edge_a.src, edge_a.tgt)).unwrap().dist = edge_a.dist;
+                        trace!("Updating edge dist ({}, {}): {} -> {}", edge_a.src, edge_a.tgt, prune_dist, edge_a.dist);
+                        prune_edges.insert(edge_a, edge_a.dist);
                     } else if (edge_b.dist < prune_dist) && (edge_a.dist > edge_b.dist) {
-                        prune_edges.get_mut(&(edge_a.src, edge_a.tgt)).unwrap().dist = edge_b.dist;
+                        trace!("Updating edge dist ({} / {}): {} -> {}", edge_a.src, edge_a.tgt, prune_dist, edge_b.dist);
+                        prune_edges.insert(edge_a, edge_b.dist);
                     }
                 } else {  // save lowest dist edge to prune later
                     /*
@@ -429,19 +409,30 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
                     }
                     */
                     if edge_a.dist <= edge_b.dist {
-                        prune_edges.insert((edge_a.src, edge_a.tgt), edge_a);
-                    } else if edge_a.dist > edge_b.dist {
-                        prune_edges.insert((edge_a.src, edge_a.tgt), edge_b);
+                        trace!("Inserting edge: ({}, {}) with dist: {}", edge_a.src, edge_a.tgt, edge_a.dist);
+                        prune_edges.insert(edge_a, edge_a.dist);
+                    } else {
+                        trace!("Inserting edge: ({}, {}) with dist: {}", edge_a.src, edge_a.tgt, edge_b.dist);
+                        prune_edges.insert(edge_a, edge_b.dist);
                     }
                 }
             }
             edge_a = edge_b;
         }
     }
+    prune_edges.iter().map(|(&edge, &dist)| (edge.clone(), dist)).collect()
+    };
     // prune identical edges and keep one edge with lowest dist
-    edges.retain(|&edge| !prune_edges.contains_key(&(edge.src, edge.tgt)));
-    for pruned_edge in &prune_edges {
-        edges.push(*pruned_edge.1);
+    edges.retain(|edge| !prune_edges.contains_key(&edge));
+    let prune_edges_len = prune_edges.len();
+    for (edge, dist) in prune_edges {
+        if dist < edge.dist {
+            let mut new_edge = edge.clone();
+            new_edge.dist = dist;
+            edges.push(new_edge);
+        } else {
+            edges.push(edge);
+        }
     }
 
     let time_duration = time_start.elapsed();
@@ -464,7 +455,7 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
     info!("Number of edges after pruning: {}", edges.len());
     number_of_edges = number_of_edges - edges.len();
     info!("Number of edges pruned: {}", number_of_edges);
-    info!("Prune edges: {}", prune_edges.len());
+    info!("Prune edges: {}", prune_edges_len);
 
     let time_duration = time_start.elapsed();
     info!("End of PBF data parsing after {} seconds!", time_duration.as_secs());
