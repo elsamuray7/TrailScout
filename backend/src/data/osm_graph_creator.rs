@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs::{File, create_dir_all};
 use std::{fs, io};
 use std::io::{Write, BufWriter};
@@ -8,7 +8,7 @@ use serde::Deserialize;
 use std::time::{Instant};
 use log::{info, error, trace, debug};
 use osmpbf::{Element, BlobReader, BlobType};
-use crate::data::graph::{calc_dist, Category, Edge, Node as GraphNode, Node, Sight};
+use crate::data::graph::{calc_dist, Category, Edge, Graph, Node as GraphNode, Node, Sight};
 
 const SIGHTS_CONFIG_PATH :&str = "./sights_config.json";
 const EDGE_CONFIG_PATH :&str = "./edge_type_config.json";
@@ -419,7 +419,7 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
     info!("Start pruning identical edges!");
 
     // prune double edges
-    let prune_edges: HashMap<Edge, usize> =
+    let prune_edges: HashSet<Edge> =
     {
     let mut prune_edges: HashMap<&Edge, usize> = HashMap::new();
     let mut edge_a = edges.first().unwrap();
@@ -464,19 +464,17 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
             edge_a = edge_b;
         }
     }
-    prune_edges.iter().map(|(&edge, &dist)| (edge.clone(), dist)).collect()
+    prune_edges.iter().map(|(&edge, &dist)| {
+        let mut new_edge = edge.clone();
+        new_edge.dist = dist;
+        new_edge
+    }).collect()
     };
     // prune identical edges and keep one edge with lowest dist
-    edges.retain(|edge| !prune_edges.contains_key(&edge));
+    edges.retain(|edge| !prune_edges.contains(&edge));
     let prune_edges_len = prune_edges.len();
-    for (edge, dist) in prune_edges {
-        if dist < edge.dist {
-            let mut new_edge = edge.clone();
-            new_edge.dist = dist;
-            edges.push(new_edge);
-        } else {
-            edges.push(edge);
-        }
+    for edge in prune_edges {
+        edges.push(edge);
     }
 
     let time_duration = time_start.elapsed();
