@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashMap};
 use std::fs::{File, create_dir_all};
 use std::{fs, io};
@@ -7,7 +8,7 @@ use serde::Deserialize;
 use std::time::{Instant};
 use log::{info, error, trace, debug};
 use osmpbf::{Element, BlobReader, BlobType};
-use crate::data::graph::{calc_dist, Category, Edge, Node as GraphNode, Sight};
+use crate::data::graph::{calc_dist, Category, Edge, Node as GraphNode, Node, Sight};
 
 const SIGHTS_CONFIG_PATH :&str = "./sights_config.json";
 const EDGE_CONFIG_PATH :&str = "./edge_type_config.json";
@@ -56,6 +57,29 @@ fn get_edge_type_config() -> EdgeTypeConfig {
     return edge_type_config;
 }
 
+pub fn create_fmi_graph(in_graph: &String, out_graph: &String)-> Result<(), io::Error> {
+
+    info!("Starting to Parse OSM File");
+
+    let mut nodes : Vec<Node> = Vec::new();
+    let mut edges : Vec<Edge> = Vec::new();
+    let mut sights : Vec<Sight> = Vec::new();
+    parse_osm_data(in_graph, &mut nodes, &mut edges, &mut sights);
+    write_graph_file( out_graph, &mut nodes, &mut edges, &mut sights);
+
+    info!("Start creating the graph from fmi file!");
+    let time_start = Instant::now();
+
+    let graph = Graph::parse_from_file(out_graph).unwrap();
+
+    let time_duration = time_start.elapsed();
+    info!("End graph creation after {} seconds!", time_duration.as_secs());
+
+    info!("Nodes: {}", graph.num_nodes);
+    info!("Sights: {}", graph.num_sights);
+    info!("Edges: {}", graph.num_edges);
+    Ok(())
+}
 
 pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges: &mut Vec<Edge>, sights: &mut Vec<Sight>) -> Result<(), io::Error> {
 
@@ -325,15 +349,35 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
     }).ok();
     //post processing of nodes and sights
     let mut id_counter = 0;
+    let mut duplicate_position_list : Vec<usize> = Vec::new();
     for node in nodes.iter_mut() {
         node.id = id_counter;
         //check for duplicate nodes
         if(osm_id_to_node_id.contains_key(&node.osm_id)) {
-            info!("duplicate node with id {} and osm_id {}", node.id, node.osm_id);
+            // info!("duplicate node with id {} and osm_id {}", node.id, node.osm_id);
+            // safe position of duplicate (position is for all wright, when deleting starts with first one)
+            duplicate_position_list.push(id_counter);
+        } else {
+            // add new node and increase counter for id
+            osm_id_to_node_id.insert(node.osm_id, node.id);
+            id_counter += 1;
         }
-        osm_id_to_node_id.insert(node.osm_id, node.id);
-        id_counter += 1;
     }
+
+    for current_id in duplicate_position_list {
+        /* only for testing and debugging:
+        checks whether the duplicates got the same lat and lon values
+        let old_node = nodes.get(current_id).unwrap();
+        let node = nodes.get(*osm_id_to_node_id.get_mut(&old_node.osm_id).unwrap()).unwrap();
+        if (old_node.lat == node.lat && old_node.lon == node.lon){
+            info!("normaler Fall aufgetreten");
+        } else {
+            info!("komischer Fall aufgetreten");
+        }*/
+        nodes.remove(current_id);
+        //info!("deleted entry {}",current_id)
+    }
+
     //assign the same id as the corresponding node (sight and node should have the same osm_id)
     for sight in sights.iter_mut() {
         sight.node_id = *osm_id_to_node_id.get(&sight.osm_id).unwrap();
@@ -456,6 +500,19 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
     number_of_edges = number_of_edges - edges.len();
     info!("Number of edges pruned: {}", number_of_edges);
     info!("Prune edges: {}", prune_edges_len);
+
+    sights.sort_unstable_by( |s1, s2| {
+        if s1.lat > s2.lat {
+            Ordering::Greater
+        } else if s1.lat < s2.lat {
+            Ordering::Less
+        } else {
+            Ordering::Equal
+        }
+    });
+
+    let time_duration = time_start.elapsed();
+    info!("Finished sorting sights after {} seconds!", time_duration.as_secs());
 
     let time_duration = time_start.elapsed();
     info!("End of PBF data parsing after {} seconds!", time_duration.as_secs());

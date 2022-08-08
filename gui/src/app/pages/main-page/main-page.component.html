@@ -1,5 +1,5 @@
 <div id="container">
-    <div id="map">
+    <div id="map" *blockUI="'map'">
 
         <app-map-container id='map-container'
         [circleRadius]="radius"
@@ -30,4 +30,5 @@
             [disableTooltip]="!!markerCoords"
             ></i>
         </div>
+  <app-toast></app-toast>
 </div>

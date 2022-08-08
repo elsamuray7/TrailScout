@@ -1,5 +1,5 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { NgcCookieConsentService, NgcInitializeEvent, NgcNoCookieLawEvent, NgcStatusChangeEvent } from 'ngx-cookieconsent';
+import { NgcCookieConsentService, NgcStatusChangeEvent } from 'ngx-cookieconsent';
 import { Subscription } from 'rxjs';
 import { CookieHandlerService } from './services/cookie-handler.service';
 
@@ -17,7 +17,7 @@ export class AppComponent implements OnInit, OnDestroy {
   constructor(private ccService: NgcCookieConsentService, private cookieHandlerService: CookieHandlerService){}
 
   ngOnInit() {
-
+    this.cookieHandlerService.allowCookies(this.ccService.hasConsented());
     this.statusChangeSubscription = this.ccService.statusChange$.subscribe(
       (event: NgcStatusChangeEvent) => {
         this.cookieHandlerService.allowCookies(event.status === 'allow');
@@ -25,7 +25,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
     this.revokeChoiceSubscription = this.ccService.revokeChoice$.subscribe(
       () => {
-        
+
         this.cookieHandlerService.allowCookies(false);
       });
   }
