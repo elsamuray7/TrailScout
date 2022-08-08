@@ -2,6 +2,7 @@ import {EventEmitter, Injectable} from '@angular/core';
 import {HttpClient} from "@angular/common/http";
 import {environment} from "../../environments/environment";
 import { catchError, of, timeout } from 'rxjs';
+import { Sight } from '../data/Sight';
 
 
 interface latlng {
@@ -9,16 +10,10 @@ interface latlng {
   lon: number;
 }
 
-interface sight {
-  node_id: number;
-  latlng: latlng;
-  category: string;
-}
-
 interface route {
   type: string;
   time_budget: number;
-  sight: sight | null;
+  sight: Sight | null;
   nodes: latlng[];
 }
 export interface RouteResponse {

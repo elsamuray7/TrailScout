@@ -39,6 +39,7 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
   private circle?: L.Circle;
   private activeLayers = new Map<string, any>();
 
+  routeSightLayer: L.LayerGroup;
   routeStart?: L.Polyline;
   routeEnd?: L.Polyline;
   routeIntermediate?: L.Polyline;
@@ -161,5 +162,19 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
     this.routeStart = new L.Polyline(startSection, {color: 'green'}).addTo(this.map);
     this.routeIntermediate = new L.Polyline(intermediateSections, {color: 'yellow'}).addTo(this.map);
     this.routeEnd = new L.Polyline(endSection, {color: 'red'}).addTo(this.map);
+  }
+
+  drawSightsOnRoute(route: RouteResponse) {
+    this.routeSightLayer = new L.LayerGroup<any>();
+    route.route!.map(section => {
+      if (section.sight) {
+        var latlng: LatLngExpression = {
+          lat: section.sight.lat,
+          lng: section.sight.lon
+        }
+        var newMarker = new L.Marker(latlng).addTo(this.routeSightLayer);
+        this.routeSightLayer.addTo(this.map);
+      }
+    });
   }
 }
