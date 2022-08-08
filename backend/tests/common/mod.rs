@@ -24,10 +24,10 @@ pub fn check_if_fmi_file_exists_and_parse_if_not() {
     }
 }
 
-pub fn initializeLogger() {
+pub fn initialize_logger() {
     //initializing the logger
     let env = Env::default()
     .filter_or("TRAILSCOUT_LOG_LEVEL", "trace")
     .write_style_or("TRAILSCOUT_LOG_STYLE", "always");
-    env_logger::init_from_env(env);
+    env_logger::try_init_from_env(env).ok();
 }
