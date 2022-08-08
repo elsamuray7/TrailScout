@@ -303,8 +303,9 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
                             let mut way_ref_iter = w.refs();
                             let mut osm_src = way_ref_iter.next().unwrap() as usize;
                             for node_id  in way_ref_iter {
+                                // undirected graph, create in and out edges
                                 let osm_tgt = node_id as usize;
-                                let edge = Edge {
+                                let out_edge = Edge {
                                     osm_id: w.id() as usize,
                                     osm_src: osm_src,
                                     osm_tgt: osm_tgt,
@@ -312,7 +313,18 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
                                     tgt: 0,
                                     dist: 0
                                 };
-                                result.1.push(edge);
+                                result.1.push(out_edge);
+
+                                let in_edge = Edge {
+                                    osm_id: w.id() as usize,
+                                    osm_src: osm_tgt,
+                                    osm_tgt: osm_src,
+                                    src: 0,
+                                    tgt: 0,
+                                    dist: 0
+                                };
+                                result.1.push(in_edge);
+
                                 osm_src = osm_tgt;
                             }
                         },

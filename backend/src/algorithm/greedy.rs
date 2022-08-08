@@ -114,7 +114,9 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
                      log::debug!("Node1: score: {}, distance to current position: {}", score1, dist1);
                      log::debug!("Node2: score: {}, distance to current position: {}", score2, dist2);
 
-                     (score1 / dist1.max(&1)).cmp(&(score2 / dist2.max(&2)))
+                     let metric2 = score2 as f64 / *dist2.max(&1) as f64;
+                     let metric1 = score1 as f64 / *dist1.max(&1) as f64;
+                     metric2.total_cmp(&metric1)
                  })
                  .collect();
              log::debug!("Sorted sights:\n{:?}", &sorted_dist_vec);
