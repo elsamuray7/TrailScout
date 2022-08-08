@@ -40,9 +40,7 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
   private activeLayers = new Map<string, any>();
 
   routeSightLayer: L.LayerGroup;
-  routeStart?: L.Polyline;
-  routeEnd?: L.Polyline;
-  routeIntermediate?: L.Polyline;
+  routePoly?: L.Polyline;
 
   constructor() {
   }
@@ -140,28 +138,13 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
   }
 
   drawRoute(_route: RouteResponse) {
-    this.routeStart?.removeFrom(this.map);
-    this.routeEnd?.removeFrom(this.map);
-    this.routeIntermediate?.removeFrom(this.map);
-    const startSection: L.LatLng[] = [];
-    const endSection: L.LatLng[] = [];
-    const intermediateSections: L.LatLng[] = [];
+    this.routePoly?.removeFrom(this.map);
+    const routeNodes: L.LatLng[] = [];
 
     _route.route!.map(section => section.nodes.map(node => {
-      if (section.type === 'Start') {
-        startSection.push(new L.LatLng(node.lat, node.lon))
-        return;
-      }
-      if (section.type === 'End') {
-        endSection.push(new L.LatLng(node.lat, node.lon))
-      }
-      if (section.type === 'Intermediate') {
-        intermediateSections.push(new L.LatLng(node.lat, node.lon))
-      }
+      routeNodes.push(new L.LatLng(node.lat, node.lon))
     }) );
-    this.routeStart = new L.Polyline(startSection, {color: 'green'}).addTo(this.map);
-    this.routeIntermediate = new L.Polyline(intermediateSections, {color: 'yellow'}).addTo(this.map);
-    this.routeEnd = new L.Polyline(endSection, {color: 'red'}).addTo(this.map);
+    this.routePoly = new L.Polyline(routeNodes).addTo(this.map);
   }
 
   drawSightsOnRoute(route: RouteResponse) {
