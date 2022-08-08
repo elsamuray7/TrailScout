@@ -1,5 +1,6 @@
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs::{File, create_dir_all};
 use std::{fs, io};
 use std::io::{Write, BufWriter};
@@ -91,8 +92,8 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
     let mut osm_id_to_node_id: HashMap<usize, usize> = HashMap::new();
     let mut is_street_node: BTreeMap<usize, bool> = BTreeMap::new(); // TODO when parsing ways mark street ndoes, filter nodes that are neither street nodes nor sight nodes
 
-    // vec to check if a node is a sight
-    let mut is_sight_node: Vec<bool> = Vec::new();
+    // hash set to check if a node is a sight
+    let mut is_sight_node = HashSet::new();
 
     info!("Start reading the PBF file!");
     let time_start = Instant::now();
@@ -381,10 +382,10 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
     }
 
     //assign the same id as the corresponding node (sight and node should have the same osm_id)
-    is_sight_node.resize(nodes.len(), false);
+    is_sight_node.reserve(sights.len());
     for sight in sights.iter_mut() {
         sight.node_id = *osm_id_to_node_id.get(&sight.osm_id).unwrap();
-        is_sight_node[sight.node_id] = true;
+        is_sight_node.insert(sight.node_id);
     }
     let time_duration = time_start.elapsed();
     info!("Finished building osm_id_to_node_id after {} seconds!", time_duration.as_secs());
@@ -412,7 +413,7 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
     let mut n = 0 as f64;
     for sight in sights.iter() {
         n += 1.0;
-        let nearest_node_id = get_nearest_node(nodes, &mut is_sight_node, sight.lat, sight.lon);
+        let nearest_node_id = get_nearest_node(nodes, &is_sight_node, sight.lat, sight.lon);
         let nearest_node = &nodes[nearest_node_id];
         let nearest_dist = calc_dist(sight.lat, sight.lon, nearest_node.lat, nearest_node.lon);
         let out_edge = Edge {
