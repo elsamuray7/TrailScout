@@ -3,6 +3,7 @@ import * as L from 'leaflet';
 import { GeoSearchControl, OpenStreetMapProvider } from 'leaflet-geosearch';
 import { LatLngExpression } from 'leaflet';
 import {Category} from "../../data/Category";
+import { RouteResponse } from 'src/app/services/route.service';
 
 const iconRetinaUrl = 'assets/marker-icon-2x.png';
 const iconUrl = 'assets/marker-icon.png';
@@ -37,6 +38,10 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
   private marker?: L.Marker;
   private circle?: L.Circle;
   private activeLayers = new Map<string, any>();
+
+  routeStart?: L.Polyline;
+  routeEnd?: L.Polyline;
+  routeIntermediate?: L.Polyline;
 
   constructor() {
   }
@@ -131,5 +136,30 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
     if (this.activeLayers.has(category.name)) {
       this.map.removeLayer(this.activeLayers.get(category.name));
     }
+  }
+
+  drawRoute(_route: RouteResponse) {
+    this.routeStart?.removeFrom(this.map);
+    this.routeEnd?.removeFrom(this.map);
+    this.routeIntermediate?.removeFrom(this.map);
+    const startSection: L.LatLng[] = [];
+    const endSection: L.LatLng[] = [];
+    const intermediateSections: L.LatLng[] = [];
+
+    _route.route!.map(section => section.nodes.map(node => {
+      if (section.type === 'Start') {
+        startSection.push(new L.LatLng(node.lat, node.lon))
+        return;
+      }
+      if (section.type === 'End') {
+        endSection.push(new L.LatLng(node.lat, node.lon))
+      }
+      if (section.type === 'Intermediate') {
+        intermediateSections.push(new L.LatLng(node.lat, node.lon))
+      }
+    }) );
+    this.routeStart = new L.Polyline(startSection, {color: 'green'}).addTo(this.map);
+    this.routeIntermediate = new L.Polyline(intermediateSections, {color: 'yellow'}).addTo(this.map);
+    this.routeEnd = new L.Polyline(endSection, {color: 'red'}).addTo(this.map);
   }
 }
