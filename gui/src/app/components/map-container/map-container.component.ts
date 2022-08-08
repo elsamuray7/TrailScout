@@ -125,7 +125,8 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
       }
       const icon = this.getIcon(sight);
 
-      var newMarker = new L.Marker(latlng, {icon: icon}).addTo(newLayer);
+      let newMarker = new L.Marker(latlng, {icon: icon,}).addTo(newLayer);
+      newMarker.bindPopup(sight.category,{closeButton: false});
       newLayer.addTo(this.map);
     });
     this.activeLayers.set(category.name, newLayer);
