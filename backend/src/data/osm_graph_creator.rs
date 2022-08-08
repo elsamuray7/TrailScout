@@ -549,6 +549,22 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
     let time_duration = time_start.elapsed();
     info!("Finished sorting sights after {} seconds!", time_duration.as_secs());
 
+    /*
+    let mut n_id: usize = 0;
+    let mut num_useless_nodes: usize = 0;
+    for edge in &*edges {
+        if edge.src == n_id {
+            break;
+        } else if edge.src > n_id {
+            num_useless_nodes += 1;
+            info!("AHA scheizzn muss los Knoten {} ist ehrenlos", n_id);
+            break;
+        }
+    }
+
+    info!("Es gibt {} ehrenlose Knoten", num_useless_nodes);
+     */
+
     let time_duration = time_start.elapsed();
     info!("End of PBF data parsing after {} seconds!", time_duration.as_secs());
     Ok(())
