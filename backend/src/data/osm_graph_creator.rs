@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashMap};
 use std::fs::{File, create_dir_all};
 use std::{fs, io};
@@ -415,6 +416,19 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
 
     let time_duration = time_start.elapsed();
     info!("Finished sorting edges after {} seconds!", time_duration.as_secs());
+
+    sights.sort_unstable_by( |s1, s2| {
+        if s1.lat > s2.lat {
+            Ordering::Greater
+        } else if s1.lat < s2.lat {
+            Ordering::Less
+        } else {
+            Ordering::Equal
+        }
+    });
+    
+    let time_duration = time_start.elapsed();
+    info!("Finished sorting sights after {} seconds!", time_duration.as_secs());
 
     let time_duration = time_start.elapsed();
     info!("End of PBF data parsing after {} seconds!", time_duration.as_secs());

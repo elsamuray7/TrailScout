@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use ctor::ctor;
 use log::info;
 use once_cell::sync::Lazy;
@@ -10,7 +12,7 @@ static GRAPH: Lazy<Graph> = Lazy::new(|| Graph::parse_from_file("./tests_data/ou
 #[ctor]
 fn initialize() {
     common::initializeLogger();
-    common::parse_pbf_to_fmi_file();
+    //common::parse_pbf_to_fmi_file();
 }
 
 #[test]
@@ -84,4 +86,21 @@ fn test_edges_go_in_both_directions() {
         }
     }
     assert_eq!(onesided_edges, 0, "Onesided edges: {} of a total of {} edges", onesided_edges, graph.edges.len());
+}
+
+#[test]
+fn get_sights_in_bremen_with_radius_1000_meters() {
+    info!("Creating graph"); 
+    let graph: &Lazy<Graph> = &GRAPH;
+    info!("Finished creating graph with {} nodes, {} sights and {} edges", graph.num_nodes, graph.num_sights, graph.num_edges);
+
+    let time_start = Instant::now();
+
+    //when you google "bremen lat long" then 53.0793° N, 8.8017° E is the result
+    let sights_bremen_100 = graph.get_sights_in_area(53.0793, 8.8017, 1000.0);
+
+    let time_duration = time_start.elapsed();
+    info!("Got sights in area after {} seconds!", time_duration.as_millis() as f64 / 1000.0);
+
+    assert_eq!(sights_bremen_100.len(), 452, "Bremen doesn't have the correct number of sights");
 }

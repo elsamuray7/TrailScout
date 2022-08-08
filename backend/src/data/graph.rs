@@ -1,9 +1,12 @@
+use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fmt::Formatter;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io::{BufRead, BufReader};
 use std::num::{ParseFloatError, ParseIntError};
+use geoutils::{Location, Distance};
+use log::info;
 use serde::{Serialize};
 use serde_enum_str::{Deserialize_enum_str, Serialize_enum_str};
 
@@ -306,24 +309,42 @@ impl Graph {
             .collect()
     }
 
-    /// Get all sights within a circular area, specified by `radius`, around a given coordinate
+    /// Get all sights within a circular area, specified by `radius' (in meters), around a given coordinate
     /// (latitude / longitude)
     pub fn get_sights_in_area(&self, lat: f64, lon: f64, radius: f64) -> HashMap<usize, &Sight> {
-        /*
-        TODO
-            - get bbox of area around coordinate
-            - get slice of sights within min/max latitude of bbox, e.g. with binary search
-            (precondition: sights sorted by latitude, should already be the case in graph
-            creator output file)
-            - create mutable vector with fetched sights
-            - sort sights by longitude
-            - get slice of sights within min/max longitude of bbox, e.g. with binary search
-            - return new vector with fetched sights
-         */
-        self.sights.iter()
+        //estimate bounding box with 111111 meters = 1 longitude degree
+        //use binary search to find the range of elements that should be considered
+        let lower_bound = binary_search_sights_vector(&self.sights, lat - radius / 111111.0);
+        let upper_bound = binary_search_sights_vector(&self.sights, lat + radius / 111111.0);
+
+        let slice = &self.sights[lower_bound..upper_bound];
+        info!("Sight slice size: {}, compared to a total {} sights", slice.len(), self.num_sights);
+
+        let center = Location::new(lat, lon);
+        //iterate through the slice and check every sight whether it's in the target circle
+        slice.iter()
+            .filter(|sight| {
+                let location = Location::new(sight.lat, sight.lon);
+                return center.is_in_circle(&location, Distance::from_meters(radius)).unwrap();
+            })
             .map(|sight| (sight.node_id, sight))
             .collect()
     }
+}
+
+
+fn binary_search_sights_vector(sights: &Vec<Sight>, target_latitude: f64) -> usize {
+    let result = sights.binary_search_by(|e|
+        if e.lat  > target_latitude {
+            Ordering::Greater
+        } else if e.lat < target_latitude {
+            Ordering::Less
+        } else {
+            Ordering::Equal
+        }
+    );
+    //idk why they throw an error but still return a useable result. Stupid shit.
+    return result.unwrap_or(result.unwrap_err());
 }
 
 /// Calculates the distance between two given coordinates (latitude / longitude) in metres. TODO make metre changeable later?
