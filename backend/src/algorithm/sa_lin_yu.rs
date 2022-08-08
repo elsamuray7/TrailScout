@@ -215,17 +215,33 @@ impl<'a> SimAnnealingLinYu<'a> {
         let mut best_score = self.get_total_score(best_solution)?;
         let mut best_insert = None;
 
-        for i in 0..len-1 {
-            for j in i+1..len {
-                best_solution.insert(j, best_solution[i]);
-                best_solution.remove(i);
+        for i in 0..len {
+            for j in 0..len {
+                if i == j {
+                    continue;
+                }
+
+                if j < i {
+                    best_solution.insert(j, best_solution[i]);
+                    best_solution.remove(i + 1);
+                } else if j > i {
+                    best_solution.insert(j, best_solution[i]);
+                    best_solution.remove(i);
+                }
+
                 let new_score = self.get_total_score(best_solution)?;
                 if new_score > best_score {
                     best_score = new_score;
                     best_insert = Some((i,j));
                 }
-                best_solution.insert(i, best_solution[j]);
-                best_solution.remove(j + 1);
+
+                if i < j {
+                    best_solution.insert(i, best_solution[j]);
+                    best_solution.remove(j + 1);
+                } else if i > j {
+                    best_solution.insert(i, best_solution[j]);
+                    best_solution.remove(j);
+                }
             }
         }
 
