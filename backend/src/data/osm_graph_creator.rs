@@ -1,15 +1,14 @@
-use std::collections::{BTreeMap, HashMap};
+use std::cmp::Ordering;
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs::{File, create_dir_all};
 use std::{fs, io};
-use std::io::{LineWriter, Write, BufWriter};
+use std::io::{Write, BufWriter};
 use crossbeam::thread;
 use serde::Deserialize;
 use std::time::{Instant};
-use log::{info, error, trace};
+use log::{info, error, trace, debug};
 use osmpbf::{Element, BlobReader, BlobType};
-use crate::data::graph::{calc_dist, get_nearest_node, Category, Edge, Node as GraphNode, Node, Sight};
-
-use super::graph::Graph;
+use crate::data::graph::{calc_dist, get_nearest_node, Category, Edge, Graph, Node as GraphNode, Node, Sight};
 
 const SIGHTS_CONFIG_PATH :&str = "./sights_config.json";
 const EDGE_CONFIG_PATH :&str = "./edge_type_config.json";
@@ -305,8 +304,9 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
                             let mut way_ref_iter = w.refs();
                             let mut osm_src = way_ref_iter.next().unwrap() as usize;
                             for node_id  in way_ref_iter {
+                                // undirected graph, create in and out edges
                                 let osm_tgt = node_id as usize;
-                                let edge = Edge {
+                                let out_edge = Edge {
                                     osm_id: w.id() as usize,
                                     osm_src: osm_src,
                                     osm_tgt: osm_tgt,
@@ -314,7 +314,18 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
                                     tgt: 0,
                                     dist: 0
                                 };
-                                result.1.push(edge);
+                                result.1.push(out_edge);
+
+                                let in_edge = Edge {
+                                    osm_id: w.id() as usize,
+                                    osm_src: osm_tgt,
+                                    osm_tgt: osm_src,
+                                    src: 0,
+                                    tgt: 0,
+                                    dist: 0
+                                };
+                                result.1.push(in_edge);
+
                                 osm_src = osm_tgt;
                             }
                         },
@@ -440,6 +451,103 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
 
     let time_duration = time_start.elapsed();
     info!("Finished sorting edges after {} seconds!", time_duration.as_secs());
+
+    let mut number_of_edges = edges.len();
+    info!("Start pruning identical edges!");
+
+    // prune double edges
+    let prune_edges: HashSet<Edge> =
+    {
+    let mut prune_edges: HashMap<&Edge, usize> = HashMap::new();
+    let mut edge_a = edges.first().unwrap();
+    let mut first_edge = true;
+    // find all edges to be pruned
+    for edge in &*edges {
+        if (first_edge) {
+            edge_a = edge;
+            first_edge = false;
+        } else {
+            let edge_b = edge;
+            // edges are sorted by src, then by tgt, check for same (src, tgt) edges
+            if (edge_a.src == edge_b.src) && (edge_a.tgt == edge_b.tgt) {
+                trace!("Found two identical edges! \n Edge a: src: {} tgt: {} dist: {} \n Edge b: src: {} tgt: {} dist: {}", edge_a.src, edge_a.tgt, edge_a.dist, edge_b.src, edge_b.tgt, edge_b.dist);
+                // if several identical edges exist, save the lowest dist
+                if prune_edges.contains_key(&edge_a) {
+                    let prune_dist = prune_edges.get_key_value(&edge_a).unwrap().0.dist;
+                    if (edge_a.dist < prune_dist) && (edge_a.dist <= edge_b.dist) {
+                        trace!("Updating edge dist ({}, {}): {} -> {}", edge_a.src, edge_a.tgt, prune_dist, edge_a.dist);
+                        prune_edges.insert(edge_a, edge_a.dist);
+                    } else if (edge_b.dist < prune_dist) && (edge_a.dist > edge_b.dist) {
+                        trace!("Updating edge dist ({} / {}): {} -> {}", edge_a.src, edge_a.tgt, prune_dist, edge_b.dist);
+                        prune_edges.insert(edge_a, edge_b.dist);
+                    }
+                } else {  // save lowest dist edge to prune later
+                    /*
+                    if edge_a.dist < edge_b.dist {
+                        info!("Different distance: edge_a: {}, edge_b: {}", edge_a.dist, edge_b.dist);
+                    } else if edge_b.dist < edge_a.dist {
+                        info!("Different distance: edge_a: {}, edge_b: {}", edge_a.dist, edge_b.dist);
+                    }
+                    */
+                    if edge_a.dist <= edge_b.dist {
+                        trace!("Inserting edge: ({}, {}) with dist: {}", edge_a.src, edge_a.tgt, edge_a.dist);
+                        prune_edges.insert(edge_a, edge_a.dist);
+                    } else {
+                        trace!("Inserting edge: ({}, {}) with dist: {}", edge_a.src, edge_a.tgt, edge_b.dist);
+                        prune_edges.insert(edge_a, edge_b.dist);
+                    }
+                }
+            }
+            edge_a = edge_b;
+        }
+    }
+    prune_edges.iter().map(|(&edge, &dist)| {
+        let mut new_edge = edge.clone();
+        new_edge.dist = dist;
+        new_edge
+    }).collect()
+    };
+    // prune identical edges and keep one edge with lowest dist
+    edges.retain(|edge| !prune_edges.contains(&edge));
+    let prune_edges_len = prune_edges.len();
+    for edge in prune_edges {
+        edges.push(edge);
+    }
+
+    let time_duration = time_start.elapsed();
+    info!("Finished pruning identical edges after {} seconds!", time_duration.as_secs());
+
+    edges.sort_unstable_by(|e1, e2| {
+        let id1 = e1.src;
+        let id2 = e2.src;
+        id1.cmp(&id2).then_with(||{
+            let id1 = e1.tgt;
+            let id2 = e2.tgt;
+            id1.cmp(&id2)
+        })
+    });
+
+    let time_duration = time_start.elapsed();
+    info!("Finished sorting edges after {} seconds!", time_duration.as_secs());
+
+    info!("Number of edges before pruning: {}", number_of_edges);
+    info!("Number of edges after pruning: {}", edges.len());
+    number_of_edges = number_of_edges - edges.len();
+    info!("Number of edges pruned: {}", number_of_edges);
+    info!("Prune edges: {}", prune_edges_len);
+
+    sights.sort_unstable_by( |s1, s2| {
+        if s1.lat > s2.lat {
+            Ordering::Greater
+        } else if s1.lat < s2.lat {
+            Ordering::Less
+        } else {
+            Ordering::Equal
+        }
+    });
+
+    let time_duration = time_start.elapsed();
+    info!("Finished sorting sights after {} seconds!", time_duration.as_secs());
 
     let time_duration = time_start.elapsed();
     info!("End of PBF data parsing after {} seconds!", time_duration.as_secs());

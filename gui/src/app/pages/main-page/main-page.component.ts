@@ -1,18 +1,23 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { NgbOffcanvas } from '@ng-bootstrap/ng-bootstrap';
 import * as L from 'leaflet';
+import { BlockUI, NgBlockUI } from 'ng-block-ui';
+import { Subscription } from 'rxjs';
 import { ApplicationStateService } from 'src/app/services/application-state.service';
-import { CookieHandlerService } from 'src/app/services/cookie-handler.service';
+import { RouteResponse, RouteService } from 'src/app/services/route.service';
+import { ToastService } from 'src/app/services/toast.service';
 import { MapContainerComponent } from '../../components/map-container/map-container.component';
+import {MapService} from "../../services/map.service";
 
 @Component({
   selector: 'app-main-page',
   templateUrl: './main-page.component.html',
   styleUrls: ['./main-page.component.scss']
 })
-export class MainPageComponent implements OnInit {
+export class MainPageComponent implements OnInit, OnDestroy {
 
   @ViewChild(MapContainerComponent) mapContainer: MapContainerComponent;
+  @BlockUI('map') blockUIMap: NgBlockUI;
   marker = false;
   markerCoords?: L.LatLng;
   isCollapsed = true;
@@ -22,25 +27,39 @@ export class MainPageComponent implements OnInit {
   defaultStartPointLong = 8.806422;
   defaultStartPointLat = 53.073635;
 
+  sub?: Subscription;
+  blockSub?: Subscription;
+
   radius?: number;
   constructor(
-    private cookieService: CookieHandlerService,
+    private mapService: MapService,
     private offcanvasService: NgbOffcanvas,
-    private applicationStateService: ApplicationStateService) {
+    private applicationStateService: ApplicationStateService,
+    private routeService: RouteService,
+    private toastService: ToastService) {
 
     this.mobile =  applicationStateService.getIsMobileResolution();
 
-    const startCookie = this.cookieService.getLocationCookie();
-    if (startCookie.value !== '') {
-      const val = startCookie.value as string;
-      const coords = JSON.parse(val);
+    this.sub = this.routeService.routeUpdated.subscribe(route => {
+      this.showRoute(route);
+      this.blockUIMap.stop();
+    });
+    this.blockSub = this.routeService.startRouteCall.subscribe(() => {
+      this.blockUIMap.start('Loading route...');
+    });
+
+    const coords = this.mapService.getCoordniates();
+    if (coords) {
       this.markerSet(new L.LatLng(coords["lat"] as any, coords["lng"] as any))
     }
 
-    const radiusCookie = this.cookieService.getRadiusCookie();
-    if (radiusCookie && !this.radius) {
-      this.radiusChange(radiusCookie.value as number);
+    const radius = this.mapService.getRadius();
+    if (radius && !this.radius) {
+      this.radiusChange(radius);
     }
+  }
+  ngOnDestroy(): void {
+    this.sub?.unsubscribe();
   }
 
   ngOnInit(): void {
@@ -52,13 +71,13 @@ export class MainPageComponent implements OnInit {
     if (!this.radius) {
       this.radius = 0;
     }
-    this.cookieService.setRadiusCookie(this.radius);
+    this.mapService.setRadius(radius);
   }
 
   markerSet(latlng: L.LatLng) {
     this.marker = true;
     this.markerCoords = latlng;
-    this.cookieService.setLocationCookie(latlng);
+    this.mapService.setCoordinates(latlng);
   }
 
   drawSights(response: any) {
@@ -82,5 +101,14 @@ export class MainPageComponent implements OnInit {
     }, (reason) => {
       console.log(reason);
     })
+  }
+
+  async showRoute(route: RouteResponse) {
+    if (route.error && !route.route) {
+      this.toastService.showDanger(route.error.message ?? 'Something went wrong!');
+      return;
+    }
+    this.mapContainer.drawRoute(route);
+    
   }
 }

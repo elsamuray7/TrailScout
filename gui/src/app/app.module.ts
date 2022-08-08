@@ -10,6 +10,7 @@ import { CookieService } from 'ngx-cookie-service';
 import {NgcCookieConsentModule, NgcCookieConsentConfig} from 'ngx-cookieconsent';
 import { CookieHandlerService } from './services/cookie-handler.service';
 import { HttpClientModule } from '@angular/common/http';
+import { BlockUIModule } from 'ng-block-ui';
 
 const cookieConfig:NgcCookieConsentConfig = {
   cookie: {
@@ -39,7 +40,11 @@ const cookieConfig:NgcCookieConsentConfig = {
     NavigationModule,
     NgbModule,
     NgcCookieConsentModule.forRoot(cookieConfig),
-    NgcCookieConsentModule
+    NgcCookieConsentModule,
+    BlockUIModule.forRoot({
+      delayStart: 200,
+      delayStop: 500
+    })
   ],
   providers: [CookieService, CookieHandlerService],
   bootstrap: [AppComponent]
