@@ -1,3 +1,4 @@
+use std::time::Instant;
 use log::info;
 use once_cell::sync::Lazy;
 use trailscout_lib::data::graph::Graph;
@@ -13,7 +14,7 @@ fn test_parsing_process_to_produce_graph_with_proper_number_of_elements() {
     common::parse_pbf_to_fmi_file();
     info!("Creating graph");
     let graph: &Lazy<Graph> = &GRAPH;
-    info!("Asserting graph properties"); 
+    info!("Finished creating graph with {} nodes, {} sights and {} edges", graph.num_nodes, graph.num_sights, graph.num_edges);
     assert_eq!(graph.num_nodes, 1565544, "nodes");
     assert_eq!(graph.num_sights, 3014, "sights");
     assert_eq!(graph.num_edges, 3885174, "edges");
@@ -28,7 +29,7 @@ fn test_sights_have_at_least_one_outgoing_edge () {
     common::check_if_fmi_file_exists_and_parse_if_not();
     info!("Creating graph"); 
     let graph: &Lazy<Graph> = &GRAPH;
-    info!("Finished creating graph");
+    info!("Finished creating graph with {} nodes, {} sights and {} edges", graph.num_nodes, graph.num_sights, graph.num_edges);
         
     let mut unleavable_sights = 0;
     for sight in &graph.sights {
@@ -46,7 +47,7 @@ fn test_sights_have_at_least_one_incoming_edge () {
     common::check_if_fmi_file_exists_and_parse_if_not();
     info!("Creating graph"); 
     let graph: &Lazy<Graph> = &GRAPH;
-    info!("Finished creating graph");
+    info!("Finished creating graph with {} nodes, {} sights and {} edges", graph.num_nodes, graph.num_sights, graph.num_edges);
         
     let mut unreachable_sights = 0;
     for sight in &graph.sights {
@@ -73,7 +74,7 @@ fn test_edges_go_in_both_directions() {
     common::check_if_fmi_file_exists_and_parse_if_not();
     info!("Creating graph"); 
     let graph: &Lazy<Graph> = &GRAPH;
-    info!("Finished creating graph");
+    info!("Finished creating graph with {} nodes, {} sights and {} edges", graph.num_nodes, graph.num_sights, graph.num_edges);
 
     let mut onesided_edges = 0;
     for edge in &graph.edges {
@@ -86,4 +87,23 @@ fn test_edges_go_in_both_directions() {
         }
     }
     assert_eq!(onesided_edges, 0, "Onesided edges: {} of a total of {} edges", onesided_edges, graph.edges.len());
+}
+
+#[test]
+fn get_sights_in_bremen_with_radius_1000_meters() {
+    common::initialize_logger();
+    common::check_if_fmi_file_exists_and_parse_if_not();
+    info!("Creating graph"); 
+    let graph: &Lazy<Graph> = &GRAPH;
+    info!("Finished creating graph with {} nodes, {} sights and {} edges", graph.num_nodes, graph.num_sights, graph.num_edges);
+
+    let time_start = Instant::now();
+
+    //when you google "bremen lat long" then 53.0793° N, 8.8017° E is the result
+    let sights_bremen_100 = graph.get_sights_in_area(53.0793, 8.8017, 1000.0);
+
+    let time_duration = time_start.elapsed();
+    info!("Got sights in area after {} seconds!", time_duration.as_millis() as f64 / 1000.0);
+
+    assert_eq!(sights_bremen_100.len(), 452, "Bremen doesn't have the correct number of sights");
 }
