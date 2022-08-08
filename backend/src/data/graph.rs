@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::Formatter;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
@@ -290,13 +290,8 @@ impl Graph {
 
     /// Get the nearest node (which is not a sight) to a given coordinate (latitude / longitude)
     pub fn get_nearest_node(&self, lat: f64, lon: f64) -> usize {
-        // vec to check if a node is a sight
-        let mut is_sight_node: Vec<bool> = Vec::new();
-        is_sight_node.resize(self.nodes.len(), false);
-        for sight in self.sights.iter() {
-            is_sight_node[sight.node_id] = true;
-        }
-        get_nearest_node(&self.nodes, &mut is_sight_node, lat, lon)
+        get_nearest_node(&self.nodes, &self.sights.iter().map(|sight| sight.node_id).collect(),
+                         lat, lon)
     }
 
     /// Get the number of outgoing edges of the node with id `node_id`
@@ -375,11 +370,11 @@ pub(crate) fn calc_dist(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> usize {
 }
 
 /// Get the nearest node (which is not a sight) to a given coordinate (latitude / longitude)
-pub fn get_nearest_node(nodes: &Vec<Node>, is_sight_node: &mut Vec<bool>, lat: f64, lon: f64) -> usize {
+pub fn get_nearest_node(nodes: &Vec<Node>, sights: &HashSet<usize>, lat: f64, lon: f64) -> usize {
     let mut min_dist = usize::MAX;
     let mut min_id = nodes[0].id;
     for (id, node) in nodes.iter().enumerate() {
-        if !is_sight_node[id] {
+        if !sights.contains(&id) {
             let dist = calc_dist(lat, lon, node.lat, node.lon);
             if dist < min_dist {
                 min_dist = dist;
