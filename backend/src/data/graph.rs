@@ -93,6 +93,7 @@ impl Hash for Node {
 }
 
 /// A directed and weighted graph edge
+#[derive(Clone, Copy)]
 pub struct Edge {
     pub(crate) osm_id: usize, // TODO delete later!
     pub osm_src: usize,
@@ -103,6 +104,21 @@ pub struct Edge {
     pub tgt: usize,
     /// The edge's weight, i.e., the distance between its source and target
     pub dist: usize,
+}
+
+impl PartialEq<Self> for Edge {
+    fn eq(&self, other: &Self) -> bool {
+        self.src == other.src && self.tgt == other.tgt
+    }
+}
+
+impl Eq for Edge {}
+
+impl Hash for Edge {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.src.hash(state);
+        self.tgt.hash(state);
+    }
 }
 
 /// A sight node mapped on its nearest node
