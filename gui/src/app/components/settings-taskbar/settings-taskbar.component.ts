@@ -117,33 +117,9 @@ export class SettingsTaskbarComponent implements OnInit {
   }
 
   transformTimeToISO8601Date(time: NgbTimeStruct): string {
-    var result = this.currentDate.getFullYear().toString() + "-";
-    if (this.currentDate.getMonth() < 10) {
-      result += "0" + this.currentDate.getMonth().toString() + "-";
-    } else {
-      result += this.currentDate.getMonth().toString() + "-";
-    }
-    if (this.currentDate.getDate() < 10) {
-      result += "0" + this.currentDate.getDate().toString() + "T";
-    } else {
-      result += this.currentDate.getDate().toString() + "T";
-    }
-    if (time.hour < 10) {
-      result += "0" + time.hour + ":";
-    } else {
-      result += time.hour + ":";
-    }
-    if (time.minute < 10) {
-      result += "0" + time.minute + ":";
-    } else {
-      result += time.minute + ":";
-    }
-    if (time.second < 10) {
-      result += "0" + time.second + "Z";
-    } else {
-      result += time.second + "Z";
-    }
-    return result;
+    var tempDate = this.currentDate;
+    tempDate.setUTCHours(time.hour, time.minute, time.second);
+    return tempDate.toISOString();
   }
 
   getMinutesBetweenStartAndEnd() {
