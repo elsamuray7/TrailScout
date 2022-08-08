@@ -101,7 +101,7 @@ export class SettingsTaskbarComponent implements OnInit {
     })
     const request = {
       "start": this.transformTimeToISO8601Date(this._startTime),
-      "end": this.transformTimeToISO8601Date(this._endTime),
+      "end": this.transformTimeToISO8601Date(this._endTime, !this.isStartBeforeEnd()),
       "walking_speed_kmh": 50,
       "area": {
         "lat": this.mapService.getCoordniates().lat,
@@ -116,15 +116,22 @@ export class SettingsTaskbarComponent implements OnInit {
     this.routeService.calculateRoute(request);
   }
 
-  transformTimeToISO8601Date(time: NgbTimeStruct): string {
+  transformTimeToISO8601Date(time: NgbTimeStruct, nextDay = false): string {
     var tempDate = this.currentDate;
     tempDate.setUTCHours(time.hour, time.minute, time.second);
+    if(nextDay) {
+      tempDate.setDate(tempDate.getDate() +1);
+    }
     return tempDate.toISOString();
   }
 
+  isStartBeforeEnd(): boolean {
+    return this._startTime.hour < this._endTime.hour ||
+      (this._startTime.hour == this._endTime.hour && this._startTime.minute < this._endTime.minute);
+  }
+
   getMinutesBetweenStartAndEnd() {
-    if (this._startTime.hour < this._endTime.hour ||
-      (this._startTime.hour == this._endTime.hour && this._startTime.minute < this._endTime.minute)) {
+    if (this.isStartBeforeEnd()) {
       // if start before end
       return (this._endTime.hour - this._startTime.hour) * 60 + this._endTime.minute - this._startTime.minute
     } else {
