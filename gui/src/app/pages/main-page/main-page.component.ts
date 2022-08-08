@@ -109,6 +109,6 @@ export class MainPageComponent implements OnInit, OnDestroy {
       return;
     }
     this.mapContainer.drawRoute(route);
-    
+    this.mapContainer.drawSightsOnRoute(route);
   }
 }
