@@ -8,8 +8,7 @@ use serde::Deserialize;
 use std::time::{Instant};
 use log::{info, error, trace, debug};
 use osmpbf::{Element, BlobReader, BlobType};
-use crate::data::graph::{calc_dist, get_nearest_node, Category, Edge, Node as GraphNode, Node, Sight};
-use crate::data::graph::{calc_dist, Category, Edge, Graph, Node as GraphNode, Node, Sight};
+use crate::data::graph::{calc_dist, get_nearest_node, Category, Edge, Graph, Node as GraphNode, Node, Sight};
 
 const SIGHTS_CONFIG_PATH :&str = "./sights_config.json";
 const EDGE_CONFIG_PATH :&str = "./edge_type_config.json";
