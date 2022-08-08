@@ -5,6 +5,7 @@ import { NavigationModule } from '../navigation/navigation.module';
 import { ComponentsModule } from 'src/app/components/components.module';
 import { NgbCollapseModule, NgbModule, NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { ApplicationStateService } from 'src/app/services/application-state.service';
+import { BlockUIModule } from 'ng-block-ui';
 
 
 
@@ -16,7 +17,8 @@ import { ApplicationStateService } from 'src/app/services/application-state.serv
     CommonModule,
     NavigationModule,
     ComponentsModule,
-    NgbModule
+    NgbModule,
+    BlockUIModule
   ],
   providers: [ApplicationStateService]
 })

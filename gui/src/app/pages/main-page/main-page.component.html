@@ -1,5 +1,5 @@
 <div id="container">
-    <div id="map">
+    <div id="map" *blockUI="'map'">
 
         <app-map-container id='map-container'
         [circleRadius]="radius"
@@ -16,7 +16,6 @@
             [startPointSet]="marker"
             (radiusChange)="radiusChange($event)"
             (drawSightsEvent)="drawSights($event)"
-            (routeCalculated)="showRoute()"
             (closeButton)="collapse.toggle()"></app-settings-taskbar>
         </div>
         <i class="btn btn-primary"
@@ -31,4 +30,5 @@
             [disableTooltip]="!!markerCoords"
             ></i>
         </div>
+  <app-toast></app-toast>
 </div>
