@@ -3,7 +3,7 @@ import * as L from 'leaflet';
 import { GeoSearchControl, OpenStreetMapProvider } from 'leaflet-geosearch';
 import { LatLngExpression } from 'leaflet';
 import {Category} from "../../data/Category";
-import { RouteResponse, RouteService } from 'src/app/services/route.service';
+import { RouteResponse } from 'src/app/services/route.service';
 
 const iconRetinaUrl = 'assets/marker-icon-2x.png';
 const iconUrl = 'assets/marker-icon.png';
@@ -39,10 +39,11 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
   private circle?: L.Circle;
   private activeLayers = new Map<string, any>();
 
-  leafRoute_1?: L.Polyline;
-  leafRoute_2?: L.Polyline
+  routeStart?: L.Polyline;
+  routeEnd?: L.Polyline;
+  routeIntermediate?: L.Polyline;
 
-  constructor(private routeService : RouteService) {
+  constructor() {
   }
   ngOnChanges(changes: SimpleChanges): void {
     this.addCircle(this.marker?.getLatLng()!);
@@ -138,20 +139,27 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
   }
 
   drawRoute(_route: RouteResponse) {
-    const route_1: L.LatLng[] = [];
-    const route_2: L.LatLng[] = [];
+    this.routeStart?.removeFrom(this.map);
+    this.routeEnd?.removeFrom(this.map);
+    this.routeIntermediate?.removeFrom(this.map);
+    const startSection: L.LatLng[] = [];
+    const endSection: L.LatLng[] = [];
+    const intermediateSections: L.LatLng[] = [];
 
-    _route.route!.map(nodes => nodes.nodes.map(node => {
-      if (nodes.type === 'Start') {
-        route_1.push(new L.LatLng(node.lat, node.lon))
+    _route.route!.map(section => section.nodes.map(node => {
+      if (section.type === 'Start') {
+        startSection.push(new L.LatLng(node.lat, node.lon))
         return;
       }
-      if (nodes.type === 'End') {
-        route_2.push(new L.LatLng(node.lat, node.lon))
+      if (section.type === 'End') {
+        endSection.push(new L.LatLng(node.lat, node.lon))
       }
-      
+      if (section.type === 'Intermediate') {
+        intermediateSections.push(new L.LatLng(node.lat, node.lon))
+      }
     }) );
-    this.leafRoute_1 = new L.Polyline(route_1, {color: 'red'}).addTo(this.map);
-    this.leafRoute_2 = new L.Polyline(route_2, {color: 'green'}).addTo(this.map);
+    this.routeStart = new L.Polyline(startSection, {color: 'green'}).addTo(this.map);
+    this.routeIntermediate = new L.Polyline(intermediateSections, {color: 'yellow'}).addTo(this.map);
+    this.routeEnd = new L.Polyline(endSection, {color: 'red'}).addTo(this.map);
   }
 }
