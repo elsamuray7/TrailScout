@@ -91,8 +91,9 @@ fn swap<'a>(current_solution: &Vec<&'a Sight>) -> Vec<&'a Sight> {
     result
 }
 
-/// Select two indices `i` and `j` by random and insert the element at position `i` at position `j`
-/// in `current_solution`
+/// Select two indices `i` and `j` by random, insert the element at position `i` in
+/// `current_solution` at position `j` in a new copy of `current_solution` and remove it from its
+/// old position in the copy
 fn insert<'a>(current_solution: &Vec<&'a Sight>) -> Vec<&'a Sight> {
     let mut rng = thread_rng();
     let size = current_solution.len();
@@ -108,6 +109,18 @@ fn insert<'a>(current_solution: &Vec<&'a Sight>) -> Vec<&'a Sight> {
         result.remove(i);
     }
     result
+}
+
+/// Insert the element at position `i` in `current_solution` at position `j` in `current_solution`
+/// and remove it from its old position
+fn determ_insert(current_solution: &mut Vec<&Sight>, i: usize, j: usize) {
+    if j < i {
+        current_solution.insert(j, current_solution[i]);
+        current_solution.remove(i + 1);
+    } else if j > i {
+        current_solution.insert(j, current_solution[i]);
+        current_solution.remove(i);
+    }
 }
 
 /// Select two indices by random and reverse the slice of `current_solution` between these two
@@ -220,28 +233,13 @@ impl<'a> SimAnnealingLinYu<'a> {
                 if i == j {
                     continue;
                 }
-
-                if j < i {
-                    best_solution.insert(j, best_solution[i]);
-                    best_solution.remove(i + 1);
-                } else if j > i {
-                    best_solution.insert(j, best_solution[i]);
-                    best_solution.remove(i);
-                }
-
+                determ_insert(best_solution, i, j);
                 let new_score = self.get_total_score(best_solution)?;
                 if new_score > best_score {
                     best_score = new_score;
                     best_insert = Some((i,j));
                 }
-
-                if i < j {
-                    best_solution.insert(i, best_solution[j]);
-                    best_solution.remove(j + 1);
-                } else if i > j {
-                    best_solution.insert(i, best_solution[j]);
-                    best_solution.remove(j);
-                }
+                determ_insert(best_solution, j, i);
             }
         }
 
@@ -254,8 +252,7 @@ impl<'a> SimAnnealingLinYu<'a> {
             best_solution.swap(i, j);
         }
         if let Some((i, j)) = self.perform_all_possible_inserts(best_solution)? {
-            best_solution.insert(j, best_solution[i]);
-            best_solution.remove(i);
+            determ_insert(best_solution, i, j);
         }
         Ok(())
     }
