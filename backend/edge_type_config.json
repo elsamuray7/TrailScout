@@ -1,0 +1,140 @@
+{
+    "edge_type_tag_map":
+    [
+        {
+            "edge_type": "Unclassified",
+            "tags": [
+                {
+                    "key": "highway", 
+                    "value": "unclassified"
+                }
+            ]
+        },
+        {
+            "edge_type": "Residential",
+            "tags": [
+                {
+                    "key": "highway", 
+                    "value": "residential"
+                }
+            ]
+        },
+        {
+            "edge_type": "Service",
+            "tags": [
+                {
+                    "key": "highway", 
+                    "value": "service"
+                }
+            ]
+        },
+        {
+            "edge_type": "LivingStreet",
+            "tags": [
+                {
+                    "key": "highway", 
+                    "value": "living_street"
+                }
+            ]
+        },
+        {
+            "edge_type": "Pedestrian",
+            "tags": [
+                {
+                    "key": "highway", 
+                    "value": "pedestrian"
+                }
+            ]                
+        },
+        {
+            "edge_type": "Track",
+            "tags": [
+                {
+                    "key": "highway", 
+                    "value": "track"
+                }
+            ]
+        },
+        {
+            "edge_type": "Road",
+            "tags": [ 
+                {
+                    "key": "highway", 
+                    "value": "road"
+                }
+            ]
+        },
+        {
+            "edge_type": "Footway",
+            "tags": [ 
+                {
+                    "key": "highway", 
+                    "value": "footway"
+                }
+            ]
+        },
+        {
+            "edge_type": "Bridleway",
+            "tags": [ 
+                {
+                    "key": "highway", 
+                    "value": "bridleway"
+                }
+            ]
+        },
+        {
+            "edge_type": "Steps",
+            "tags": [
+                {
+                    "key": "highway", 
+                    "value": "steps"
+                }
+            ]
+        },
+        {
+            "edge_type": "Corridor",
+            "tags": [
+                {
+                    "key": "highway", 
+                    "value": "corridor"
+                }
+            ]
+        },
+        {
+            "edge_type": "Path",
+            "tags": [
+                {
+                    "key": "highway", 
+                    "value": "path"
+                }
+            ]
+        },
+        {
+            "edge_type": "Primary",
+            "tags": [
+                {
+                    "key": "highway", 
+                    "value": "primary"
+                }
+            ]
+        },
+        {
+            "edge_type": "Secondary",
+            "tags": [
+                {
+                    "key": "highway", 
+                    "value": "secondary"
+                }
+            ]
+        },
+        {
+            "edge_type": "Tertiary",
+            "tags": [
+                {
+                    "key": "highway", 
+                    "value": "tertiary"
+                }
+            ]
+        }
+    ]
+}
