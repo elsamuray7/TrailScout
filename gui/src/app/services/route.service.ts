@@ -39,7 +39,7 @@ export class RouteService {
   public async calculateRoute(request: any) {
     this.startRouteCall.emit();
     this.http.post(this.backendUrl + "/route", request).pipe(
-      timeout(60000),
+      timeout(300000),
       catchError(e => {
         console.log(e);
         this.routeUpdated.emit({error: e, route: undefined} as RouteResponse);
