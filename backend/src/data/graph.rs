@@ -1,4 +1,4 @@
-use std::cmp::Ordering;
+use std::cmp::{Ordering, min};
 use std::collections::{HashMap, HashSet};
 use std::fmt::Formatter;
 use std::fs::File;
@@ -373,14 +373,37 @@ pub(crate) fn calc_dist(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> usize {
 pub fn get_nearest_node(nodes: &Vec<Node>, sights: &HashSet<usize>, lat: f64, lon: f64) -> usize {
     let mut min_dist = usize::MAX;
     let mut min_id = nodes[0].id;
-    for (id, node) in nodes.iter().enumerate() {
-        if !sights.contains(&id) {
-            let dist = calc_dist(lat, lon, node.lat, node.lon);
-            if dist < min_dist {
-                min_dist = dist;
-                min_id = id;
+
+    let result = nodes.binary_search_by(|n| n.lat.total_cmp(&lat));
+    let found_index;
+    if result.is_ok() {
+        found_index = result.unwrap() as i32;
+    } else {
+        found_index = result.unwrap_err() as i32;
+    }
+    let mut positive_index = found_index;
+    let mut negative_index =  found_index;
+    'outer: while positive_index <= nodes.len() as i32 || negative_index >= 0 {
+        for i in [positive_index, negative_index] {
+            if i > 0 && i <nodes.len() as i32 {
+                let node = nodes.get((i) as usize).unwrap();
+                
+                let minimum_possible_distance = calc_dist(lat, lon, node.lat, lon);
+                if minimum_possible_distance < min_dist {
+                    break 'outer;
+                } 
+
+                if !sights.contains(&node.id) {
+                    let dist = calc_dist(lat, lon, node.lat, node.lon);
+                    if dist < min_dist {
+                        min_dist = dist;
+                        min_id = node.id;
+                    }
+                }
             }
         }
+        positive_index = positive_index + 1;
+        negative_index = negative_index - 1;
     }
     min_id
 }

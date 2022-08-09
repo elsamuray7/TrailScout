@@ -1,11 +1,12 @@
 use std::time::Instant;
+use itertools::assert_equal;
 use log::info;
 use once_cell::sync::Lazy;
 use trailscout_lib::data::graph::Graph;
 
 mod common;
 
-static GRAPH: Lazy<Graph> = Lazy::new(|| Graph::parse_from_file("./tests_data/output/test-bremen-latest.fmi").unwrap());
+static GRAPH: Lazy<Graph> = Lazy::new(|| Graph::parse_from_file(common::OUT_PATH).unwrap());
 
 
 #[test]
@@ -15,12 +16,15 @@ fn test_parsing_process_to_produce_graph_with_proper_number_of_elements() {
     info!("Creating graph");
     let graph: &Lazy<Graph> = &GRAPH;
     info!("Finished creating graph with {} nodes, {} sights and {} edges", graph.num_nodes, graph.num_sights, graph.num_edges);
-    assert_eq!(graph.num_nodes, 1565544, "nodes");
-    assert_eq!(graph.num_sights, 3014, "sights");
-    assert_eq!(graph.num_edges, 3885174, "edges");
-    let a = graph.get_sights_in_area(1.0,1.0,1.0);
-    //It seems like there are some duplicate nodes, which causes a few of the sights to not be returned (2971 instead of 3014)
-    assert_eq!(a.len(), 2971, "get_sights_in_area");
+    if common::IN_PATH.contains("bremen") {
+        assert_eq!(graph.num_nodes, 1565544, "nodes");
+        assert_eq!(graph.num_sights, 3014, "sights");
+        assert_eq!(graph.num_edges, 3352214, "edges");
+    } else if common::IN_PATH.contains("stg") {
+        assert_eq!(graph.num_nodes, 22175, "nodes");
+        assert_eq!(graph.num_sights, 356, "sights");
+        assert_eq!(graph.num_edges, 44836, "edges");
+    }
 }
 
 #[test]
@@ -121,6 +125,7 @@ fn test_edges_go_in_both_directions() {
         for n_edge in n_edges {
             if n_edge.tgt == edge.src {
                 onesided_edges -= 1;
+                break;
             }
         }
     }

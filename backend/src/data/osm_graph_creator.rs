@@ -408,6 +408,10 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
 
     info!("Start mapping sights into graph!");
 
+    nodes.sort_unstable_by(|n1, n2|{
+        return n1.lat.total_cmp(&n2.lat);
+    });
+
     // create edges between a sight and the nearest non sight node
     let mut n = 0 as f64;
     for sight in sights.iter() {
@@ -436,8 +440,43 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
         trace!("Progress: {}", n / (sights.len() as f64));
     }
 
+    nodes.sort_unstable_by(|n1, n2|{
+        return n1.id.cmp(&n2.id);
+    });
+
     let time_duration = time_start.elapsed();
     info!("Finished mapping sights into graph after {} seconds!", time_duration.as_secs());
+
+    edges.sort_unstable_by(|e1, e2| {
+        let id1 = e1.src;
+        let id2 = e2.src;
+        id1.cmp(&id2).then_with(||{
+            let id1 = e1.tgt;
+            let id2 = e2.tgt;
+            id1.cmp(&id2).then_with(|| {
+                let dist1 = e1.dist;
+                let dist2 = e2.dist;
+                dist1.cmp(&dist2)
+            })
+        })
+    });
+
+    let time_duration = time_start.elapsed();
+    info!("Finished sorting edges after {} seconds!", time_duration.as_secs());
+
+    let edges_before_pruning = edges.len();
+    let mut i = edges.len()-1;
+    while i > 0 {
+        let edge_a = edges.get(i-1).unwrap();
+        let edge_b = edges.get(i).unwrap();
+        if edge_a.src == edge_b.src && edge_a.tgt == edge_b.tgt {
+            edges.swap_remove(i);
+        }
+        i -= 1;
+    }
+
+    let time_duration = time_start.elapsed();
+    info!("Finished pruning of {} identical edges after {} seconds!", edges_before_pruning - edges.len(), time_duration.as_secs());
 
     edges.sort_unstable_by(|e1, e2| {
         let id1 = e1.src;
@@ -449,11 +488,11 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
         })
     });
 
-    let time_duration = time_start.elapsed();
-    info!("Finished sorting edges after {} seconds!", time_duration.as_secs());
 
-    let mut number_of_edges = edges.len();
-    info!("Start pruning identical edges!");
+    let time_duration = time_start.elapsed();
+    info!("Finished resorting edges after {} seconds!", time_duration.as_secs());
+
+    /*let mut number_of_edges = edges.len();
 
     // prune double edges
     let prune_edges: HashSet<Edge> =
@@ -534,7 +573,7 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
     info!("Number of edges after pruning: {}", edges.len());
     number_of_edges = number_of_edges - edges.len();
     info!("Number of edges pruned: {}", number_of_edges);
-    info!("Prune edges: {}", prune_edges_len);
+    info!("Prune edges: {}", prune_edges_len);*/
 
     sights.sort_unstable_by( |s1, s2| {
         if s1.lat > s2.lat {

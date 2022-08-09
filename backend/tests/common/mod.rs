@@ -4,11 +4,16 @@ use env_logger::Env;
 use log::info;
 use trailscout_lib::data::{osm_graph_creator::{parse_osm_data, write_graph_file}, graph::{Sight, Edge, Node, Graph}};
 
+//pub const IN_PATH:&str = "./tests_data/bremen-latest.osm.pbf";
+pub const IN_PATH:&str = "./tests_data/stgcenter.pbf";
+pub const OUT_PATH:&str = "./tests_data/test-output.pbf";
+
+
 pub fn parse_pbf_to_fmi_file() {
         info!("starting test setup");
         info!("current working dir: {}",std::env::current_dir().unwrap().to_str().unwrap());
-        let in_graph = "./tests_data/bremen-latest.osm.pbf";
-        let out_graph = "./tests_data/output/test-bremen-latest.fmi";
+        let in_graph = IN_PATH;
+        let out_graph = OUT_PATH;
         let mut nodes : Vec<Node> = Vec::new();
         let mut edges : Vec<Edge> = Vec::new();
         let mut sights : Vec<Sight> = Vec::new();
