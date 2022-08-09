@@ -277,7 +277,8 @@ mod test {
                                  SightCategoryPref { name: "Nightlife".to_string(), pref: 4 }],
                 sights: vec![SightPref { id: 1274147, category: "Sightseeing".to_string(), pref: 0 }],
             }).unwrap();
-        let route = algo.compute_route();
+        let route = algo.compute_route()
+            .expect("Error during route computation");
 
         // Route should only contain sectors that include sights with categories restaurant,
         // sightseeing or nightlife
