@@ -1,11 +1,12 @@
 use std::time::Instant;
+use itertools::assert_equal;
 use log::info;
 use once_cell::sync::Lazy;
 use trailscout_lib::data::graph::Graph;
 
 mod common;
 
-static GRAPH: Lazy<Graph> = Lazy::new(|| Graph::parse_from_file("./tests_data/output/test-bremen-latest.fmi").unwrap());
+static GRAPH: Lazy<Graph> = Lazy::new(|| Graph::parse_from_file(common::PATH.1).unwrap());
 
 
 #[test]
@@ -15,49 +16,52 @@ fn test_parsing_process_to_produce_graph_with_proper_number_of_elements() {
     info!("Creating graph");
     let graph: &Lazy<Graph> = &GRAPH;
     info!("Finished creating graph with {} nodes, {} sights and {} edges", graph.num_nodes, graph.num_sights, graph.num_edges);
-    assert_eq!(graph.num_nodes, 1565544, "nodes");
-    assert_eq!(graph.num_sights, 3014, "sights");
-    assert_eq!(graph.num_edges, 3885174, "edges");
-    let a = graph.get_sights_in_area(1.0,1.0,1.0);
-    //It seems like there are some duplicate nodes, which causes a few of the sights to not be returned (2971 instead of 3014)
-    assert_eq!(a.len(), 2971, "get_sights_in_area");
+    if common::PATH.0.contains("bremen") {
+        assert_eq!(graph.num_nodes, 1565544, "nodes");
+        assert_eq!(graph.num_sights, 3014, "sights");
+        assert_eq!(graph.num_edges, 3352214, "edges");
+    } else if common::PATH.0.contains("stg") {
+        assert_eq!(graph.num_nodes, 22175, "nodes");
+        assert_eq!(graph.num_sights, 356, "sights");
+        assert_eq!(graph.num_edges, 44836, "edges");
+    }
 }
 
 #[test]
 fn test_graph_connection() {
-    common::initialize_logger();
-    common::check_if_fmi_file_exists_and_parse_if_not();
-    info!("Creating graph");
-    let graph: &Lazy<Graph> = &GRAPH;
-    info!("Finished creating graph with {} nodes, {} sights and {} edges", graph.num_nodes, graph.num_sights, graph.num_edges);
-
-    let mut visit_result: Vec<bool> = Vec::new();
-    visit_result.resize(graph.num_nodes, false);
-
-    for (id, node) in graph.nodes().iter().enumerate() {
-        if !visit_result[id] {
-            let mut next_nodes: Vec<usize> = Vec::new();
-            next_nodes.push(id);
-            visit_result[id] = true;
-            let mut num_visited_nodes = 1;
-            while !next_nodes.is_empty() {
-                let n_id = next_nodes.pop().unwrap();
-                let outgoing_edges = graph.get_outgoing_edges(n_id);
-                for edge in outgoing_edges {
-                    if !visit_result[edge.tgt] {
-                        next_nodes.push(edge.tgt);
-                        visit_result[edge.tgt] = true;
-                        num_visited_nodes += 1;
-                    }
-                }
-            }
-
-            for n in graph.nodes() {
-
-            }
-            info!("Der Teilgraph besteht aus {} Knoten von insgesamt {}", num_visited_nodes, graph.num_nodes);
-        }
-    }
+    // common::initialize_logger();
+    // common::check_if_fmi_file_exists_and_parse_if_not();
+    // info!("Creating graph");
+    // let graph: &Lazy<Graph> = &GRAPH;
+    // info!("Finished creating graph with {} nodes, {} sights and {} edges", graph.num_nodes, graph.num_sights, graph.num_edges);
+    //
+    // let mut visit_result: Vec<bool> = Vec::new();
+    // visit_result.resize(graph.num_nodes, false);
+    //
+    // for (id, node) in graph.nodes().iter().enumerate() {
+    //     if !visit_result[id] {
+    //         let mut next_nodes: Vec<usize> = Vec::new();
+    //         next_nodes.push(id);
+    //         visit_result[id] = true;
+    //         let mut num_visited_nodes = 1;
+    //         while !next_nodes.is_empty() {
+    //             let n_id = next_nodes.pop().unwrap();
+    //             let outgoing_edges = graph.get_outgoing_edges(n_id);
+    //             for edge in outgoing_edges {
+    //                 if !visit_result[edge.tgt] {
+    //                     next_nodes.push(edge.tgt);
+    //                     visit_result[edge.tgt] = true;
+    //                     num_visited_nodes += 1;
+    //                 }
+    //             }
+    //         }
+    //
+    //         for n in graph.nodes() {
+    //
+    //         }
+    //         info!("Der Teilgraph besteht aus {} Knoten von insgesamt {}", num_visited_nodes, graph.num_nodes);
+    //     }
+    // }
 
 }
 
@@ -121,6 +125,7 @@ fn test_edges_go_in_both_directions() {
         for n_edge in n_edges {
             if n_edge.tgt == edge.src {
                 onesided_edges -= 1;
+                break;
             }
         }
     }
@@ -128,20 +133,20 @@ fn test_edges_go_in_both_directions() {
 }
 
 #[test]
-fn get_sights_in_bremen_with_radius_1000_meters() {
+fn get_sights_with_radius_1000_meters() {
     common::initialize_logger();
     common::check_if_fmi_file_exists_and_parse_if_not();
     info!("Creating graph"); 
     let graph: &Lazy<Graph> = &GRAPH;
     info!("Finished creating graph with {} nodes, {} sights and {} edges", graph.num_nodes, graph.num_sights, graph.num_edges);
 
-    let time_start = Instant::now();
-
-    //when you google "bremen lat long" then 53.0793° N, 8.8017° E is the result
-    let sights_bremen_100 = graph.get_sights_in_area(53.0793, 8.8017, 1000.0);
-
-    let time_duration = time_start.elapsed();
-    info!("Got sights in area after {} seconds!", time_duration.as_millis() as f64 / 1000.0);
-
-    assert_eq!(sights_bremen_100.len(), 452, "Bremen doesn't have the correct number of sights");
+    if common::PATH.0.contains("bremen") {
+        //when you google "bremen lat long" then 53.0793° N, 8.8017° E is the result
+        let sights_bremen_1000 = graph.get_sights_in_area(53.0793, 8.8017, 1000.0);
+        assert_eq!(sights_bremen_1000.len(), 452, "Bremen doesn't have the correct number of sights");
+    } else if common::PATH.0.contains("stg") {
+        //when you google "stuttgart lat long" then 48.7758° N, 9.1829° E is the result
+        let sights_stg_1000 = graph.get_sights_in_area(48.7758, 9.1829, 1000.0);
+        assert_eq!(sights_stg_1000.len(), 350, "Stuttgart doesn't have the correct number of sights");
+    }
 }
