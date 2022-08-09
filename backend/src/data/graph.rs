@@ -470,7 +470,9 @@ mod test {
                 .map(|edge| (graph.get_node(edge.tgt), edge.dist))
                 .collect::<Vec<(&Node, usize)>>();
 
-        for _ in 0..50 {
+        for round in 0..50 {
+            println!("Round {} / {}", round, 50);
+
             let rand_src = rng.gen_range(0..graph.num_nodes);
             let rand_tgt = rng.gen_range(0..graph.num_nodes);
 
@@ -482,11 +484,19 @@ mod test {
                                                |node| node.id == rand_src);
 
             match dijkstra_result {
-                Some(_) => assert!(rev_dijkstra_result.is_some(),
-                                   "Route between {} and {} has a direction", rand_src, rand_tgt),
-                None => assert!(rev_dijkstra_result.is_none(),
-                                "Route between {} and {} has a direction", rand_src, rand_tgt)
-            };
+                Some((_, dist)) => {
+                    println!("Route from {} to {} exists", rand_src, rand_tgt);
+                    assert!(rev_dijkstra_result.is_some(),
+                            "Route between {} and {} is directed", rand_src, rand_tgt);
+                    let (_, rev_dist) = rev_dijkstra_result.unwrap();
+                    assert_eq!(dist, rev_dist, "Distances do not match: {} vs. {}", dist, rev_dist);
+                },
+                None => {
+                    println!("No route from {} to {}", rand_src, rand_tgt);
+                    assert!(rev_dijkstra_result.is_none(),
+                            "Route between {} and {} is directed", rand_tgt, rand_src);
+                }
+            }
         }
     }
 }
