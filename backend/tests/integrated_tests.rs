@@ -29,39 +29,39 @@ fn test_parsing_process_to_produce_graph_with_proper_number_of_elements() {
 
 #[test]
 fn test_graph_connection() {
-    common::initialize_logger();
-    common::check_if_fmi_file_exists_and_parse_if_not();
-    info!("Creating graph");
-    let graph: &Lazy<Graph> = &GRAPH;
-    info!("Finished creating graph with {} nodes, {} sights and {} edges", graph.num_nodes, graph.num_sights, graph.num_edges);
-
-    let mut visit_result: Vec<bool> = Vec::new();
-    visit_result.resize(graph.num_nodes, false);
-
-    for (id, node) in graph.nodes().iter().enumerate() {
-        if !visit_result[id] {
-            let mut next_nodes: Vec<usize> = Vec::new();
-            next_nodes.push(id);
-            visit_result[id] = true;
-            let mut num_visited_nodes = 1;
-            while !next_nodes.is_empty() {
-                let n_id = next_nodes.pop().unwrap();
-                let outgoing_edges = graph.get_outgoing_edges(n_id);
-                for edge in outgoing_edges {
-                    if !visit_result[edge.tgt] {
-                        next_nodes.push(edge.tgt);
-                        visit_result[edge.tgt] = true;
-                        num_visited_nodes += 1;
-                    }
-                }
-            }
-
-            for n in graph.nodes() {
-
-            }
-            info!("Der Teilgraph besteht aus {} Knoten von insgesamt {}", num_visited_nodes, graph.num_nodes);
-        }
-    }
+    // common::initialize_logger();
+    // common::check_if_fmi_file_exists_and_parse_if_not();
+    // info!("Creating graph");
+    // let graph: &Lazy<Graph> = &GRAPH;
+    // info!("Finished creating graph with {} nodes, {} sights and {} edges", graph.num_nodes, graph.num_sights, graph.num_edges);
+    //
+    // let mut visit_result: Vec<bool> = Vec::new();
+    // visit_result.resize(graph.num_nodes, false);
+    //
+    // for (id, node) in graph.nodes().iter().enumerate() {
+    //     if !visit_result[id] {
+    //         let mut next_nodes: Vec<usize> = Vec::new();
+    //         next_nodes.push(id);
+    //         visit_result[id] = true;
+    //         let mut num_visited_nodes = 1;
+    //         while !next_nodes.is_empty() {
+    //             let n_id = next_nodes.pop().unwrap();
+    //             let outgoing_edges = graph.get_outgoing_edges(n_id);
+    //             for edge in outgoing_edges {
+    //                 if !visit_result[edge.tgt] {
+    //                     next_nodes.push(edge.tgt);
+    //                     visit_result[edge.tgt] = true;
+    //                     num_visited_nodes += 1;
+    //                 }
+    //             }
+    //         }
+    //
+    //         for n in graph.nodes() {
+    //
+    //         }
+    //         info!("Der Teilgraph besteht aus {} Knoten von insgesamt {}", num_visited_nodes, graph.num_nodes);
+    //     }
+    // }
 
 }
 
