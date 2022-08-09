@@ -26,7 +26,8 @@ export class SightsServiceService {
     const body = {
       "lat": coords["lat"],
       "lon": coords["lng"],
-      "radius": radius
+      //Convert radius to meters for backend
+      "radius": radius * 1000
     }
     this.http.post(this.backendUrl + "/sights", body).subscribe((sights ) => {
       for (let category of this.categories) {
