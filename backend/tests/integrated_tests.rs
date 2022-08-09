@@ -6,7 +6,7 @@ use trailscout_lib::data::graph::Graph;
 
 mod common;
 
-static GRAPH: Lazy<Graph> = Lazy::new(|| Graph::parse_from_file(common::OUT_PATH).unwrap());
+static GRAPH: Lazy<Graph> = Lazy::new(|| Graph::parse_from_file(common::PATH.1).unwrap());
 
 
 #[test]
@@ -16,11 +16,11 @@ fn test_parsing_process_to_produce_graph_with_proper_number_of_elements() {
     info!("Creating graph");
     let graph: &Lazy<Graph> = &GRAPH;
     info!("Finished creating graph with {} nodes, {} sights and {} edges", graph.num_nodes, graph.num_sights, graph.num_edges);
-    if common::IN_PATH.contains("bremen") {
+    if common::PATH.0.contains("bremen") {
         assert_eq!(graph.num_nodes, 1565544, "nodes");
         assert_eq!(graph.num_sights, 3014, "sights");
         assert_eq!(graph.num_edges, 3352214, "edges");
-    } else if common::IN_PATH.contains("stg") {
+    } else if common::PATH.0.contains("stg") {
         assert_eq!(graph.num_nodes, 22175, "nodes");
         assert_eq!(graph.num_sights, 356, "sights");
         assert_eq!(graph.num_edges, 44836, "edges");
@@ -133,20 +133,20 @@ fn test_edges_go_in_both_directions() {
 }
 
 #[test]
-fn get_sights_in_bremen_with_radius_1000_meters() {
+fn get_sights_with_radius_1000_meters() {
     common::initialize_logger();
     common::check_if_fmi_file_exists_and_parse_if_not();
     info!("Creating graph"); 
     let graph: &Lazy<Graph> = &GRAPH;
     info!("Finished creating graph with {} nodes, {} sights and {} edges", graph.num_nodes, graph.num_sights, graph.num_edges);
 
-    let time_start = Instant::now();
-
-    //when you google "bremen lat long" then 53.0793° N, 8.8017° E is the result
-    let sights_bremen_100 = graph.get_sights_in_area(53.0793, 8.8017, 1000.0);
-
-    let time_duration = time_start.elapsed();
-    info!("Got sights in area after {} seconds!", time_duration.as_millis() as f64 / 1000.0);
-
-    assert_eq!(sights_bremen_100.len(), 452, "Bremen doesn't have the correct number of sights");
+    if common::PATH.0.contains("bremen") {
+        //when you google "bremen lat long" then 53.0793° N, 8.8017° E is the result
+        let sights_bremen_1000 = graph.get_sights_in_area(53.0793, 8.8017, 1000.0);
+        assert_eq!(sights_bremen_1000.len(), 452, "Bremen doesn't have the correct number of sights");
+    } else if common::PATH.0.contains("stg") {
+        //when you google "stuttgart lat long" then 48.7758° N, 9.1829° E is the result
+        let sights_stg_1000 = graph.get_sights_in_area(48.7758, 9.1829, 1000.0);
+        assert_eq!(sights_stg_1000.len(), 350, "Stuttgart doesn't have the correct number of sights");
+    }
 }
