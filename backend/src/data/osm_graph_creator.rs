@@ -6,9 +6,11 @@ use std::io::{Write, BufWriter};
 use crossbeam::thread;
 use serde::Deserialize;
 use std::time::{Instant};
+use geoutils::Location;
+use itertools::Itertools;
 use log::{info, error, trace, debug};
 use osmpbf::{Element, BlobReader, BlobType};
-use crate::data::graph::{calc_dist, get_nearest_node, Category, Edge, Graph, Node as GraphNode, Node, Sight};
+use crate::data::graph::{get_nearest_node, Category, Edge, Graph, Node as GraphNode, Node, Sight};
 
 const SIGHTS_CONFIG_PATH :&str = "./sights_config.json";
 const EDGE_CONFIG_PATH :&str = "./edge_type_config.json";
@@ -397,10 +399,15 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
         let tgt = *osm_id_to_node_id.get(&edge.osm_tgt).unwrap();
         let tgt_node = nodes.get(tgt).unwrap();
 
+        let src_loc = Location::new(src_node.lat, src_node.lon);
+        let tgt_loc = Location::new(tgt_node.lat, tgt_node.lon);
+
         let mut edge = edge;
         edge.src = src;
         edge.tgt = tgt;
-        edge.dist = calc_dist(src_node.lat, src_node.lon, tgt_node.lat, tgt_node.lon);
+        edge.dist = src_loc.distance_to(&tgt_loc)
+            .expect("Could not determine distance between edge source and target")
+            .meters() as usize
     }
 
     let time_duration = time_start.elapsed();
@@ -408,17 +415,23 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
 
     info!("Start mapping sights into graph!");
 
-    nodes.sort_unstable_by(|n1, n2|{
-        return n1.lat.total_cmp(&n2.lat);
-    });
+    let nodes_sorted_by_lat = nodes.iter()
+        .sorted_unstable_by(|n1, n2|{
+            return n1.lat.total_cmp(&n2.lat);
+        })
+        .collect_vec();
 
     // create edges between a sight and the nearest non sight node
     let mut n = 0 as f64;
     for sight in sights.iter() {
         n += 1.0;
-        let nearest_node_id = get_nearest_node(nodes, &is_sight_node, sight.lat, sight.lon);
+        let nearest_node_id = get_nearest_node(&nodes_sorted_by_lat, &is_sight_node, sight.lat, sight.lon);
         let nearest_node = &nodes[nearest_node_id];
-        let nearest_dist = calc_dist(sight.lat, sight.lon, nearest_node.lat, nearest_node.lon);
+        let sight_loc = Location::new(sight.lat, sight.lon);
+        let nearest_node_loc = Location::new(nearest_node.lat, nearest_node.lon);
+        let nearest_dist = sight_loc.distance_to(&nearest_node_loc)
+            .expect("Could not determine distance between sight and its nearest node")
+            .meters() as usize;
         let out_edge = Edge {
             osm_id: 0,
             osm_src: 0,
@@ -440,9 +453,10 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
         trace!("Progress: {}", n / (sights.len() as f64));
     }
 
-    nodes.sort_unstable_by(|n1, n2|{
-        return n1.id.cmp(&n2.id);
-    });
+    // Just create a copy and sort that by latitude, should be less expensive probably
+    // nodes.sort_unstable_by(|n1, n2|{
+    //     return n1.id.cmp(&n2.id);
+    // });
 
     let time_duration = time_start.elapsed();
     info!("Finished mapping sights into graph after {} seconds!", time_duration.as_secs());

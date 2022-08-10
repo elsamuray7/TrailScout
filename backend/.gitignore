@@ -3,3 +3,6 @@
 
 # Ignore graph files generated from OSM data
 *.fmi
+
+# IntelliJ related stuff
+runConfigurations.xml
