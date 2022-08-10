@@ -276,7 +276,6 @@ impl Graph {
         for i in (last_src + 1) as usize..=graph.num_nodes {
             graph.offsets[i] = graph.num_edges;
         }
-
         Ok(graph)
     }
 
