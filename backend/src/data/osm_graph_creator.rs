@@ -42,7 +42,7 @@ struct EdgeTypeConfig {
 #[derive(Deserialize)]
 struct EdgeTypeMap {
     edge_type: String,
-    tag: Tag
+    tags: Vec<Tag>,
 }
 
 //read config at SIGHTS_CONFIG_PATH and return it
@@ -86,7 +86,7 @@ pub fn create_fmi_graph(in_graph: &String, out_graph: &String)-> Result<(), io::
 pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges: &mut Vec<Edge>, sights: &mut Vec<Sight>) -> Result<(), io::Error> {
 
     let sight_config_orig = get_sights_config();
-    //let edge_type_config = get_edge_type_config();
+    let edge_type_config_orig = get_edge_type_config();
 
     let reader = BlobReader::from_path(osmpbf_file_path)?;    
 
@@ -111,6 +111,7 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
             info!("optional Features: {:?}", header.optional_features());
         } else if blob_type == BlobType::OsmData {
             let sight_config = &sight_config_orig;
+            let edge_type_config = &edge_type_config_orig;
             let thread_result = s.spawn(move |d| {
                 let data = blob.to_primitiveblock().unwrap();
                 let mut result = (Vec::<GraphNode>::new(), Vec::<Edge>::new(), Vec::<Sight>::new());
@@ -303,32 +304,41 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
                         },
                         Element::Way(w) => {
                             // TODO way id; check way tags
-                            let mut way_ref_iter = w.refs();
-                            let mut osm_src = way_ref_iter.next().unwrap() as usize;
-                            for node_id  in way_ref_iter {
-                                // undirected graph, create in and out edges
-                                let osm_tgt = node_id as usize;
-                                let out_edge = Edge {
-                                    osm_id: w.id() as usize,
-                                    osm_src: osm_src,
-                                    osm_tgt: osm_tgt,
-                                    src: 0,
-                                    tgt: 0,
-                                    dist: 0
-                                };
-                                result.1.push(out_edge);
+                            let way_tags = w.tags();
+                            for (key, value) in way_tags {
+                                for et_tag_map in &edge_type_config.edge_type_tag_map {
+                                    for tag in &et_tag_map.tags {
+                                        if key == tag.key && value == tag.value {
+                                            let mut way_ref_iter = w.refs();
+                                            let mut osm_src = way_ref_iter.next().unwrap() as usize;
+                                            for node_id  in way_ref_iter {
+                                                // undirected graph, create in and out edges
+                                                let osm_tgt = node_id as usize;
+                                                let out_edge = Edge {
+                                                    osm_id: w.id() as usize,
+                                                    osm_src: osm_src,
+                                                    osm_tgt: osm_tgt,
+                                                    src: 0,
+                                                    tgt: 0,
+                                                    dist: 0
+                                                };
+                                                result.1.push(out_edge);
 
-                                let in_edge = Edge {
-                                    osm_id: w.id() as usize,
-                                    osm_src: osm_tgt,
-                                    osm_tgt: osm_src,
-                                    src: 0,
-                                    tgt: 0,
-                                    dist: 0
-                                };
-                                result.1.push(in_edge);
+                                                let in_edge = Edge {
+                                                    osm_id: w.id() as usize,
+                                                    osm_src: osm_tgt,
+                                                    osm_tgt: osm_src,
+                                                    src: 0,
+                                                    tgt: 0,
+                                                    dist: 0
+                                                };
+                                                result.1.push(in_edge);
 
-                                osm_src = osm_tgt;
+                                                osm_src = osm_tgt;
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         },
                         Element::Relation(r) => {},
