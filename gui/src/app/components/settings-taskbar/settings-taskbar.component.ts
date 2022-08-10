@@ -106,7 +106,7 @@ export class SettingsTaskbarComponent implements OnInit {
       "area": {
         "lat": this.mapService.getCoordniates().lat,
         "lon": this.mapService.getCoordniates().lng,
-        "radius": this.mapService.getRadius()
+        "radius": this.mapService.getRadius() * 1000
       },
       "user_prefs": {
         "categories": categories,
