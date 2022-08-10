@@ -359,7 +359,7 @@ impl Graph {
             .filter(|sight| reachable_nodes.contains(self.get_node(sight.node_id)))
             .map(|sight| (sight.node_id, sight))
             .collect();
-        debug!("Found {} sights within the given area (of a total of {} sights)",
+        debug!("Found {} reachable sights within the given area (of a total of {} sights)",
             sights_in_area.len(), self.sights.len());
 
         sights_in_area
