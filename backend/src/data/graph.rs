@@ -273,8 +273,12 @@ impl Graph {
 
             graph.edges.push(edge);
         }
-        graph.offsets[graph.num_nodes] = graph.num_edges;
-
+        //this while is needed when the last nodes don't have any edges and therefore never get an offset assigned
+        let mut i = graph.num_nodes;
+        while graph.offsets[i] == 0 && i != usize::MAX {
+            graph.offsets[i] = graph.num_edges;
+            i -= 1;
+        }
         Ok(graph)
     }
 

@@ -1,5 +1,3 @@
-use std::time::Instant;
-use itertools::assert_equal;
 use log::info;
 use once_cell::sync::Lazy;
 use trailscout_lib::data::graph::Graph;
