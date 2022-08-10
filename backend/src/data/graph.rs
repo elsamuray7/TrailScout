@@ -6,9 +6,10 @@ use std::hash::{Hash, Hasher};
 use std::io::{BufRead, BufReader};
 use std::num::{ParseFloatError, ParseIntError};
 use geoutils::{Location, Distance};
-use log::info;
+use log::{info, trace};
 use serde::{Serialize};
 use serde_enum_str::{Deserialize_enum_str, Serialize_enum_str};
+use pathfinding::prelude::*;
 
 /// Bounding box of a circular area around a coordinate
 struct BoundingBox {
@@ -311,8 +312,7 @@ impl Graph {
         out_edges.iter()
             .filter(|&edge| {
                 let tgt_node = self.get_node(edge.tgt);
-                // TODO check whether target node lies in area
-                true
+                (calc_dist(lat ,lon, tgt_node.lat, tgt_node.lon) as f64) < radius
             })
             .collect()
     }
@@ -320,6 +320,19 @@ impl Graph {
     /// Get all sights within a circular area, specified by `radius' (in meters), around a given coordinate
     /// (latitude / longitude)
     pub fn get_sights_in_area(&self, lat: f64, lon: f64, radius: f64) -> HashMap<usize, &Sight> {
+        let successors = |node: &Node|
+            self.get_outgoing_edges_in_area(node.id, lat, lon, radius)
+                .into_iter()
+                .map(|edge| (self.get_node(edge.tgt), edge.dist))
+                .collect::<Vec<(&Node, usize)>>();
+
+        let root_id = self.get_nearest_node(lat, lon);
+        let reachable_nodes: HashSet<&Node> = dijkstra_all(
+            &self.get_node(root_id),
+            |node| successors(node))
+            .into_keys()
+            .collect();
+
         //estimate bounding box with 111111 meters = 1 longitude degree
         //use binary search to find the range of elements that should be considered
         let lower_bound = binary_search_sights_vector(&self.sights, lat - radius / 111111.0);
@@ -334,6 +347,14 @@ impl Graph {
             .filter(|sight| {
                 let location = Location::new(sight.lat, sight.lon);
                 return center.is_in_circle(&location, Distance::from_meters(radius)).unwrap();
+            })
+            .filter(|sight| {
+                if reachable_nodes.contains(self.get_node(sight.node_id)) {
+                    true
+                } else {
+                    trace!("Detected unreachable sight: {}", sight.node_id);
+                    false
+                }
             })
             .map(|sight| (sight.node_id, sight))
             .collect()
@@ -451,5 +472,55 @@ impl From<ParseIntError> for ParseError {
 impl From<ParseFloatError> for ParseError {
     fn from(err: ParseFloatError) -> Self {
         Self::ParseFloat(err)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use pathfinding::prelude::dijkstra;
+    use rand::{Rng, thread_rng};
+    use crate::data::graph::{Graph, Node};
+
+    #[test]
+    fn test_reverse_edges() {
+        let graph = Graph::parse_from_file("./osm_graphs/bremen-latest.fmi")
+            .expect("Failed to parse graph file");
+
+        let mut rng = thread_rng();
+
+        let successors = |node: &Node|
+            graph.get_outgoing_edges(node.id)
+                .into_iter()
+                .map(|edge| (graph.get_node(edge.tgt), edge.dist))
+                .collect::<Vec<(&Node, usize)>>();
+
+        for round in 0..50 {
+            println!("Round {} / {}", round, 50);
+
+            let rand_src = rng.gen_range(0..graph.num_nodes);
+            let rand_tgt = rng.gen_range(0..graph.num_nodes);
+
+            let dijkstra_result = dijkstra(&graph.get_node(rand_src),
+                                           |node| successors(node),
+                                           |node| node.id == rand_tgt);
+            let rev_dijkstra_result = dijkstra(&graph.get_node(rand_tgt),
+                                               |node| successors(node),
+                                               |node| node.id == rand_src);
+
+            match dijkstra_result {
+                Some((_, dist)) => {
+                    println!("Route from {} to {} exists", rand_src, rand_tgt);
+                    assert!(rev_dijkstra_result.is_some(),
+                            "Route between {} and {} is directed", rand_src, rand_tgt);
+                    let (_, rev_dist) = rev_dijkstra_result.unwrap();
+                    assert_eq!(dist, rev_dist, "Distances do not match: {} vs. {}", dist, rev_dist);
+                },
+                None => {
+                    println!("No route from {} to {}", rand_src, rand_tgt);
+                    assert!(rev_dijkstra_result.is_none(),
+                            "Route between {} and {} is directed", rand_tgt, rand_src);
+                }
+            }
+        }
     }
 }
