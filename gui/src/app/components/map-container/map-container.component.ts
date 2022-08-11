@@ -192,7 +192,8 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
           lat: section.sight.lat,
           lng: section.sight.lon
         }
-        var newMarker = new L.Marker(latlng).addTo(this.routeSightLayer);
+        const icon = this.getIcon(section.sight);
+        var newMarker = new L.Marker(latlng, {icon: icon}).addTo(this.routeSightLayer);
         this.routeSightLayer.addTo(this.map);
       }
     });
