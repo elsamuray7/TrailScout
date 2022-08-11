@@ -11,7 +11,7 @@ use std::time::Instant;
 /// Initial temperature
 const T_0: f64 = 0.1;
 /// Multiplier for iterations on a temperature
-const B: usize = 3000;
+const B: usize = 100;
 /// Factor by which the temperature is cooled down
 const ALPHA: f64 = 0.999;
 /// Maximum allowed computation time
@@ -385,6 +385,7 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
             i += 1;
             log::trace!("Iteration {} / {}", i, i_iter);
 
+            let mut replace_solution = true;
             if old_score > new_score {
                 let score_dif = old_score - new_score;
                 let r = rng.gen::<f64>();
@@ -392,17 +393,20 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
                 if r >= heur {
                     log::trace!("Continue with next iteration (r-value: {} >= heuristic: {})",
                         r, heur);
-                    continue;
+                    replace_solution = false;
                 }
             }
-            old_score = new_score;
-            x = y;
 
-            if new_score > f_best {
-                f_best = new_score;
-                x_best = x.clone();
-                log::trace!("Updated best score (new score: {} > best score so far: {})",
+            if replace_solution {
+                old_score = new_score;
+                x = y;
+
+                if new_score > f_best {
+                    f_best = new_score;
+                    x_best = x.clone();
+                    log::trace!("Updated best score (new score: {} > best score so far: {})",
                     new_score, f_best);
+                }
             }
 
             if i == i_iter {
