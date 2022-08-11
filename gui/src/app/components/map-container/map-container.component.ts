@@ -3,6 +3,8 @@ import * as L from 'leaflet';
 import { GeoSearchControl, OpenStreetMapProvider } from 'leaflet-geosearch';
 import { LatLngExpression } from 'leaflet';
 import {Category} from "../../data/Category";
+import * as Icons from './icons';
+import { Sight } from 'src/app/data/Sight';
 import { RouteResponse } from 'src/app/services/route.service';
 
 const iconRetinaUrl = 'assets/marker-icon-2x.png';
@@ -125,7 +127,10 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
         lat: sight.lat,
         lng: sight.lon
       }
-      var newMarker = new L.Marker(latlng).addTo(newLayer);
+      const icon = this.getIcon(sight);
+
+      let newMarker = new L.Marker(latlng, {icon: icon,}).addTo(newLayer);
+      newMarker.bindPopup(sight.category,{closeButton: false});
       newLayer.addTo(this.map);
     });
     this.activeLayers.set(category.name, newLayer);
@@ -137,6 +142,29 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
     }
   }
 
+  getIcon(sight: Sight) {
+    const cat = sight.category;
+    switch(cat) {
+      case "Sightseeing":
+        return Icons.sightsIcon;
+      case "Nightlife":
+        return Icons.nightIcon;
+      case "Restaurants":
+        return Icons.restaurantIcon;
+      case "Shopping":
+        return Icons.shoppingIcon;
+      case "PicnicBarbequeSpot":
+        return Icons.grillIcon;
+      case "MuseumExhibition":
+        return Icons.museumIcon;
+      case "Nature":
+        return Icons.natureIcon;
+      case "Swimming":
+        return Icons.seaIcon;
+      default:
+        return iconDefault;
+    }
+  }
   drawRoute(_route: RouteResponse) {
     this.routePoly?.removeFrom(this.map);
     var r = 55;
@@ -162,7 +190,9 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
           lat: section.sight.lat,
           lng: section.sight.lon
         }
-        var newMarker = new L.Marker(latlng).addTo(this.routeSightLayer);
+        const icon = this.getIcon(section.sight);
+        var newMarker = new L.Marker(latlng, {icon: icon}).addTo(this.routeSightLayer);
+        newMarker.bindPopup(section.sight.category,{closeButton: false});
         this.routeSightLayer.addTo(this.map);
       }
     });
