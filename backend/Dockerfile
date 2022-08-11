@@ -4,12 +4,14 @@ FROM rust:1.62 as build
 COPY . .
 RUN cargo build --release
 
-FROM debian:buster-slim
+FROM debian:11.4-slim
 # copy the build artifact from the build stage
 COPY --from=build ./target/release/trailscout_service ./
 COPY ./osm_graphs ./osm_graphs
 COPY config.json config.json
 COPY sights_config.json sights_config.json
+COPY edge_type_config.json edge_type_config.json
+
 
 EXPOSE 8080
 

@@ -4,6 +4,6 @@
     "log_level": "debug",
     "graph_file_path": "./osm_graphs/bremen-latest.fmi",
     "source_file": "./osm_graphs/bremen-latest.osm.pbf",
-    "routing_algorithm": "Greedy"
+    "routing_algorithm": "DerAllerbesteste"
 }
 
