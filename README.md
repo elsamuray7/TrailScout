@@ -31,9 +31,9 @@ Download Repository:
 
 Um das Projekt in Production Environment auszuführen:
 
-`docker compose -f docker-compose.yml -f production.yml up`
+`sudo docker compose -f docker-compose.yml -f production.yml up`
 
-bzw. um es auch neu zu bauen `docker compose -f docker-compose.yml -f production.yml up --build`
+bzw. um es auch neu zu bauen `sudo docker compose -f docker-compose.yml -f production.yml up --build`
 
 
 ## Graph Erstellung
