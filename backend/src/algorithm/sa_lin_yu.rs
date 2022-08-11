@@ -3,9 +3,12 @@ use chrono::{DateTime, Utc};
 use itertools::Itertools;
 use pathfinding::prelude::*;
 use rand::prelude::*;
-use crate::algorithm::{_Algorithm, AlgorithmError, Area, Route, RouteSector, ScoreMap, Sector, UserPreferences};
+use crate::algorithm::{_Algorithm, AlgorithmError, Area, Route, RouteSector, ScoreMap, Sector, USER_PREF_MAX, UserPreferences};
 use crate::data::graph::{Category, Graph, Node, Sight};
 use std::time::Instant;
+
+/// Simulated Annealing internal user preference to score mapping
+const USER_PREF_TO_SCORE: [usize; USER_PREF_MAX + 1] = [0, 1, 2, 4, 8, 16];
 
 // Constant parameters
 /// Initial temperature
@@ -34,12 +37,12 @@ fn compute_scores(sights: &HashMap<usize, &Sight>, user_prefs: UserPreferences) 
         sights.iter()
             .filter(|(_, sight)| sight.category == category_enum)
             .for_each(|(&sight_id, _)| {
-                scores.insert(sight_id, category.pref);
+                scores.insert(sight_id, USER_PREF_TO_SCORE[category.get_valid_pref()]);
             });
     }
     for sight in &user_prefs.sights {
         // TODO implement check whether SightPref really corresponds to sight
-        scores.insert(sight.id, sight.pref);
+        scores.insert(sight.id, USER_PREF_TO_SCORE[sight.get_valid_pref()]);
     }
     log::debug!("Computed scores: {:?}", &scores);
 
@@ -360,6 +363,7 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
 
         let mut x = randomized_sights;
         let mut old_score = self.get_total_score(&x)?;
+        log::debug!("Score of initial solution: {}", old_score);
         let mut x_best = x.clone();
         let mut f_best = old_score;
 
@@ -424,7 +428,7 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
             }
         }
 
-        log::debug!("Finished simulated annealing");
+        log::debug!("Finished simulated annealing (final score: {})", self.get_total_score(&x_best)?);
 
         self.build_route(x_best)
     }
