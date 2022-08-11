@@ -10,7 +10,7 @@ extern crate log;
 pub fn main() -> Result<(), io::Error> {
     //initializing the logger
     let env_logger = Env::default()
-    .filter_or("TRAILSCOUT_LOG_LEVEL", "trace")
+    .filter_or("TRAILSCOUT_LOG_LEVEL", "debug")
     .write_style_or("TRAILSCOUT_LOG_STYLE", "always");
     env_logger::init_from_env(env_logger);
     info!("starting up");
