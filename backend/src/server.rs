@@ -1,20 +1,21 @@
+mod server_utils;
+
 use actix_cors::Cors;
-use actix_web::{App, get, http, HttpResponse, HttpServer, post, Responder, Result, web};
-use actix_files;
+use actix_web::{App, http, HttpResponse, HttpServer, post, Result, web};
 use chrono::DateTime;
 use serde::Deserialize;
-use serde_json::json;
-use std::{env, path::PathBuf};
-use std::any::Any;
-use std::str;
+use std::{env, str};
 use std::fs;
-use log::{info, debug, error};
+use log::{debug, error};
 use serde_json;
 
-use trailscout_lib::algorithm::{Algorithm, AlgorithmError};
+use trailscout_lib::algorithm::Algorithm;
 use trailscout_lib::data::graph::{Graph, Sight};
-use trailscout_lib::server_utils::requests::{RouteProviderReq, RouteProviderRes, SightsRequest};
-use trailscout_lib::server_utils::custom_errors::{TailScoutError};
+use trailscout_lib::data::osm_graph_creator;
+use trailscout_lib;
+use crate::server_utils::custom_errors::TrailScoutError;
+use crate::server_utils::requests::{RouteProviderReq, RouteProviderRes, SightsRequest};
+
 
 ///Location of the application config file
 const CONFIG_PATH :&str = "./config.json";
@@ -33,6 +34,7 @@ struct Config {
     log_level: String,
     graph_file_path : String,
     routing_algorithm: String,
+    source_file: String,
 }
 
 ///read config.json at CONFIG_PATH and return it
@@ -51,7 +53,7 @@ fn get_config() -> Config {
 
 ///Responds to post request asking for sights
 #[post("/sights")]
-async fn post_sights(request:  web::Json<SightsRequest>, data: web::Data<AppState>) -> Result<HttpResponse, TailScoutError> {
+async fn post_sights(request:  web::Json<SightsRequest>, data: web::Data<AppState>) -> Result<HttpResponse, TrailScoutError> {
 
     debug!("Got Sights Request for lat={}, lon={} and radius={}.",
         request.lat, request.lon, request.radius);
@@ -67,7 +69,7 @@ async fn post_sights(request:  web::Json<SightsRequest>, data: web::Data<AppStat
 
 ///Responds to post request asking for routing
 #[post("/route")]
-async fn post_route(request:  web::Json<RouteProviderReq>, data: web::Data<AppState>) -> Result<HttpResponse, TailScoutError> {
+async fn post_route(request:  web::Json<RouteProviderReq>, data: web::Data<AppState>) -> Result<HttpResponse, TrailScoutError> {
     debug!("Received route request");
 
     let route_request = request.into_inner();
@@ -95,12 +97,18 @@ async fn post_route(request:  web::Json<RouteProviderReq>, data: web::Data<AppSt
         Err(error) => {
             //Mein intellij mekert hier wegen "doesn't implement Display". Geht aber -> intellij bug?
             error!("Error in post_route: {}",error);
-            return Err(TailScoutError::InternalError {message: format!("Error in post_route: {}",error)})
+            return Err(TrailScoutError::InternalError {message: format!("Error in post_route: {}", error)})
         }
 
     };
 
-    let route = algo.compute_route();
+    let route = match algo.compute_route() {
+        Ok(route) => route,
+        Err(error) => {
+            error!("Error in post_route: {}", error);
+            return Err(TrailScoutError::InternalError { message: format!("Error in post_route: {}", error) })
+        }
+    };
     debug!("Computed route with {}. Sending response...", &data.config.routing_algorithm);
 
     Ok(HttpResponse::Ok().json(RouteProviderRes {
@@ -128,6 +136,9 @@ async fn main() -> std::io::Result<()> {
     env::set_var("RUST_BACKTRACE", "1");
     env_logger::init();
 
+    //If Source File exists but FMI graph does not, build it
+    osm_graph_creator::checked_create_fmi_graph(&config.graph_file_path,
+                                                &config.source_file)?;
 
     debug!("Starting to parsed graph from: {}", &config.graph_file_path);
     let graph = Graph::parse_from_file(&config.graph_file_path).expect("Error parsing graph from file");

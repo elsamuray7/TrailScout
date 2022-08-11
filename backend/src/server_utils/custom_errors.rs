@@ -4,7 +4,7 @@ use derive_more::{Display, Error};
 
 ///Custom Error for TrailScout
 #[derive(Debug, Display, Error)]
-pub enum TailScoutError {
+pub enum TrailScoutError {
     #[display(fmt = "{}", message)]
     InternalError {
         message:String
@@ -17,7 +17,7 @@ pub enum TailScoutError {
 }
 
 
-impl ResponseError for TailScoutError {
+impl ResponseError for TrailScoutError {
     fn status_code(&self) -> StatusCode {
         match *self {
             Self::InternalError { .. } => StatusCode::INTERNAL_SERVER_ERROR,

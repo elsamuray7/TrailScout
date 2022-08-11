@@ -1,11 +1,15 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::Formatter;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io::{BufRead, BufReader};
 use std::num::{ParseFloatError, ParseIntError};
-use serde::{Serialize};
+use geoutils::{Distance, Location};
+use itertools::Itertools;
+use log::{debug, trace};
+use serde::Serialize;
 use serde_enum_str::{Deserialize_enum_str, Serialize_enum_str};
+use pathfinding::prelude::*;
 
 /// Bounding box of a circular area around a coordinate
 struct BoundingBox {
@@ -90,6 +94,7 @@ impl Hash for Node {
 }
 
 /// A directed and weighted graph edge
+#[derive(Clone, Copy)]
 pub struct Edge {
     pub(crate) osm_id: usize, // TODO delete later!
     pub osm_src: usize,
@@ -100,6 +105,21 @@ pub struct Edge {
     pub tgt: usize,
     /// The edge's weight, i.e., the distance between its source and target
     pub dist: usize,
+}
+
+impl PartialEq<Self> for Edge {
+    fn eq(&self, other: &Self) -> bool {
+        self.src == other.src && self.tgt == other.tgt
+    }
+}
+
+impl Eq for Edge {}
+
+impl Hash for Edge {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.src.hash(state);
+        self.tgt.hash(state);
+    }
 }
 
 /// A sight node mapped on its nearest node
@@ -128,42 +148,28 @@ pub struct Graph {
 }
 
 impl Graph {
-    /// Create a new graph without any nodes, edges or sights
-    pub fn new() -> Self {
-        Self {
-            nodes: Vec::new(),
-            edges: Vec::new(),
-            offsets: Vec::new(),
-            num_nodes: 0,
-            num_edges: 0,
-            sights: Vec::new(),
-            num_sights: 0
-        }
-    }
-
     /// Parse graph data (in particular, nodes, edges and sights) from a file and create a new
     /// graph from it
     pub fn parse_from_file(graph_file_path: &str) -> Result<Self, ParseError> {
-        let mut graph = Graph::new();
         let graph_file = File::open(graph_file_path)?;
         let graph_reader = BufReader::new(graph_file);
 
         let mut lines = graph_reader.lines();
-        let mut line_no = 0;
+        let mut line_no = 0_usize;
 
-        graph.num_nodes = lines.next()
+        let num_nodes: usize = lines.next()
             .expect("Unexpected EOF while parsing number of nodes")?
             .parse()?;
-        graph.num_sights = lines.next()
+        let num_sights: usize = lines.next()
             .expect("Unexpected EOF while parsing number of sights")?
             .parse()?;
-        graph.num_edges = lines.next()
+        let num_edges: usize = lines.next()
             .expect("Unexpected EOF while parsing number of edges")?
             .parse()?;
         line_no += 3;
 
-        graph.nodes.reserve_exact(graph.num_nodes);
-        for i in 0..graph.num_nodes {
+        let mut nodes = Vec::with_capacity(num_nodes);
+        for i in 0..num_nodes {
             let line = lines.next()
                 .expect(&format!("Unexpected EOF while parsing nodes in line {}", line_no))?;
             let mut split = line.split(" ");
@@ -183,11 +189,11 @@ impl Graph {
                     .parse()?,
                 info: "".to_string()
             };
-            graph.nodes.push(node);
+            nodes.push(node);
         }
 
-        graph.sights.reserve_exact(graph.num_sights);
-        for i in 0..graph.num_sights {
+        let mut sights = Vec::with_capacity(num_sights);
+        for _ in 0..num_sights {
             let line = lines.next()
                 .expect(&format!("Unexpected EOF while parsing nodes in line {}", line_no))?;
             let mut split = line.split(" ");
@@ -213,14 +219,14 @@ impl Graph {
                     .parse()
                     .unwrap(),
             };
-            graph.sights.push(sight);
+            sights.push(sight);
         }
 
-        let mut last_src: i64 = -1;
+        let mut next_src: usize = 0;
         let mut offset: usize = 0;
-        graph.edges.reserve_exact(graph.num_edges);
-        graph.offsets.resize(graph.num_nodes + 1, 0);
-        for _ in 0..graph.num_edges {
+        let mut edges = Vec::with_capacity(num_edges);
+        let mut offsets = vec![0; num_nodes + 1];
+        for _ in 0..num_edges {
             let line = lines.next()
                 .expect(&format!("Unexpected EOF while parsing edges in line {}", line_no))?;
             let mut split = line.split(" ");
@@ -244,19 +250,29 @@ impl Graph {
                     .parse()?,
             };
 
-            if edge.src as i64 > last_src {
-                for j in (last_src + 1) as usize..=edge.src {
-                    graph.offsets[j] = offset;
+            if edge.src >= next_src {
+                for j in next_src..=edge.src {
+                    offsets[j] = offset;
                 }
-                last_src = edge.src as i64;
+                next_src = edge.src + 1;
             }
             offset += 1;
 
-            graph.edges.push(edge);
+            edges.push(edge);
         }
-        graph.offsets[graph.num_nodes] = graph.num_edges;
+        for i in next_src..=num_nodes {
+            offsets[i] = num_edges;
+        }
 
-        Ok(graph)
+        Ok(Self {
+            nodes,
+            edges,
+            offsets,
+            num_nodes,
+            num_edges,
+            sights,
+            num_sights,
+        })
     }
 
     /// Returns a reference to the vector containing all nodes in this graph
@@ -269,76 +285,152 @@ impl Graph {
         &self.nodes[node_id]
     }
 
-    /// Get the nearest node to a given coordinate (latitude / longitude)
+    /// Get the nearest non-sight reachable graph node to a given coordinate (latitude / longitude)
     pub fn get_nearest_node(&self, lat: f64, lon: f64) -> usize {
-        // TODO compute nearest node to given coordinate
-        let mut min_dist = usize::MAX;
-        let mut min_id = self.nodes[0].id;
-        for (id, node) in self.nodes.iter().enumerate() {
-            let dist = calc_dist(lat, lon, node.lat, node.lon);
-            if dist < min_dist {
-                min_dist = dist;
-                min_id = id;
-            }
-        }
-        min_id
+        let nodes_sorted_by_lat = self.nodes.iter()
+            .sorted_unstable_by(|node1, node2| node1.lat.total_cmp(&node2.lat))
+            .collect_vec();
+        let id_filter = self.sights.iter().map(|sight| sight.node_id)
+            //.merge(self.nodes.iter().filter(|node| self.get_degree(node.id) > 0)
+            //    .map(|node| node.id))
+            .collect();
+        get_nearest_node(&nodes_sorted_by_lat, &id_filter, lat, lon)
     }
 
     /// Get the number of outgoing edges of the node with id `node_id`
     pub fn get_degree(&self, node_id: usize) -> usize {
-        self.offsets[node_id+1] - self.offsets[node_id]
+        self.offsets[node_id + 1] - self.offsets[node_id]
     }
 
     /// Get all outgoing edges of a particular node
     pub fn get_outgoing_edges(&self, node_id: usize) -> &[Edge] {
-        &self.edges[self.offsets[node_id]..self.offsets[node_id+1]]
+        &self.edges[self.offsets[node_id]..self.offsets[node_id + 1]]
     }
 
     /// Get all outgoing edges of a particular node where the edge target lies within given area
     pub fn get_outgoing_edges_in_area(&self, node_id: usize, lat: f64, lon: f64, radius: f64) -> Vec<&Edge> {
+        let center = Location::new(lat, lon);
         let out_edges = self.get_outgoing_edges(node_id);
         out_edges.iter()
             .filter(|&edge| {
                 let tgt_node = self.get_node(edge.tgt);
-                // TODO check whether target node lies in area
-                true
+                let tgt_loc = Location::new(tgt_node.lat, tgt_node.lon);
+                // Use haversine distance here for more efficiency
+                center.haversine_distance_to(&tgt_loc).meters() <= radius
             })
             .collect()
     }
 
-    /// Get all sights within a circular area, specified by `radius`, around a given coordinate
+    /// Get all sights within a circular area, specified by `radius` (in meters), around a given coordinate
     /// (latitude / longitude)
     pub fn get_sights_in_area(&self, lat: f64, lon: f64, radius: f64) -> HashMap<usize, &Sight> {
-        /*
-        TODO
-            - get bbox of area around coordinate
-            - get slice of sights within min/max latitude of bbox, e.g. with binary search
-            (precondition: sights sorted by latitude, should already be the case in graph
-            creator output file)
-            - create mutable vector with fetched sights
-            - sort sights by longitude
-            - get slice of sights within min/max longitude of bbox, e.g. with binary search
-            - return new vector with fetched sights
-         */
-        self.sights.iter()
+        debug!("Computing sights in area: lat: {}, lon: {}, radius: {}", lat, lon, radius);
+
+        let successors = |node: &Node|
+            self.get_outgoing_edges_in_area(node.id, lat, lon, radius)
+                .into_iter()
+                .map(|edge| (self.get_node(edge.tgt), edge.dist))
+                .collect::<Vec<(&Node, usize)>>();
+
+        // Get all nodes that are reachable from the node with the lowest distance to the center
+        let center_id = self.get_nearest_node(lat, lon);
+        let reachable_nodes: HashSet<&Node> = dijkstra_all(
+            &self.get_node(center_id),
+            |node| successors(node))
+            .into_keys()
+            .collect();
+
+        //estimate bounding box with 111111 meters = 1 longitude degree
+        //use binary search to find the range of elements that should be considered
+        let lower_bound = binary_search_sights_vector(&self.sights, lat - radius / 111111.0);
+        let upper_bound = binary_search_sights_vector(&self.sights, lat + radius / 111111.0);
+
+        let slice = &self.sights[lower_bound..upper_bound];
+
+        let center = Location::new(lat, lon);
+        let radius = Distance::from_meters(radius);
+        //iterate through the slice and check every sight whether it's in the target circle
+        let sights_in_area: HashMap<usize, &Sight> = slice.iter()
+            .filter(|sight| {
+                let location = Location::new(sight.lat, sight.lon);
+                location.is_in_circle(&center, radius)
+                    .expect("Could not determine whether sight lies in given area")
+            })
+            .filter(|sight| reachable_nodes.contains(self.get_node(sight.node_id)))
             .map(|sight| (sight.node_id, sight))
-            .collect()
+            .collect();
+        debug!("Found {} reachable sights within the given area (of a total of {} sights)",
+            sights_in_area.len(), self.sights.len());
+
+        sights_in_area
     }
 }
 
-/// Calculates the distance between two given coordinates (latitude / longitude) in metres. TODO make metre changeable later?
-pub(crate) fn calc_dist(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> usize {
-    let r: f64 = 6371000.0;
+/// Helper method to estimate index bounds within the sights vector for latitude coordinates
+fn binary_search_sights_vector(sights: &Vec<Sight>, target_latitude: f64) -> usize {
+    let result = sights.binary_search_by(|sight|
+        sight.lat.total_cmp(&target_latitude));
+    result.unwrap_or_else(|index| index)
+}
 
-    let d_lat: f64 = (lat2 - lat1).to_radians();
-    let d_lon: f64 = (lon2 - lon1).to_radians();
-    let lat1: f64 = lat1.to_radians();
-    let lat2: f64 = lat2.to_radians();
+/// Get the nearest node (that is not in `id_filter`) to a given coordinate (latitude / longitude).
+/// The function expects a node vector sorted by latitude.
+pub fn get_nearest_node(nodes_sorted_by_lat: &Vec<&Node>, id_filter: &HashSet<usize>, lat: f64, lon: f64) -> usize {
+    // Location to find the nearest node for
+    let location = Location::new(lat, lon);
 
-    let a: f64 = ((d_lat/2.0).sin()) * ((d_lat/2.0).sin()) + ((d_lon/2.0).sin()) * ((d_lon/2.0).sin()) * (lat1.cos()) * (lat2.cos());
-    let c: f64 = 2.0 * ((a.sqrt()).atan2((1.0-a).sqrt()));
+    // Search the index of the node with the closest latitude coordinate within the list of nodes
+    let result = nodes_sorted_by_lat.binary_search_by(|n| n.lat.total_cmp(&lat));
+    let found_index = result.unwrap_or_else(|index| index);
+    debug!("Starting to search for nearest node at index: {} for latitude: {}", found_index, lat);
 
-    (r * c) as usize
+    let mut min_dist = Distance::from_meters(f64::MAX);
+    let mut min_id = 0;
+
+    // Iterate over the left and right neighbour indices to determine the nearest node
+    let mut left_index = found_index;
+    let mut right_index = found_index;
+    loop {
+        for i in [left_index, right_index] {
+            let node = nodes_sorted_by_lat[i];
+
+            // If the distance with the current nodes longitude set to the longitude of the
+            // location is greater than the minimum distance so far, abort and output the node
+            // with the found distance
+            let node_loc_lon_aligned = Location::new(node.lat, location.longitude());
+            // Use haversine distance here for more efficiency
+            let minimum_possible_distance = location.haversine_distance_to(&node_loc_lon_aligned);
+            if minimum_possible_distance.meters() >= min_dist.meters() {
+                trace!("Minimum possible distance: {} for node: {} greater/equal to minimum distance so far: {} for node: {}",
+                minimum_possible_distance, node.id, min_dist, min_id);
+                return min_id;
+            }
+
+            // If the node is not a sight and has a smaller distance to the location than the
+            // minimum distance found so far, update the minimum distance and the id of the nearest
+            // node
+            if !id_filter.contains(&node.id) {
+                let node_loc = Location::new(node.lat, node.lon);
+                // Use haversine distance here for more efficiency
+                let dist = location.haversine_distance_to(&node_loc);
+                if dist.meters() < min_dist.meters() {
+                    trace!("Updating minimum distance so far from: {} for node: {} to: {} for node: {}",
+                    min_dist, min_id, dist, node.id);
+                    min_dist = dist;
+                    min_id = node.id;
+                }
+            }
+        }
+
+        if left_index == 0 && right_index == nodes_sorted_by_lat.len() - 1 {
+            break;
+        }
+
+        left_index = if left_index == 0 { 0 } else { left_index - 1 };
+        right_index = if right_index == nodes_sorted_by_lat.len() - 1 { right_index } else { right_index + 1 };
+    }
+
+    min_id
 }
 
 #[derive(Debug)]
@@ -383,5 +475,99 @@ impl From<ParseIntError> for ParseError {
 impl From<ParseFloatError> for ParseError {
     fn from(err: ParseFloatError) -> Self {
         Self::ParseFloat(err)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::collections::HashSet;
+    use std::time::Instant;
+    use geoutils::{Distance, Location};
+    use log::{debug, trace};
+    use rand::{Rng, thread_rng};
+    use crate::data::graph::{Graph, Node};
+    use crate::init_logging;
+
+    /// Baba Hotel, ich schwör!!
+    const RADISSON_BLU_HOTEL: (f64, f64) = (53.074448, 8.805105);
+
+    #[test]
+    fn test_offsets() {
+        init_logging();
+
+        let graph = Graph::parse_from_file("./tests_data/output/bremen-latest.fmi")
+            .expect("Failed to parse graph file");
+
+        let mut rng = thread_rng();
+        let rand_id = rng.gen_range(0..graph.num_nodes);
+
+        let outgoing_edges = graph.get_outgoing_edges(rand_id);
+        for edge in outgoing_edges {
+            assert_eq!(edge.src, rand_id, "Expected source: {}, got: {} via edge offsets",
+                       rand_id, edge.src);
+        }
+
+        let mut offsets_clone = graph.offsets.clone();
+        offsets_clone.sort();
+        assert_eq!(offsets_clone, graph.offsets, "Offsets are not in ascending order");
+    }
+
+    fn get_nearest_node_naive(nodes: &Vec<&Node>, id_filter: &HashSet<usize>, lat: f64, lon: f64) -> usize {
+        let location = Location::new(lat, lon);
+
+        let mut min_dist = Distance::from_meters(f64::MAX);
+        let mut min_id = 0;
+
+        for (id, node) in nodes.iter().enumerate() {
+            if !id_filter.contains(&id) {
+                let node_loc = Location::new(node.lat, node.lon);
+                let dist = location.haversine_distance_to(&node_loc);
+                if dist.meters() < min_dist.meters() {
+                    trace!("Updating minimum distance so far from: {} for node: {} to: {} for node: {}",
+                        min_dist, min_id, dist, id);
+                    min_dist = dist;
+                    min_id = id;
+                }
+            }
+        }
+
+        min_id
+    }
+
+    #[test]
+    fn test_nearest_node() {
+        init_logging();
+
+        let graph = Graph::parse_from_file("./tests_data/output/bremen-latest.fmi")
+            .expect("Failed to parse graph file");
+
+        let (lat, lon) = RADISSON_BLU_HOTEL;
+        let location = Location::new(lat, lon);
+
+        let start = Instant::now();
+        let actual = graph.get_nearest_node(lat, lon);
+        let elapsed = start.elapsed().as_millis();
+        debug!("Efficient implementation took {} ms", elapsed);
+
+        let start = Instant::now();
+        let id_filter = graph.sights.iter().map(|sight| sight.node_id)
+            //.merge(graph.nodes.iter().filter(|node| graph.get_degree(node.id) > 0)
+            //    .map(|node| node.id))
+            .collect();
+        let expected = get_nearest_node_naive(&graph.nodes.iter().collect(),
+                                              &id_filter, lat, lon);
+        let elapsed = start.elapsed().as_millis();
+        debug!("Naive implementation took {} ms", elapsed);
+
+
+        let actual_node = graph.get_node(actual);
+        let expected_node = graph.get_node(expected);
+        let actual_loc = Location::new(actual_node.lat, actual_node.lon);
+        let expected_loc = Location::new(expected_node.lat, expected_node.lon);
+        let actual_dist = location.haversine_distance_to(&actual_loc);
+        let expected_dist = location.haversine_distance_to(&expected_loc);
+
+        assert_eq!(actual, expected, "Expected nearest node: {} with dist: {}, got: {} with dist: {} from efficient implementation",
+                   expected, expected_dist, actual, actual_dist);
     }
 }

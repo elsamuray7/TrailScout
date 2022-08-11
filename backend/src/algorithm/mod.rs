@@ -1,4 +1,5 @@
 pub mod greedy;
+pub mod sa_lin_yu;
 
 use std::collections::HashMap;
 use chrono::{DateTime, Utc};
@@ -6,6 +7,7 @@ use crate::data::graph::{Graph, Node, Sight};
 use serde::{Serialize, Deserialize};
 use derive_more::{Display, Error};
 use crate::algorithm::greedy::GreedyAlgorithm;
+use crate::algorithm::sa_lin_yu::SimAnnealingLinYu;
 
 /// Type alias for a mapping from node id's to scores, where the nodes represent sights / tourist
 /// attractions
@@ -138,7 +140,11 @@ trait _Algorithm<'a> {
 
     /// Compute a route on a graph that visits tourist attractions in a specific area based on
     /// user preferences for these tourist attractions
-    fn compute_route(&self) -> Route;
+    ///
+    /// # Returns
+    /// * an `Ok` containing the computed route in case of no errors, or
+    /// * an `Err` containing an `AlgorithmError`, otherwise
+    fn compute_route(&self) -> Result<Route, AlgorithmError>;
 
     /// Returns a reference to this concrete implementation of the `_Algorithm` trait
     /// as a generic trait object
@@ -149,6 +155,7 @@ trait _Algorithm<'a> {
 
 pub enum Algorithm<'a> {
     Greedy(GreedyAlgorithm<'a>),
+    SimAnnealing(SimAnnealingLinYu<'a>),
 }
 
 impl<'a> Algorithm<'a> {
@@ -177,6 +184,8 @@ impl<'a> Algorithm<'a> {
         match algorithm_name {
             GreedyAlgorithm::ALGORITHM_NAME => Ok(Self::Greedy(GreedyAlgorithm::new(
                 graph, start_time, end_time, walking_speed_mps, area, user_prefs)?)),
+            SimAnnealingLinYu::ALGORITHM_NAME => Ok(Self::SimAnnealing(SimAnnealingLinYu::new(
+                graph, start_time, end_time, walking_speed_mps, area, user_prefs)?)),
             unknown_name => Err(AlgorithmError::UnknownAlgorithm {
                 unknown_name: unknown_name.to_string(),
             })
@@ -185,9 +194,14 @@ impl<'a> Algorithm<'a> {
 
     /// Compute a route on a graph that visits tourist attractions in a specific area based on
     /// user preferences for these tourist attractions
-    pub fn compute_route(&self) -> Route {
+    ///
+    /// # Returns
+    /// * an `Ok` containing the computed route in case of no errors, or
+    /// * an `Err` containing an `AlgorithmError`, otherwise
+    pub fn compute_route(&self) -> Result<Route, AlgorithmError> {
         match self {
             Self::Greedy(inner) => inner.as_algorithm(),
+            Self::SimAnnealing(inner) => inner.as_algorithm(),
         }.compute_route()
     }
 }
@@ -204,16 +218,21 @@ pub enum AlgorithmError {
     /// i.e., a negative time interval
     #[display(fmt = "End time is before start time")]
     NegativeTimeInterval,
+    /// Error indicating that no route between two nodes could be determined
+    #[display(fmt = "No route found from node {} to {}", from, to)]
+    NoRouteFound {
+        from: usize,
+        to: usize,
+    },
 }
 
 #[cfg(test)]
 mod test {
-    use std::path::Path;
     use chrono::{DateTime, Utc};
     use crate::algorithm::{_Algorithm, Area, RouteSector, SightCategoryPref, SightPref, UserPreferences};
     use crate::algorithm::greedy::GreedyAlgorithm;
     use crate::data::graph::{Category, Graph};
-    use crate::data::osm_graph_creator::{parse_osm_data, write_graph_file};
+    use crate::init_logging;
 
     /// Baba Hotel, ich schwör!!
     const RADISSON_BLU_HOTEL: Area = Area {
@@ -222,24 +241,12 @@ mod test {
         radius: 22.0,
     };
 
-    fn get_graph() -> std::io::Result<Graph> {
-        let pbf_path = "./osm_graphs/bremen-latest.osm.pbf";
-        let fmi_path = "./osm_graphs/bremen-latest.fmi";
-        if !Path::new(fmi_path).exists() {
-            let mut nodes = Vec::new();
-            let mut edges = Vec::new();
-            let mut sights = Vec::new();
-            parse_osm_data(pbf_path, &mut nodes, &mut edges, &mut sights)?;
-            write_graph_file(fmi_path, &mut nodes, &mut edges, &mut sights)?;
-        }
-        let graph = Graph::parse_from_file("./osm_graphs/bremen-latest.fmi")
-            .expect("Failed to parse graph file");
-        Ok(graph)
-    }
-
     #[test]
-    fn test_greedy() -> std::io::Result<()> {
-        let graph = get_graph()?;
+    fn test_greedy() {
+        init_logging();
+
+        let graph = Graph::parse_from_file("./tests_data/output/bremen-latest.fmi")
+            .expect("Failed to parse graph file");
 
         let start_time = DateTime::parse_from_rfc3339("2022-07-01T10:00:00+01:00")
             .unwrap().with_timezone(&Utc);
@@ -257,7 +264,8 @@ mod test {
                                  SightCategoryPref { name: "Nightlife".to_string(), pref: 4 }],
                 sights: vec![SightPref { id: 1274147, category: "Sightseeing".to_string(), pref: 0 }],
             }).unwrap();
-        let route = algo.compute_route();
+        let route = algo.compute_route()
+            .expect("Error during route computation");
 
         // Route should only contain sectors that include sights with categories restaurant,
         // sightseeing or nightlife
@@ -293,7 +301,5 @@ mod test {
         assert!((total_time_budget as i64) < actual_time_budget,
                 "Used time budget: {}. Actual time budget: {}.",
                 total_time_budget, actual_time_budget);
-
-        Ok(())
     }
 }

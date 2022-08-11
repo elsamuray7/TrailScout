@@ -1,5 +1,5 @@
-use crate::algorithm::{Area, Route, UserPreferences};
 use serde::{Deserialize, Serialize};
+use trailscout_lib::algorithm::{Area, Route, UserPreferences};
 
 
 ///struct to contain parameters from route request

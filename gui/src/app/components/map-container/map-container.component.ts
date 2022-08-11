@@ -5,6 +5,7 @@ import { LatLngExpression } from 'leaflet';
 import {Category} from "../../data/Category";
 import * as Icons from './icons';
 import { Sight } from 'src/app/data/Sight';
+import { RouteResponse } from 'src/app/services/route.service';
 
 const iconRetinaUrl = 'assets/marker-icon-2x.png';
 const iconUrl = 'assets/marker-icon.png';
@@ -39,6 +40,9 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
   private marker?: L.Marker;
   private circle?: L.Circle;
   private activeLayers = new Map<string, any>();
+
+  routeSightLayer: L.LayerGroup;
+  routePoly?: L.Polyline;
 
   constructor() {
   }
@@ -162,5 +166,35 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
       default:
         return iconDefault;
     }
+  }
+  drawRoute(_route: RouteResponse) {
+    this.routePoly?.removeFrom(this.map);
+    var r = 55;
+    var g = 255;
+    var colorStepsize = (g-r) / _route.route!.length;
+    _route.route!.map(section => {
+      var sectionNodes: L.LatLng[] = [];
+      section.nodes.map(node => {
+          sectionNodes.push(new L.LatLng(node.lat, node.lon));
+        });
+      this.routePoly = new L.Polyline(sectionNodes, {color: "rgb("+r+" ,"+g+",0)"}).addTo(this.map);
+      r += colorStepsize;
+      g -= colorStepsize;
+      });
+
+  }
+
+  drawSightsOnRoute(route: RouteResponse) {
+    this.routeSightLayer = new L.LayerGroup<any>();
+    route.route!.map(section => {
+      if (section.sight) {
+        var latlng: LatLngExpression = {
+          lat: section.sight.lat,
+          lng: section.sight.lon
+        }
+        var newMarker = new L.Marker(latlng).addTo(this.routeSightLayer);
+        this.routeSightLayer.addTo(this.map);
+      }
+    });
   }
 }
