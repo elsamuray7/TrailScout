@@ -3,6 +3,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs::{File, create_dir_all};
 use std::{fs, io};
 use std::io::{Write, BufWriter};
+use std::path::Path;
 use crossbeam::thread;
 use serde::Deserialize;
 use std::time::{Instant};
@@ -59,7 +60,7 @@ fn get_edge_type_config() -> EdgeTypeConfig {
     return edge_type_config;
 }
 
-pub fn create_fmi_graph(in_graph: &String, out_graph: &String)-> Result<(), io::Error> {
+pub fn create_fmi_graph(in_graph: &str, out_graph: &str)-> Result<(), io::Error> {
 
     info!("Starting to Parse OSM File");
 
@@ -80,6 +81,14 @@ pub fn create_fmi_graph(in_graph: &String, out_graph: &String)-> Result<(), io::
     info!("Nodes: {}", graph.num_nodes);
     info!("Sights: {}", graph.num_sights);
     info!("Edges: {}", graph.num_edges);
+    Ok(())
+}
+
+/// Parse given `graph_file`. If it does not exist yet, build it from `source_file` first.
+pub fn checked_create_fmi_graph(graph_file: &str, osm_source_file: &str) -> std::io::Result<()> {
+    if !Path::new(graph_file).exists() && Path::new(osm_source_file).exists() {
+        create_fmi_graph(osm_source_file, graph_file)?
+    }
     Ok(())
 }
 

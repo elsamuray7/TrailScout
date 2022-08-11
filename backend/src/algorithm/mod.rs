@@ -228,12 +228,11 @@ pub enum AlgorithmError {
 
 #[cfg(test)]
 mod test {
-    use std::path::Path;
     use chrono::{DateTime, Utc};
     use crate::algorithm::{_Algorithm, Area, RouteSector, SightCategoryPref, SightPref, UserPreferences};
     use crate::algorithm::greedy::GreedyAlgorithm;
     use crate::data::graph::{Category, Graph};
-    use crate::data::osm_graph_creator::{parse_osm_data, write_graph_file};
+    use crate::init_logging;
 
     /// Baba Hotel, ich schwör!!
     const RADISSON_BLU_HOTEL: Area = Area {
@@ -242,24 +241,12 @@ mod test {
         radius: 22.0,
     };
 
-    fn get_graph() -> std::io::Result<Graph> {
-        let pbf_path = "./osm_graphs/bremen-latest.osm.pbf";
-        let fmi_path = "./osm_graphs/bremen-latest.fmi";
-        if !Path::new(fmi_path).exists() {
-            let mut nodes = Vec::new();
-            let mut edges = Vec::new();
-            let mut sights = Vec::new();
-            parse_osm_data(pbf_path, &mut nodes, &mut edges, &mut sights)?;
-            write_graph_file(fmi_path, &mut nodes, &mut edges, &mut sights)?;
-        }
-        let graph = Graph::parse_from_file("./osm_graphs/bremen-latest.fmi")
-            .expect("Failed to parse graph file");
-        Ok(graph)
-    }
-
     #[test]
-    fn test_greedy() -> std::io::Result<()> {
-        let graph = get_graph()?;
+    fn test_greedy() {
+        init_logging();
+
+        let graph = Graph::parse_from_file("./tests_data/output/bremen-latest.fmi")
+            .expect("Failed to parse graph file");
 
         let start_time = DateTime::parse_from_rfc3339("2022-07-01T10:00:00+01:00")
             .unwrap().with_timezone(&Utc);
@@ -314,7 +301,5 @@ mod test {
         assert!((total_time_budget as i64) < actual_time_budget,
                 "Used time budget: {}. Actual time budget: {}.",
                 total_time_budget, actual_time_budget);
-
-        Ok(())
     }
 }

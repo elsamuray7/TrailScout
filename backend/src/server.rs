@@ -1,22 +1,20 @@
+mod server_utils;
+
 use actix_cors::Cors;
-use actix_web::{App, get, http, HttpResponse, HttpServer, post, Responder, Result, web};
-use actix_files;
+use actix_web::{App, http, HttpResponse, HttpServer, post, Result, web};
 use chrono::DateTime;
 use serde::Deserialize;
-use serde_json::json;
-use std::{env, path::PathBuf};
-use std::any::Any;
-use std::path::Path;
-use std::str;
+use std::{env, str};
 use std::fs;
-use log::{info, debug, error};
+use log::{debug, error};
 use serde_json;
 
-use trailscout_lib::algorithm::{Algorithm, AlgorithmError};
+use trailscout_lib::algorithm::Algorithm;
 use trailscout_lib::data::graph::{Graph, Sight};
 use trailscout_lib::data::osm_graph_creator;
-use trailscout_lib::server_utils::requests::{RouteProviderReq, RouteProviderRes, SightsRequest};
-use trailscout_lib::server_utils::custom_errors::{TrailScoutError};
+use trailscout_lib;
+use crate::server_utils::custom_errors::TrailScoutError;
+use crate::server_utils::requests::{RouteProviderReq, RouteProviderRes, SightsRequest};
 
 
 ///Location of the application config file
@@ -139,11 +137,8 @@ async fn main() -> std::io::Result<()> {
     env_logger::init();
 
     //If Source File exists but FMI graph does not, build it
-    if !Path::new(&config.graph_file_path).exists() & Path::new(&config.source_file).exists() {
-        osm_graph_creator::create_fmi_graph(
-            &config.source_file,&config.graph_file_path).expect("Could Not Parse OSM to Graph");
-    }
-
+    osm_graph_creator::checked_create_fmi_graph(&config.graph_file_path,
+                                                &config.source_file)?;
 
     debug!("Starting to parsed graph from: {}", &config.graph_file_path);
     let graph = Graph::parse_from_file(&config.graph_file_path).expect("Error parsing graph from file");

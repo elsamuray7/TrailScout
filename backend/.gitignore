@@ -1,8 +1,11 @@
 /target
 /Cargo.lock
 
+# Ignore OSM data too large for GitHub
+germany-latest.osm.pbf
+baden-wuerttemberg-latest.osm.pbf
 # Ignore graph files generated from OSM data
-*.fmi
+osm_graphs/**.fmi
 
 # IntelliJ related stuff
 runConfigurations.xml

@@ -1,8 +1,7 @@
 use std::path::Path;
 
-use env_logger::Env;
 use log::info;
-use trailscout_lib::data::{osm_graph_creator::{parse_osm_data, write_graph_file}, graph::{Sight, Edge, Node, Graph}};
+use trailscout_lib::data::{osm_graph_creator::{parse_osm_data, write_graph_file}, graph::{Sight, Edge, Node}};
 
 //pub const PATH:(&str, &str) = ("./tests_data/bremen-latest.osm.pbf", "./tests_data/output/test-bremen-latest.fmi");
 pub const PATH:(&str, &str) = ("./tests_data/stgcenter.pbf", "./tests_data/output/test-stgcenter.fmi");
@@ -29,9 +28,5 @@ pub fn check_if_fmi_file_exists_and_parse_if_not() {
 }
 
 pub fn initialize_logger() {
-    //initializing the logger
-    let env = Env::default()
-    .filter_or("TRAILSCOUT_LOG_LEVEL", "info")
-    .write_style_or("TRAILSCOUT_LOG_STYLE", "always");
-    env_logger::try_init_from_env(env).ok();
+    trailscout_lib::init_logging();
 }
