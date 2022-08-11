@@ -143,8 +143,6 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
   }
 
   getIcon(sight: Sight) {
-    ["Sightseeing", "Other", "Nightlife", "Restaurants", "Shopping", "PicnicBarbequeSpot",
-    "MuseumExhibition", "Nature", "Swimming"];
     const cat = sight.category;
     switch(cat) {
       case "Sightseeing":
