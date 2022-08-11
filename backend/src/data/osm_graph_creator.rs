@@ -361,13 +361,34 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
     let time_duration = time_start.elapsed();
     info!("Finished reading PBF file after {} seconds!", time_duration.as_secs());
     }).ok();
+
+    let mut nodes_with_outgoing_edge = HashMap::<usize, bool>::new();
+    for edge in edges.iter() {
+        nodes_with_outgoing_edge.insert(edge.osm_src, true);
+    }
+    for sight in sights.iter() {
+        nodes_with_outgoing_edge.insert(sight.osm_id, true);
+    }
+
+    let nodes_before_pruning = nodes.len();
+    let mut i = nodes.len();
+    while i > 0 {
+        i -= 1;
+        if !nodes_with_outgoing_edge.contains_key(&nodes.get(i).unwrap().osm_id) {
+            nodes.swap_remove(i);
+        }
+    }
+
+    let time_duration = time_start.elapsed();
+    info!("Finished pruning of {} nodes without edges after {} seconds!", nodes_before_pruning - nodes.len(), time_duration.as_secs());
+
     //post processing of nodes and sights
     let mut id_counter = 0;
     let mut duplicate_position_list : Vec<usize> = Vec::new();
     for node in nodes.iter_mut() {
         node.id = id_counter;
         //check for duplicate nodes
-        if(osm_id_to_node_id.contains_key(&node.osm_id)) {
+        if osm_id_to_node_id.contains_key(&node.osm_id) {
             // info!("duplicate node with id {} and osm_id {}", node.id, node.osm_id);
             // safe position of duplicate (position is for all wright, when deleting starts with first one)
             duplicate_position_list.push(id_counter);
@@ -422,6 +443,12 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
 
     let time_duration = time_start.elapsed();
     info!("Finished post processing of edges after {} seconds!", time_duration.as_secs());
+
+    for sight in sights.iter() {
+        if sight.osm_id == nodes.get(0).unwrap().osm_id {
+            info!("");
+        }
+    }
 
     info!("Start mapping sights into graph!");
 
@@ -512,90 +539,8 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
         })
     });
 
-
     let time_duration = time_start.elapsed();
     info!("Finished resorting edges after {} seconds!", time_duration.as_secs());
-
-    /*let mut number_of_edges = edges.len();
-
-    // prune double edges
-    let prune_edges: HashSet<Edge> =
-    {
-    let mut prune_edges: HashMap<&Edge, usize> = HashMap::new();
-    let mut edge_a = edges.first().unwrap();
-    // find all edges to be pruned
-    for edge in &edges[1..edges.len()] {
-        // edges are sorted by src, then by tgt, check for same (src, tgt) edges
-        if edge_a == edge {
-            trace!("Found two identical edges! \n Edge a: src: {} tgt: {} dist: {} \n Edge b: src: {} tgt: {} dist: {}", edge_a.src, edge_a.tgt, edge_a.dist, edge.src, edge.tgt, edge.dist);
-            // if several identical edges exist, save the lowest dist
-            if prune_edges.contains_key(&edge_a) {
-                let prune_dist = prune_edges.get_key_value(&edge).unwrap().0.dist;
-                let other_dist = edge.dist.min(edge_a.dist);
-                // if (edge_a.dist < prune_dist) && (edge_a.dist <= edge.dist) {
-                //     trace!("Updating edge dist ({}, {}): {} -> {}", edge_a.src, edge_a.tgt, prune_dist, edge_a.dist);
-                //     prune_edges.insert(edge_a, edge_a.dist);
-                // } else if (edge.dist < prune_dist) && (edge_a.dist > edge.dist) {
-                //     trace!("Updating edge dist ({} / {}): {} -> {}", edge_a.src, edge_a.tgt, prune_dist, edge.dist);
-                //     prune_edges.insert(edge_a, edge.dist);
-                // }
-                if other_dist < prune_dist {
-                    trace!("Updating edge dist ({}, {}): {} -> {}", edge.src, edge.tgt, prune_dist, other_dist);
-                    prune_edges.insert(edge, other_dist);
-                }
-            } else {  // save lowest dist edge to prune later
-                /*
-                if edge_a.dist < edge_b.dist {
-                    info!("Different distance: edge_a: {}, edge_b: {}", edge_a.dist, edge_b.dist);
-                } else if edge_b.dist < edge_a.dist {
-                    info!("Different distance: edge_a: {}, edge_b: {}", edge_a.dist, edge_b.dist);
-                }
-                */
-                if edge_a.dist <= edge.dist {
-                    trace!("Inserting edge: ({}, {}) with dist: {}", edge.src, edge.tgt, edge_a.dist);
-                    prune_edges.insert(edge, edge_a.dist);
-                } else {
-                    trace!("Inserting edge: ({}, {}) with dist: {}", edge.src, edge.tgt, edge.dist);
-                    prune_edges.insert(edge, edge.dist);
-                }
-            }
-        }
-        edge_a = edge;
-    }
-    prune_edges.iter().map(|(&edge, &dist)| {
-        let mut new_edge = edge.clone();
-        new_edge.dist = dist;
-        new_edge
-    }).collect()
-    };
-    // prune identical edges and keep one edge with lowest dist
-    edges.retain(|edge| !prune_edges.contains(&edge));
-    let prune_edges_len = prune_edges.len();
-    for edge in prune_edges {
-        edges.push(edge);
-    }
-
-    let time_duration = time_start.elapsed();
-    info!("Finished pruning identical edges after {} seconds!", time_duration.as_secs());
-
-    edges.sort_unstable_by(|e1, e2| {
-        let id1 = e1.src;
-        let id2 = e2.src;
-        id1.cmp(&id2).then_with(||{
-            let id1 = e1.tgt;
-            let id2 = e2.tgt;
-            id1.cmp(&id2)
-        })
-    });
-
-    let time_duration = time_start.elapsed();
-    info!("Finished sorting edges after {} seconds!", time_duration.as_secs());
-
-    info!("Number of edges before pruning: {}", number_of_edges);
-    info!("Number of edges after pruning: {}", edges.len());
-    number_of_edges = number_of_edges - edges.len();
-    info!("Number of edges pruned: {}", number_of_edges);
-    info!("Prune edges: {}", prune_edges_len);*/
 
     sights.sort_unstable_by( |s1, s2| {
         if s1.lat > s2.lat {

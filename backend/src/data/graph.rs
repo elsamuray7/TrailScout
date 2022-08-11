@@ -291,8 +291,8 @@ impl Graph {
             .sorted_unstable_by(|node1, node2| node1.lat.total_cmp(&node2.lat))
             .collect_vec();
         let id_filter = self.sights.iter().map(|sight| sight.node_id)
-            .merge(self.nodes.iter().filter(|node| self.get_degree(node.id) > 0)
-                .map(|node| node.id))
+            //.merge(self.nodes.iter().filter(|node| self.get_degree(node.id) > 0)
+            //    .map(|node| node.id))
             .collect();
         get_nearest_node(&nodes_sorted_by_lat, &id_filter, lat, lon)
     }
@@ -592,8 +592,8 @@ mod test {
 
         let start = Instant::now();
         let id_filter = graph.sights.iter().map(|sight| sight.node_id)
-            .merge(graph.nodes.iter().filter(|node| graph.get_degree(node.id) > 0)
-                .map(|node| node.id))
+            //.merge(graph.nodes.iter().filter(|node| graph.get_degree(node.id) > 0)
+            //    .map(|node| node.id))
             .collect();
         let expected = get_nearest_node_naive(&graph.nodes.iter().collect(),
                                               &id_filter, lat, lon);
