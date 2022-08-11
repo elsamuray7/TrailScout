@@ -482,63 +482,20 @@ impl From<ParseFloatError> for ParseError {
 mod test {
     use std::collections::HashSet;
     use std::time::Instant;
-    use env_logger::Env;
     use geoutils::{Distance, Location};
-    use itertools::Itertools;
     use log::{debug, trace};
-    use pathfinding::prelude::dijkstra;
     use rand::{Rng, thread_rng};
     use crate::data::graph::{Graph, Node};
+    use crate::init_logging;
 
     /// Baba Hotel, ich schwör!!
     const RADISSON_BLU_HOTEL: (f64, f64) = (53.074448, 8.805105);
 
     #[test]
-    fn test_reverse_edges() {
-        let graph = Graph::parse_from_file("./osm_graphs/bremen-latest.fmi")
-            .expect("Failed to parse graph file");
-
-        let mut rng = thread_rng();
-
-        let successors = |node: &Node|
-            graph.get_outgoing_edges(node.id)
-                .into_iter()
-                .map(|edge| (graph.get_node(edge.tgt), edge.dist))
-                .collect::<Vec<(&Node, usize)>>();
-
-        for round in 0..50 {
-            println!("Round {} / {}", round, 50);
-
-            let rand_src = rng.gen_range(0..graph.num_nodes);
-            let rand_tgt = rng.gen_range(0..graph.num_nodes);
-
-            let dijkstra_result = dijkstra(&graph.get_node(rand_src),
-                                           |node| successors(node),
-                                           |node| node.id == rand_tgt);
-            let rev_dijkstra_result = dijkstra(&graph.get_node(rand_tgt),
-                                               |node| successors(node),
-                                               |node| node.id == rand_src);
-
-            match dijkstra_result {
-                Some((_, dist)) => {
-                    println!("Route from {} to {} exists", rand_src, rand_tgt);
-                    assert!(rev_dijkstra_result.is_some(),
-                            "Route between {} and {} is directed", rand_src, rand_tgt);
-                    let (_, rev_dist) = rev_dijkstra_result.unwrap();
-                    assert_eq!(dist, rev_dist, "Distances do not match: {} vs. {}", dist, rev_dist);
-                },
-                None => {
-                    println!("No route from {} to {}", rand_src, rand_tgt);
-                    assert!(rev_dijkstra_result.is_none(),
-                            "Route between {} and {} is directed", rand_tgt, rand_src);
-                }
-            }
-        }
-    }
-
-    #[test]
     fn test_offsets() {
-        let graph = Graph::parse_from_file("./osm_graphs/bremen-latest.fmi")
+        init_logging();
+
+        let graph = Graph::parse_from_file("./tests_data/output/bremen-latest.fmi")
             .expect("Failed to parse graph file");
 
         let mut rng = thread_rng();
@@ -549,6 +506,10 @@ mod test {
             assert_eq!(edge.src, rand_id, "Expected source: {}, got: {} via edge offsets",
                        rand_id, edge.src);
         }
+
+        let mut offsets_clone = graph.offsets.clone();
+        offsets_clone.sort();
+        assert_eq!(offsets_clone, graph.offsets, "Offsets are not in ascending order");
     }
 
     fn get_nearest_node_naive(nodes: &Vec<&Node>, id_filter: &HashSet<usize>, lat: f64, lon: f64) -> usize {
@@ -569,17 +530,15 @@ mod test {
                 }
             }
         }
+
         min_id
     }
 
     #[test]
     fn test_nearest_node() {
-        let env = Env::default()
-            .filter_or("TRAILSCOUT_LOG_LEVEL", "trace")
-            .write_style_or("TRAILSCOUT_LOG_STYLE", "always");
-        env_logger::try_init_from_env(env).ok();
+        init_logging();
 
-        let graph = Graph::parse_from_file("./osm_graphs/bremen-latest.fmi")
+        let graph = Graph::parse_from_file("./tests_data/output/bremen-latest.fmi")
             .expect("Failed to parse graph file");
 
         let (lat, lon) = RADISSON_BLU_HOTEL;

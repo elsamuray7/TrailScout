@@ -1,8 +1,10 @@
-use std::collections::{BTreeMap};
+use std::collections::BTreeMap;
 
 use log::{info, trace};
 use once_cell::sync::Lazy;
-use trailscout_lib::data::graph::Graph;
+use rand::{Rng, thread_rng};
+use pathfinding::prelude::dijkstra;
+use trailscout_lib::data::graph::{Graph, Node};
 
 mod common;
 
@@ -40,7 +42,7 @@ fn test_graph_connection() {
 
     let mut results = BTreeMap::<usize, usize>::new();
 
-    for (id, node) in graph.nodes().iter().enumerate() {
+    for (id, _) in graph.nodes().iter().enumerate() {
         if !visit_result[id] {
             let mut next_nodes: Vec<usize> = Vec::new();
             next_nodes.push(id);
@@ -172,5 +174,50 @@ fn get_sights_with_radius_1000_meters() {
         //when you google "stuttgart lat long" then 48.7758° N, 9.1829° E is the result
         let sights_stg_1000 = graph.get_sights_in_area(48.7758, 9.1829, 1000.0);
         assert_eq!(sights_stg_1000.len(), 346, "Stuttgart doesn't have the correct number of sights");
+    }
+}
+
+#[test]
+fn test_paths_in_both_directions() {
+    common::initialize_logger();
+
+    let graph = Graph::parse_from_file("./tests_data/output/bremen-latest.fmi")
+        .expect("Failed to parse graph file");
+
+    let mut rng = thread_rng();
+
+    let successors = |node: &Node|
+        graph.get_outgoing_edges(node.id)
+            .into_iter()
+            .map(|edge| (graph.get_node(edge.tgt), edge.dist))
+            .collect::<Vec<(&Node, usize)>>();
+
+    for round in 1..=50 {
+        trace!("Round {} / {}", round, 50);
+
+        let rand_src = rng.gen_range(0..graph.num_nodes);
+        let rand_tgt = rng.gen_range(0..graph.num_nodes);
+
+        let dijkstra_result = dijkstra(&graph.get_node(rand_src),
+                                       |node| successors(node),
+                                       |node| node.id == rand_tgt);
+        let rev_dijkstra_result = dijkstra(&graph.get_node(rand_tgt),
+                                           |node| successors(node),
+                                           |node| node.id == rand_src);
+
+        match dijkstra_result {
+            Some((_, dist)) => {
+                trace!("Route from {} to {} exists", rand_src, rand_tgt);
+                assert!(rev_dijkstra_result.is_some(),
+                        "Route between {} and {} is directed", rand_src, rand_tgt);
+                let (_, rev_dist) = rev_dijkstra_result.unwrap();
+                assert_eq!(dist, rev_dist, "Distances do not match: {} vs. {}", dist, rev_dist);
+            },
+            None => {
+                trace!("No route from {} to {}", rand_src, rand_tgt);
+                assert!(rev_dijkstra_result.is_none(),
+                        "Route between {} and {} is directed", rand_tgt, rand_src);
+            }
+        }
     }
 }
