@@ -6,13 +6,15 @@ use trailscout_lib::data::graph::Graph;
 
 mod common;
 
-static GRAPH: Lazy<Graph> = Lazy::new(|| Graph::parse_from_file(common::PATH.1).unwrap());
+static GRAPH: Lazy<Graph> = Lazy::new(|| {
+    common::parse_pbf_to_fmi_file();
+    Graph::parse_from_file(common::PATH.1).unwrap()
+});
 
 
 #[test]
 fn test_parsing_process_to_produce_graph_with_proper_number_of_elements() {
     common::initialize_logger();
-    common::parse_pbf_to_fmi_file();
     info!("Creating graph");
     let graph: &Lazy<Graph> = &GRAPH;
     info!("Finished creating graph with {} nodes, {} sights and {} edges", graph.num_nodes, graph.num_sights, graph.num_edges);
@@ -30,7 +32,6 @@ fn test_parsing_process_to_produce_graph_with_proper_number_of_elements() {
 #[test]
 fn test_graph_connection() {
     common::initialize_logger();
-    common::check_if_fmi_file_exists_and_parse_if_not();
     info!("Creating graph");
     let graph: &Lazy<Graph> = &GRAPH;
     info!("Finished creating graph with {} nodes, {} sights and {} edges", graph.num_nodes, graph.num_sights, graph.num_edges);
@@ -74,7 +75,6 @@ fn test_graph_connection() {
 #[test]
 fn test_nodes_have_at_least_one_outgoing_edge () {
     common::initialize_logger();
-    common::check_if_fmi_file_exists_and_parse_if_not();
     info!("Creating graph"); 
     let graph: &Lazy<Graph> = &GRAPH;
     info!("Finished creating graph with {} nodes, {} sights and {} edges", graph.num_nodes, graph.num_sights, graph.num_edges);
@@ -92,7 +92,6 @@ fn test_nodes_have_at_least_one_outgoing_edge () {
 #[test]
 fn test_sights_have_at_least_one_outgoing_edge () {
     common::initialize_logger();
-    common::check_if_fmi_file_exists_and_parse_if_not();
     info!("Creating graph"); 
     let graph: &Lazy<Graph> = &GRAPH;
     info!("Finished creating graph with {} nodes, {} sights and {} edges", graph.num_nodes, graph.num_sights, graph.num_edges);
@@ -110,7 +109,6 @@ fn test_sights_have_at_least_one_outgoing_edge () {
 #[test]
 fn test_sights_have_at_least_one_incoming_edge () {
     common::initialize_logger();
-    common::check_if_fmi_file_exists_and_parse_if_not();
     info!("Creating graph"); 
     let graph: &Lazy<Graph> = &GRAPH;
     info!("Finished creating graph with {} nodes, {} sights and {} edges", graph.num_nodes, graph.num_sights, graph.num_edges);
@@ -137,7 +135,6 @@ fn test_sights_have_at_least_one_incoming_edge () {
 #[test]
 fn test_edges_go_in_both_directions() {
     common::initialize_logger();
-    common::check_if_fmi_file_exists_and_parse_if_not();
     info!("Creating graph"); 
     let graph: &Lazy<Graph> = &GRAPH;
     info!("Finished creating graph with {} nodes, {} sights and {} edges", graph.num_nodes, graph.num_sights, graph.num_edges);
@@ -159,7 +156,6 @@ fn test_edges_go_in_both_directions() {
 #[test]
 fn get_sights_with_radius_1000_meters() {
     common::initialize_logger();
-    common::check_if_fmi_file_exists_and_parse_if_not();
     info!("Creating graph"); 
     let graph: &Lazy<Graph> = &GRAPH;
     info!("Finished creating graph with {} nodes, {} sights and {} edges", graph.num_nodes, graph.num_sights, graph.num_edges);
