@@ -102,7 +102,7 @@ export class SettingsTaskbarComponent implements OnInit {
     const request = {
       "start": this.transformTimeToISO8601Date(this._startTime),
       "end": this.transformTimeToISO8601Date(this._endTime, !this.isStartBeforeEnd()),
-      "walking_speed_kmh": 50,
+      "walking_speed_kmh": 3,
       "area": {
         "lat": this.mapService.getCoordniates().lat,
         "lon": this.mapService.getCoordniates().lng,
