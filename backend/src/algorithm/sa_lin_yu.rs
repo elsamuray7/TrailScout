@@ -428,8 +428,24 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
             }
         }
 
-        log::debug!("Finished simulated annealing (final score: {})", self.get_total_score(&x_best)?);
+        let route = self.build_route(x_best)?;
+        let collected_score = self.get_collected_score(&route);
+        log::debug!("Finished simulated annealing. Computed walking route from node: {} including {} sights with total score: {}.",
+             self.root_id, route.len() - 1, collected_score);
 
-        self.build_route(x_best)
+        Ok(route)
+    }
+
+    fn get_collected_score(&self, route: &Route) -> usize {
+        route.iter()
+            .map(|route_sec| {
+                match route_sec {
+                    // Start and intermediate sectors contain a sight per definition
+                    RouteSector::Start(sector) => self.scores[&sector.sight.unwrap().node_id],
+                    RouteSector::Intermediate(sector) => self.scores[&sector.sight.unwrap().node_id],
+                    _ => 0,
+                }
+            })
+            .sum()
     }
 }
