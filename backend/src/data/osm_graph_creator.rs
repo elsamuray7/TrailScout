@@ -12,7 +12,7 @@ use geoutils::Location;
 use itertools::Itertools;
 use log::{info, error, trace, debug};
 use osmpbf::{Element, BlobReader, BlobType, Node, Way};
-use crate::data::graph::{get_nearest_node, Category, Edge, Graph, Node as GraphNode, Sight};
+use crate::data::graph::{get_nearest_node, Category, Edge, Graph, Node as GraphNode, Sight, INode};
 
 const SIGHTS_CONFIG_PATH :&str = "./sights_config.json";
 const EDGE_CONFIG_PATH :&str = "./edge_type_config.json";
@@ -53,8 +53,19 @@ struct OSMNode {
     pub osm_id: usize,
     pub id: usize,
     pub lat: f64,
-    pub lon: f64,
-    pub info: String,
+    pub lon: f64
+}
+
+impl INode for OSMNode {
+    fn id(&self) -> usize {
+        self.id
+    }
+    fn lat(&self) -> f64 {
+        self.lat
+    }
+    fn lon(&self) -> f64 {
+        self.lon
+    }
 }
 
 impl PartialEq<Self> for OSMNode {
@@ -125,29 +136,10 @@ fn get_edge_type_config() -> EdgeTypeConfig {
     return edge_type_config;
 }
 
-pub fn create_fmi_graph(in_graph: &str, out_graph: &str)-> Result<(), io::Error> {
-    info!("Starting to Parse OSM File");
-
-    parse_and_write_osm_data(in_graph, out_graph);
-
-    info!("Start creating the graph from fmi file!");
-    let time_start = Instant::now();
-
-    let graph = Graph::parse_from_file(out_graph).unwrap();
-
-    let time_duration = time_start.elapsed();
-    info!("End graph creation after {} seconds!", time_duration.as_secs());
-
-    info!("Nodes: {}", graph.num_nodes);
-    info!("Sights: {}", graph.num_sights);
-    info!("Edges: {}", graph.num_edges);
-    Ok(())
-}
-
 /// Parse given `graph_file`. If it does not exist yet, build it from `source_file` first.
 pub fn checked_create_fmi_graph(graph_file: &str, osm_source_file: &str) -> std::io::Result<()> {
     if !Path::new(graph_file).exists() && Path::new(osm_source_file).exists() {
-        create_fmi_graph(osm_source_file, graph_file)?
+        parse_and_write_osm_data(osm_source_file, graph_file)?
     }
     Ok(())
 }
@@ -225,42 +217,7 @@ pub fn parse_and_write_osm_data (osmpbf_file_path: &str, fmi_file_path: &str) ->
     let time_duration = time_start.elapsed();
     info!("Finished id post processing after {} seconds!", time_duration.as_secs());
 
-    info!("Start mapping sights into graph!");
-    let nodes_sorted_by_lat = nodes.iter()
-        .sorted_unstable_by(|n1, n2|{
-            return n1.lat.total_cmp(&n2.lat);
-        })
-        .collect_vec();
-
-    // create edges between a sight and the nearest non sight node
-    let mut n = 0 as f64;
-    for sight in sights.iter() {
-        n += 1.0;
-        let nearest_node_id = get_nearest_node(&nodes_sorted_by_lat, &is_sight_node, sight.lat, sight.lon);
-        let nearest_node = &nodes[nearest_node_id];
-        let sight_loc = Location::new(sight.lat, sight.lon);
-        let nearest_node_loc = Location::new(nearest_node.lat, nearest_node.lon);
-        let nearest_dist = sight_loc.distance_to(&nearest_node_loc)
-            .expect("Could not determine distance between sight and its nearest node")
-            .meters() as usize;
-        let out_edge = OSMEdge {
-            osm_src: 0,
-            osm_tgt: 0,
-            src: sight.node_id,
-            tgt: nearest_node.id,
-            dist: nearest_dist
-        };
-        let in_edge = OSMEdge {
-            osm_src: 0,
-            osm_tgt: 0,
-            src: nearest_node.id,
-            tgt: sight.node_id,
-            dist: nearest_dist
-        };
-        edges.push(out_edge);
-        edges.push(in_edge);
-        trace!("Progress: {}", n / (sights.len() as f64));
-    }
+    integrate_sights_into_graph(&nodes, &mut edges, &sights, &is_sight_node);
 
     let time_duration = time_start.elapsed();
     info!("Finished mapping sights into graph after {} seconds!", time_duration.as_secs());
@@ -379,8 +336,7 @@ fn create_osm_node(osm_id: usize, lat: f64, lon: f64, tags: Vec<(&str, &str)>, s
         osm_id: osm_id,
         id: 0,
         lat: lat,
-        lon: lon,
-        info: "".to_string()
+        lon: lon
     };
     result.0.push(osm_node);
 
@@ -502,6 +458,44 @@ fn id_post_processing(nodes: &mut Vec<OSMNode>, edges: &mut Vec<OSMEdge>, sights
         edge.dist = src_loc.distance_to(&tgt_loc)
             .expect("Could not determine distance between edge source and target")
             .meters() as usize
+    }
+}
+
+// create edges between a sight and the nearest non sight node
+fn integrate_sights_into_graph(nodes: &Vec<OSMNode>, edges: &mut Vec<OSMEdge>, sights: &Vec<OSMSight>, is_sight_node: &HashSet<usize>) {
+    let nodes_sorted_by_lat = nodes.iter()
+        .sorted_unstable_by(|n1, n2|{
+            return n1.lat.total_cmp(&n2.lat);
+        })
+        .collect_vec();
+
+    let mut n = 0 as f64;
+    for sight in sights.iter() {
+        n += 1.0;
+        let nearest_node_id = get_nearest_node(&nodes_sorted_by_lat, &is_sight_node, sight.lat, sight.lon);
+        let nearest_node = &nodes[nearest_node_id];
+        let sight_loc = Location::new(sight.lat, sight.lon);
+        let nearest_node_loc = Location::new(nearest_node.lat, nearest_node.lon);
+        let nearest_dist = sight_loc.distance_to(&nearest_node_loc)
+            .expect("Could not determine distance between sight and its nearest node")
+            .meters() as usize;
+        let out_edge = OSMEdge {
+            osm_src: 0,
+            osm_tgt: 0,
+            src: sight.node_id,
+            tgt: nearest_node.id,
+            dist: nearest_dist
+        };
+        let in_edge = OSMEdge {
+            osm_src: 0,
+            osm_tgt: 0,
+            src: nearest_node.id,
+            tgt: sight.node_id,
+            dist: nearest_dist
+        };
+        edges.push(out_edge);
+        edges.push(in_edge);
+        trace!("Progress: {}", n / (sights.len() as f64));
     }
 }
 
