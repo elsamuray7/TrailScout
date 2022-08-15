@@ -8,7 +8,7 @@
                       <div class='d-flex justify-content-between col' style='gap: 10px'>
                         <input id='radiusInput' type="number" placeholder="Enter radius in km..." class="form-control"
                                [(ngModel)]="radius" />
-                        <button class="btn-primary btn" id="refresh" type="submit" [disabled]='refreshing'
+                        <button class="btn-primary btn" id="refresh" type="submit" [disabled]='refreshing || !radius || radius <= 0'
                                 (click)="refreshSights()" style='flex-grow:1;'>
                           <span *ngIf='!refreshing'>Refresh</span>
                           <div *ngIf='refreshing' class="spinner-border" role="status">
