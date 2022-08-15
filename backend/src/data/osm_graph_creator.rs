@@ -10,8 +10,8 @@ use std::time::{Instant};
 use geoutils::Location;
 use itertools::Itertools;
 use log::{info, error, trace, debug};
-use osmpbf::{Element, BlobReader, BlobType};
-use crate::data::graph::{get_nearest_node, Category, Edge, Graph, Node as GraphNode, Node, Sight};
+use osmpbf::{Element, BlobReader, BlobType, Node};
+use crate::data::graph::{get_nearest_node, Category, Edge, Graph, Node as GraphNode, Sight};
 
 const SIGHTS_CONFIG_PATH :&str = "./sights_config.json";
 const EDGE_CONFIG_PATH :&str = "./edge_type_config.json";
@@ -64,7 +64,7 @@ pub fn create_fmi_graph(in_graph: &str, out_graph: &str)-> Result<(), io::Error>
 
     info!("Starting to Parse OSM File");
 
-    let mut nodes : Vec<Node> = Vec::new();
+    let mut nodes : Vec<GraphNode> = Vec::new();
     let mut edges : Vec<Edge> = Vec::new();
     let mut sights : Vec<Sight> = Vec::new();
     parse_osm_data(in_graph, &mut nodes, &mut edges, &mut sights);
@@ -633,4 +633,120 @@ pub fn write_graph_file(graph_file_path_out: &str, nodes: &mut Vec<GraphNode>, e
     let time_duration = time_start.elapsed();
     info!("End of writing fmi file after {} seconds!", time_duration.as_secs());
     Ok(())
+}
+
+fn create_node(n :Node, sight_config: &SightsConfig) -> GraphNode {
+    // TODO if no tags corrects tags for category + category enum
+    /*
+    let mut isSight = false;
+    for (key, value) in n.tags() {
+        match key {
+            "amenity" => {
+                isSight = true;
+                match value {
+                    "restaurant" | "biergarten" | "cafe" | "fast_food" | "food_court" => {
+                        let mut sight = Sight {
+                            node_id: n.id() as usize,
+                            lat: n.lat(),
+                            lon: n.lon(),
+                            category: Category::Restaurants,
+                        };
+                        sights.push(sight);
+                        num_sights += 1;
+                        node_count += 1;
+                    }
+                    _ => {}
+                }
+            }
+            _ => {}
+        }
+    }
+    if(!isSight) {
+        let mut node = GraphNode {
+            osm_id: n.id() as usize,
+            id: num_nodes,
+            lat: n.lat(),
+            lon: n.lon(),
+            //info: "".to_string()
+        };
+        osm_id_to_node_id.entry(node.osm_id)
+            .or_insert(num_nodes);
+        nodes.push(node);
+        num_nodes += 1;
+        node_count += 1;
+    }
+
+    */
+
+    let mut is_sight = false;
+    for (key, value) in n.tags() {
+        /*
+        node.info.push_str("key: (");
+        node.info.push_str(key);
+        node.info.push_str(") value: (");
+        node.info.push_str(value);
+        node.info.push_str(")\n");
+
+        */
+        for cat_tag_map in &sight_config.category_tag_map {
+            for tag in &cat_tag_map.tags {
+                if key.eq(&tag.key) {
+                    if value.eq(&tag.value) {
+                        is_sight = true;
+                        //we are saving the osm id because it's needed in the post processing
+                        let sight = Sight {
+                            osm_id: n.id() as usize,
+                            node_id: 0,
+                            lat: n.lat(),
+                            lon: n.lon(),
+                            category: cat_tag_map.category.parse::<Category>().unwrap(),
+                        };
+                        result.2.push(sight);
+
+                        let node = GraphNode {
+                            osm_id: n.id() as usize,
+                            id: 0,
+                            lat: n.lat(),
+                            lon: n.lon(),
+                            info: "".to_string()
+                        };
+                        result.0.push(node);
+                    }
+                }
+            }
+        }
+    }
+    if !is_sight {
+        let node = GraphNode {
+            osm_id: n.id() as usize,
+            id: 0,
+            lat: n.lat(),
+            lon: n.lon(),
+            info: "".to_string()
+        };
+        result.0.push(node);
+    }
+}
+
+fn is_sight(n: Node, sight_config: &SightsConfig) -> bool {
+    for (key, value) in n.tags() {
+        /*
+        node.info.push_str("key: (");
+        node.info.push_str(key);
+        node.info.push_str(") value: (");
+        node.info.push_str(value);
+        node.info.push_str(")\n");
+
+        */
+        for cat_tag_map in &sight_config.category_tag_map {
+            for tag in &cat_tag_map.tags {
+                if key.eq(&tag.key) {
+                    if value.eq(&tag.value) {
+                        return true
+                    }
+                }
+            }
+        }
+    }
+    return false;
 }
