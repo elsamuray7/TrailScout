@@ -1,5 +1,9 @@
-import { Component, Input, OnInit, Output, EventEmitter } from '@angular/core';
+import { Component, Input, OnInit, Output, EventEmitter, ViewChild } from '@angular/core';
+import { NgbTypeahead } from '@ng-bootstrap/ng-bootstrap';
 import {Category} from "../../../data/Category";
+import { debounceTime, distinctUntilChanged, filter, map, merge, Observable, OperatorFunction, Subject } from 'rxjs';
+import { Sight } from '../../../data/Sight';
+import { FormControl } from '@angular/forms';
 
 @Component({
   selector: 'app-settings-taskbar-tag-item',
@@ -10,6 +14,11 @@ export class SettingsTaskbarTagItemComponent implements OnInit {
 
   @Input() category!: Category;
   @Output('checked') checkedEvent = new EventEmitter;
+
+  @ViewChild('sightSearch', {static: true}) sightSearch: NgbTypeahead;
+  focus$ = new Subject<string>();
+  click$ = new Subject<string>();
+  public model: FormControl;
 
   checked = false;
   prio: number = 3;
@@ -38,6 +47,9 @@ export class SettingsTaskbarTagItemComponent implements OnInit {
    }
 
   ngOnInit(): void {
+    this.sightSearch.selectItem.subscribe((item) => {
+      console.log(item);
+    });
   }
 
   checkedTag() {
@@ -45,7 +57,24 @@ export class SettingsTaskbarTagItemComponent implements OnInit {
     this.checkedEvent.emit(this.checked);
   }
 
+  formatter = (sight: Sight) => sight.name;
+
+  search: OperatorFunction<string, readonly Sight[]> = (text$: Observable<string>) => {
+    const debouncedText$ = text$.pipe(debounceTime(200), distinctUntilChanged());
+    const clicksWithClosedPopup$ = this.click$.pipe(filter(() => !this.sightSearch.isPopupOpen()));
+    const inputFocus$ = this.focus$;
+
+    return merge(debouncedText$, inputFocus$, clicksWithClosedPopup$).pipe(
+      map(term => (term === '' ? this.category.sights
+        : this.category.sights.filter(v => v.name.toLowerCase().indexOf(term.toLowerCase()) > -1)).slice(0, 10))
+    );
+  };
+
   getImage() {
     return {'background-image' : 'url(assets/sights/' + this.category.name + '.jpg)' };
+  }
+
+  addSingleSight(value: Event) {
+    console.log(value);
   }
 }
