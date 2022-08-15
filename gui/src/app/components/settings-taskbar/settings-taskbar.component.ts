@@ -154,13 +154,11 @@ export class SettingsTaskbarComponent implements OnInit {
   }
 
   refreshSights() {
-    const startCookie = this.cookieService.getLocationCookie();
-    if (startCookie.value !== '' && this.radius > 0) {
-      const val = startCookie.value as string;
-      const coords = JSON.parse(val);
+    const root: L.LatLng = this.mapService.getCoordniates();
+    if (root && this.radius > 0) {
       this.refreshing = true;
       this.toastService.showStandard('Updating sights...');
-      this.sightsService.updateSights(coords, this.radius);
+      this.sightsService.updateSights(root, this.radius);
     }
   }
 }
