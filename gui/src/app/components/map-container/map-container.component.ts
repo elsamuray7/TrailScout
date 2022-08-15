@@ -177,7 +177,7 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
       section.nodes.map(node => {
           sectionNodes.push(new L.LatLng(node.lat, node.lon));
         });
-      this.routePoly = new L.Polyline(sectionNodes, {color: "rgb("+r+" ,"+g+",0)"}).addTo(this.routeLayer);
+      this.routePoly = new L.Polyline(sectionNodes, {color: "rgb("+r+" ,"+g+",0)", weight: 6}).addTo(this.routeLayer);
       r += colorStepsize;
       g -= colorStepsize;
       });
