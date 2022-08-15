@@ -42,6 +42,7 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
   private activeLayers = new Map<string, any>();
 
   routeSightLayer: L.LayerGroup;
+  routeLayer: L.LayerGroup;
   routePoly?: L.Polyline;
 
   constructor() {
@@ -166,7 +167,8 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
     }
   }
   drawRoute(_route: RouteResponse) {
-    this.routePoly?.removeFrom(this.map);
+    this.hideRoute()
+    this.routeLayer = new L.LayerGroup<any>();
     var r = 55;
     var g = 255;
     var colorStepsize = (g-r) / _route.route!.length;
@@ -175,14 +177,23 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
       section.nodes.map(node => {
           sectionNodes.push(new L.LatLng(node.lat, node.lon));
         });
-      this.routePoly = new L.Polyline(sectionNodes, {color: "rgb("+r+" ,"+g+",0)"}).addTo(this.map);
+      this.routePoly = new L.Polyline(sectionNodes, {color: "rgb("+r+" ,"+g+",0)"}).addTo(this.routeLayer);
       r += colorStepsize;
       g -= colorStepsize;
       });
+    this.routeLayer.addTo(this.map);
+  }
 
+  hideRoute() {
+    this.routeLayer?.removeFrom(this.map);
+  }
+
+  hideSightsOnRoute() {
+    this.routeSightLayer?.removeFrom(this.map);
   }
 
   drawSightsOnRoute(route: RouteResponse) {
+    this.hideSightsOnRoute();
     this.routeSightLayer = new L.LayerGroup<any>();
     route.route!.map(section => {
       if (section.sight) {
