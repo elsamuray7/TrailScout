@@ -95,6 +95,13 @@ fn swap<'a>(current_solution: &Vec<&'a Sight>) -> Vec<&'a Sight> {
     result
 }
 
+/// Insert the element at position `i` in `current_solution` at position `j` in `current_solution`
+/// and remove it from its old position
+fn determ_insert(current_solution: &mut Vec<&Sight>, i: usize, j: usize) {
+    let elem = current_solution.remove(i);
+    current_solution.insert(j, elem);
+}
+
 /// Select two indices `i` and `j` by random, insert the element at position `i` in
 /// `current_solution` at position `j` in a new copy of `current_solution` and remove it from its
 /// old position in the copy
@@ -105,26 +112,8 @@ fn insert<'a>(current_solution: &Vec<&'a Sight>) -> Vec<&'a Sight> {
     let j = rng.gen_range(0..size);
 
     let mut result = current_solution.clone();
-    if j < i {
-        result.insert(j, current_solution[i]);
-        result.remove(i + 1);
-    } else if j > i {
-        result.insert(j, current_solution[i]);
-        result.remove(i);
-    }
+    determ_insert(&mut result, i, j);
     result
-}
-
-/// Insert the element at position `i` in `current_solution` at position `j` in `current_solution`
-/// and remove it from its old position
-fn determ_insert(current_solution: &mut Vec<&Sight>, i: usize, j: usize) {
-    if j < i {
-        current_solution.insert(j, current_solution[i]);
-        current_solution.remove(i + 1);
-    } else if j > i {
-        current_solution.insert(j, current_solution[i]);
-        current_solution.remove(i);
-    }
 }
 
 /// Select two indices by random and reverse the slice of `current_solution` between these two
@@ -406,10 +395,10 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
                 x = y;
 
                 if new_score > f_best {
+                    log::trace!("Updating best score (new score: {} > best score so far: {})",
+                        new_score, f_best);
                     f_best = new_score;
                     x_best = x.clone();
-                    log::trace!("Updated best score (new score: {} > best score so far: {})",
-                    new_score, f_best);
                 }
             }
 
@@ -419,6 +408,8 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
                 i = 0;
 
                 self.local_search(&mut x_best)?;
+                f_best = self.get_total_score(&x_best)?;
+                log::trace!("Performed local search on best solution (score: {})", f_best);
 
                 let elapsed = start_time.elapsed().as_millis();
                 if elapsed > MAX_TIME {
@@ -429,23 +420,13 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
         }
 
         let route = self.build_route(x_best)?;
-        let collected_score = self.get_collected_score(&route);
         log::debug!("Finished simulated annealing. Computed walking route from node: {} including {} sights with total score: {}.",
-             self.root_id, route.len() - 1, collected_score);
+             self.root_id, route.len() - 1, f_best);
 
         Ok(route)
     }
 
     fn get_collected_score(&self, route: &Route) -> usize {
-        route.iter()
-            .map(|route_sec| {
-                match route_sec {
-                    // Start and intermediate sectors contain a sight per definition
-                    RouteSector::Start(sector) => self.scores[&sector.sight.unwrap().node_id],
-                    RouteSector::Intermediate(sector) => self.scores[&sector.sight.unwrap().node_id],
-                    _ => 0,
-                }
-            })
-            .sum()
+        unimplemented!()
     }
 }
