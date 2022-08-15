@@ -1,10 +1,10 @@
 use std::collections::HashMap;
-use chrono::{DateTime, DurationRound, Utc};
+use chrono::{DateTime, Utc};
 use itertools::Itertools;
 use pathfinding::prelude::*;
 use rand::prelude::*;
-use crate::algorithm::{_Algorithm, AlgorithmError, Area, Route, RouteSector, ScoreMap, Sector, USER_PREF_MAX, UserPreferences};
-use crate::data::graph::{Category, Graph, Node, Sight};
+use crate::algorithm::{_Algorithm, AlgorithmError, Area, EDGE_RADIUS_MULTIPLIER, Route, RouteSector, ScoreMap, Sector, USER_PREF_MAX, UserPreferences};
+use crate::data::graph::{Category, Graph, Sight};
 use std::time::Instant;
 
 /// Simulated Annealing internal user preference to score mapping
@@ -53,14 +53,15 @@ fn compute_scores(sights: &HashMap<usize, &Sight>, user_prefs: UserPreferences) 
 /// with a non-zero score, to all other nodes
 fn build_distance_map<'a>(graph: &'a Graph,
                           area: &Area,
+                          edge_radius: f64,
                           sights: &HashMap<usize, &'a Sight>,
                           root_id: usize,
-                          scores: &ScoreMap) -> HashMap<usize, HashMap<&'a Node, (&'a Node, usize)>> {
-    let successors = |node: &Node|
-        graph.get_outgoing_edges_in_area(node.id, area.lat, area.lon, area.radius)
+                          scores: &ScoreMap) -> HashMap<usize, HashMap<usize, (usize, usize)>> {
+    let successors = |node_id: usize|
+        graph.get_outgoing_edges_in_area(node_id, area.lat, area.lon, edge_radius)
             .into_iter()
-            .map(|edge| (graph.get_node(edge.tgt), edge.dist))
-            .collect::<Vec<(&Node, usize)>>();
+            .map(|edge| (edge.tgt, edge.dist))
+            .collect::<Vec<(usize, usize)>>();
 
     let mut distance_map = HashMap::with_capacity(sights.len());
     let mut sights_and_root = sights.iter().map(|(&sight_id, _)| sight_id)
@@ -73,8 +74,8 @@ fn build_distance_map<'a>(graph: &'a Graph,
         count += 1;
         log::trace!("Pre-computing distances from node {} ({} / {})", node_id, count, total);
         let dijkstra_result = dijkstra_all(
-            &graph.get_node(node_id),
-            |node| successors(node));
+            &node_id,
+            |&node_id| successors(node_id));
         distance_map.insert(node_id, dijkstra_result);
     }
     log::debug!("Pre-computed distances from relevant nodes");
@@ -164,7 +165,7 @@ pub struct SimAnnealingLinYu<'a> {
     sights: HashMap<usize, &'a Sight>,
     root_id: usize,
     scores: ScoreMap,
-    distance_map: HashMap<usize, HashMap<&'a Node, (&'a Node, usize)>>,
+    distance_map: HashMap<usize, HashMap<usize, (usize, usize)>>,
 }
 
 impl<'a> SimAnnealingLinYu<'a> {
@@ -176,17 +177,18 @@ impl<'a> SimAnnealingLinYu<'a> {
     /// included in the route without violating the time budget.
     fn get_total_score(&self, current_solution: &Vec<&'a Sight>) -> Result<usize, AlgorithmError> {
         let mut score = 0;
-        let mut time_budget = (self.end_time.timestamp() - self.start_time.timestamp()) as usize;
+        let mut time_budget: usize = self.end_time.signed_duration_since(self.start_time).num_seconds()
+            .try_into().unwrap();
         let mut curr_node_id = self.root_id;
 
         for &sight in current_solution {
             let curr_distance_map = &self.distance_map[&curr_node_id];
-            let &(_, sight_travel_dist) = curr_distance_map.get(&self.graph.get_node(sight.node_id))
+            let &(_, sight_travel_dist) = curr_distance_map.get(&sight.node_id)
                 .ok_or(AlgorithmError::NoRouteFound { from: curr_node_id, to: sight.node_id })?;
             let sight_travel_time = (sight_travel_dist as f64 / self.walking_speed_mps) as usize + 1;
 
             let sight_distance_map = &self.distance_map[&sight.node_id];
-            let &(_, root_travel_dist) = sight_distance_map.get(&self.graph.get_node(self.root_id))
+            let &(_, root_travel_dist) = sight_distance_map.get(&self.root_id)
                 .ok_or(AlgorithmError::NoRouteFound { from: sight.node_id, to: self.root_id })?;
             let root_travel_time = (root_travel_dist as f64 / self.walking_speed_mps) as usize + 1;
 
@@ -263,24 +265,26 @@ impl<'a> SimAnnealingLinYu<'a> {
     /// Build a walking route from the best solution found so far
     fn build_route(&self, best_solution: Vec<&'a Sight>) -> Result<Route, AlgorithmError> {
         let mut route = Route::new();
-        let mut time_budget = (self.end_time.timestamp() - self.start_time.timestamp()) as usize;
+        let mut time_budget: usize = self.end_time.signed_duration_since(self.start_time).num_seconds()
+            .try_into().unwrap();
         let mut curr_node_id = self.root_id;
 
         for sight in best_solution {
             let curr_distance_map = &self.distance_map[&curr_node_id];
-            let &(_, sight_travel_dist) = curr_distance_map.get(&self.graph.get_node(sight.node_id))
+            let &(_, sight_travel_dist) = curr_distance_map.get(&sight.node_id)
                 .ok_or(AlgorithmError::NoRouteFound { from: curr_node_id, to: sight.node_id })?;
             let sight_travel_time = (sight_travel_dist as f64 / self.walking_speed_mps) as usize + 1;
 
             let sight_distance_map = &self.distance_map[&sight.node_id];
-            let &(_, root_travel_dist) = sight_distance_map.get(&self.graph.get_node(self.root_id))
+            let &(_, root_travel_dist) = sight_distance_map.get(&self.root_id)
                 .ok_or(AlgorithmError::NoRouteFound { from: sight.node_id, to: self.root_id })?;
             let root_travel_time = (root_travel_dist as f64 / self.walking_speed_mps) as usize + 1;
 
             if time_budget >= (sight_travel_time + root_travel_time) {
+                let path = build_path(&sight.node_id, curr_distance_map)
+                    .into_iter().map(|node_id| self.graph.get_node(node_id)).collect_vec();
                 let sector =
-                    Sector::with_sight(sight_travel_time, sight, build_path(
-                        &self.graph.get_node(sight.node_id), curr_distance_map));
+                    Sector::with_sight(sight_travel_time, sight, path);
                 if route.is_empty() {
                     route.push(RouteSector::Start(sector));
                 } else {
@@ -290,12 +294,13 @@ impl<'a> SimAnnealingLinYu<'a> {
                 time_budget -= sight_travel_time;
             } else {
                 let curr_distance_map = &self.distance_map[&curr_node_id];
-                let &(_, root_travel_dist) = curr_distance_map.get(&self.graph.get_node(self.root_id))
+                let &(_, root_travel_dist) = curr_distance_map.get(&self.root_id)
                     .ok_or(AlgorithmError::NoRouteFound { from: curr_node_id, to: self.root_id })?;
                 let root_travel_time = (root_travel_dist as f64 / self.walking_speed_mps) as usize + 1;
 
-                let sector = Sector::new(root_travel_time, build_path(
-                    &self.graph.get_node(self.root_id), curr_distance_map));
+                let path = build_path(&self.root_id, curr_distance_map)
+                    .into_iter().map(|node_id| self.graph.get_node(node_id)).collect_vec();
+                let sector = Sector::new(root_travel_time, path);
                 route.push(RouteSector::End(sector));
 
                 break;
@@ -318,10 +323,17 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
             return Err(AlgorithmError::NegativeTimeInterval);
         }
 
-        let sights = graph.get_sights_in_area(area.lat, area.lon, area.radius);
+        let time_budget = end_time.signed_duration_since(start_time).num_seconds() as f64;
+        let relevant_radius = walking_speed_mps * time_budget;
+        let sights_radius = relevant_radius.min(area.radius);
+        let edge_radius = relevant_radius * EDGE_RADIUS_MULTIPLIER;
+        let sights = graph.get_reachable_sights_in_area(area.lat, area.lon,
+                                                        sights_radius, edge_radius);
+
         let root_id = graph.get_nearest_node(area.lat, area.lon);
         let scores = compute_scores(&sights, user_prefs);
-        let distance_map = build_distance_map(graph, &area, &sights, root_id, &scores);
+        let distance_map = build_distance_map(
+            graph, &area, edge_radius, &sights, root_id, &scores);
         Ok(Self {
             graph,
             start_time,
@@ -343,20 +355,6 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
             .map(|(_, &sight)| sight).collect_vec();
         randomized_sights.shuffle(&mut rng);
         log::debug!("Computed randomized initial solution");
-
-        // // Enrich sight data with distance from previous sight or root, respectively
-        // let mut initial_route = Vec::with_capacity(self.sights.len());
-        // for (i, &sight) in randomized_sights.iter().enumerate() {
-        //     if i == 0 {
-        //         let distances = &distance_map[&self.root_id];
-        //         let (_, dist) = distances[&self.graph.get_node(sight.node_id)];
-        //         initial_route.push((sight, dist));
-        //     } else {
-        //         let distances = &distance_map[&randomized_sights[i - 1].node_id];
-        //         let (_, dist) = distances[&self.graph.get_node(sight.node_id)];
-        //         initial_route.push((sight, dist));
-        //     }
-        // }
 
         log::debug!("Starting simulated annealing");
 

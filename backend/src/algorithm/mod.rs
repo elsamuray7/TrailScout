@@ -13,6 +13,10 @@ use crate::algorithm::sa_lin_yu::SimAnnealingLinYu;
 /// attractions
 type ScoreMap = HashMap<usize, usize>;
 
+/// Multiplier for the relevant (reachable) radius to get the radius in which outgoing edges for
+/// nodes should be retrieved
+const EDGE_RADIUS_MULTIPLIER: f64 = 1.1;
+
 /// Circular area around a geographic coordinate
 #[derive(Deserialize)]
 pub struct Area {
@@ -21,15 +25,15 @@ pub struct Area {
     radius: f64,
 }
 
+/// Maximum value for user sight preferences
+const USER_PREF_MAX: usize = 5;
+
 /// User preference for a sight category
 #[derive(Deserialize)]
 pub struct SightCategoryPref {
     name: String,
     pref: usize,
 }
-
-/// Maximum value for user sight preferences
-const USER_PREF_MAX: usize = 5;
 
 impl SightCategoryPref {
     /// Returns a valid preference value for this sight category

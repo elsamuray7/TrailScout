@@ -326,20 +326,6 @@ impl Graph {
     pub fn get_sights_in_area(&self, lat: f64, lon: f64, radius: f64) -> HashMap<usize, &Sight> {
         debug!("Computing sights in area: lat: {}, lon: {}, radius: {}", lat, lon, radius);
 
-        let successors = |node: &Node|
-            self.get_outgoing_edges_in_area(node.id, lat, lon, radius)
-                .into_iter()
-                .map(|edge| (self.get_node(edge.tgt), edge.dist))
-                .collect::<Vec<(&Node, usize)>>();
-
-        // Get all nodes that are reachable from the node with the lowest distance to the center
-        let center_id = self.get_nearest_node(lat, lon);
-        let reachable_nodes: HashSet<&Node> = dijkstra_all(
-            &self.get_node(center_id),
-            |node| successors(node))
-            .into_keys()
-            .collect();
-
         //estimate bounding box with 111111 meters = 1 longitude degree
         //use binary search to find the range of elements that should be considered
         let lower_bound = binary_search_sights_vector(&self.sights, lat - radius / 111111.0);
@@ -356,13 +342,39 @@ impl Graph {
                 location.is_in_circle(&center, radius)
                     .expect("Could not determine whether sight lies in given area")
             })
-            .filter(|sight| reachable_nodes.contains(self.get_node(sight.node_id)))
             .map(|sight| (sight.node_id, sight))
             .collect();
-        debug!("Found {} reachable sights within the given area (of a total of {} sights)",
+        debug!("Found {} sights within the given area (of a total of {} sights)",
             sights_in_area.len(), self.sights.len());
 
         sights_in_area
+    }
+
+    /// Get all reachable sights within a circular area, specified by `radius` (in meters), around a given coordinate
+    /// (latitude / longitude).
+    /// `reachable_with` specifies within which radius reachability must be tested.
+    pub fn get_reachable_sights_in_area(&self, lat: f64, lon: f64, radius: f64, reachable_within: f64) -> HashMap<usize, &Sight> {
+        let successors = |node_id: usize|
+            self.get_outgoing_edges_in_area(node_id, lat, lon, reachable_within)
+                .into_iter()
+                .map(|edge| (edge.tgt, edge.dist))
+                .collect::<Vec<(usize, usize)>>();
+
+        // Get all nodes that are reachable from the node with the lowest distance to the center
+        let center_id = self.get_nearest_node(lat, lon);
+        let reachable_nodes: HashSet<usize> = dijkstra_all(
+            &center_id,
+            |&node_id| successors(node_id))
+            .into_keys()
+            .collect();
+
+        let reachable_sights: HashMap<usize, &Sight> = self.get_sights_in_area(lat, lon, radius).into_iter()
+            .filter(|(sight_id, _)| reachable_nodes.contains(sight_id))
+            .collect();
+        debug!("Found {} reachable sights within the given area (of a total of {} sights)",
+            reachable_sights.len(), self.sights.len());
+
+        reachable_sights
     }
 }
 
