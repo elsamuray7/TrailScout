@@ -323,6 +323,7 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
         let scores = compute_scores(&sights, user_prefs);
         let distance_map = build_distance_map(
             graph, &area, edge_radius, &sights, root_id, &scores);
+
         Ok(Self {
             graph,
             start_time,
