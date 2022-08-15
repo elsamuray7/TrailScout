@@ -69,6 +69,12 @@ pub enum EdgeType {
     Tertiary // Straßen, die Dörfer verbinden
 }
 
+pub trait INode {
+    fn id(&self) -> usize;
+    fn lat(&self) -> f64;
+    fn lon(&self) -> f64;
+}
+
 /// A graph node located at a specific coordinate
 #[derive(Debug, Serialize)]
 pub struct Node {
@@ -77,6 +83,20 @@ pub struct Node {
     pub lat: f64,
     pub lon: f64,
     pub info: String,
+}
+
+impl INode for Node {
+    fn id(&self) -> usize {
+        self.id
+    }
+
+    fn lat(&self) -> f64 {
+        self.lat
+    }
+
+    fn lon(&self) -> f64 {
+        self.lon
+    }
 }
 
 impl PartialEq<Self> for Node {
@@ -375,7 +395,7 @@ fn binary_search_sights_vector(sights: &Vec<Sight>, target_latitude: f64) -> usi
 
 /// Get the nearest node (that is not in `id_filter`) to a given coordinate (latitude / longitude).
 /// The function expects a node vector sorted by latitude.
-pub fn get_nearest_node(nodes_sorted_by_lat: &Vec<&Node>, id_filter: &HashSet<usize>, lat: f64, lon: f64) -> usize {
+pub fn get_nearest_node(nodes_sorted_by_lat: &Vec<&impl INode>, id_filter: &HashSet<usize>, lat: f64, lon: f64) -> usize {
     // Location to find the nearest node for
     let location = Location::new(lat, lon);
 
@@ -397,7 +417,7 @@ pub fn get_nearest_node(nodes_sorted_by_lat: &Vec<&Node>, id_filter: &HashSet<us
             // If the distance with the current nodes longitude set to the longitude of the
             // location is greater than the minimum distance so far, abort and output the node
             // with the found distance
-            let node_loc_lon_aligned = Location::new(node.lat, location.longitude());
+            let node_loc_lon_aligned = Location::new(node.lat(), location.longitude());
             // Use haversine distance here for more efficiency
             let minimum_possible_distance = location.haversine_distance_to(&node_loc_lon_aligned);
             if minimum_possible_distance.meters() >= min_dist.meters() {
