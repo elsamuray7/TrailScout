@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
 use std::fs::{File, create_dir_all};
 use std::{fs, io};
 use std::hash::{Hash, Hasher};
@@ -10,9 +10,9 @@ use serde::{Deserialize, Serialize};
 use std::time::{Instant};
 use geoutils::Location;
 use itertools::Itertools;
-use log::{info, error, trace, debug};
-use osmpbf::{Element, BlobReader, BlobType, Node, Way};
-use crate::data::graph::{get_nearest_node, Category, Edge, Graph, Node as GraphNode, Sight, INode};
+use log::{info, error, trace};
+use osmpbf::{Element, BlobReader, BlobType, Way};
+use crate::data::graph::{get_nearest_node, Category, INode};
 
 const SIGHTS_CONFIG_PATH :&str = "./sights_config.json";
 const EDGE_CONFIG_PATH :&str = "./edge_type_config.json";
@@ -48,8 +48,9 @@ struct EdgeTypeMap {
 }
 
 /// An osm node located at a specific coordinate extraced from the osm data.
-#[derive(Debug, Serialize)]
-struct OSMNode {
+#[derive(Debug, Serialize, Deserialize)]
+pub struct OSMNode {
+    #[serde(skip_serializing, skip_deserializing)]
     /// The osm id of the node extracted from the osm data. Later mapped into id.
     osm_id: usize,
     /// The id of the node.
@@ -87,11 +88,14 @@ impl Hash for OSMNode {
 }
 
 /// A directed and weighted osm edge extracted from the osm data.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Serialize)]
 struct OSMEdge {
+    #[serde(skip_serializing)]
     /// The osm id of the edge's source node from the osm data.
     osm_src: usize,
-    /// The osm id of the edge's source node from the osm data.
+
+    /// The osm id of the edge's target node from the osm data.
+    #[serde(skip_serializing)]
     osm_tgt: usize,
     /// The id of the edge's source node
     src: usize,
@@ -119,6 +123,7 @@ impl Hash for OSMEdge {
 /// A sight node mapped on its nearest node
 #[derive(Debug, Serialize)]
 struct OSMSight {
+    #[serde(skip_serializing)]
     osm_id: usize,
     node_id: usize,
     lat: f64,
@@ -173,10 +178,10 @@ pub fn parse_and_write_osm_data (osmpbf_file_path: &str, fmi_file_path: &str) ->
         let blob = result.unwrap();
         let blob_type = blob.get_type();
         if blob_type == BlobType::OsmHeader {
-            info!("This is a Header");
+            trace!("This is a Header");
             let header = blob.to_headerblock().unwrap();
-            info!("required Features: {:?}", header.required_features());
-            info!("optional Features: {:?}", header.optional_features());
+            trace!("required Features: {:?}", header.required_features());
+            trace!("optional Features: {:?}", header.optional_features());
         } else if blob_type == BlobType::OsmData {
             let sight_config = &sight_config_orig;
             let edge_type_config = &edge_type_config_orig;
@@ -213,23 +218,23 @@ pub fn parse_and_write_osm_data (osmpbf_file_path: &str, fmi_file_path: &str) ->
         osm_sights.append(&mut result.2);
     }
     let time_duration = time_start.elapsed();
-    info!("Finished reading PBF file after {} seconds!", time_duration.as_secs());
+    info!("Finished reading PBF file after {} seconds!", time_duration.as_millis() as f32 / 1000.0);
     }).ok();
 
     let nodes_before_pruning = osm_nodes.len();
     prune_nodes_without_edges(&mut osm_nodes, &osm_edges, &osm_sights);
     let time_duration = time_start.elapsed();
-    info!("Finished pruning of {} nodes without edges after {} seconds!", nodes_before_pruning - osm_nodes.len(), time_duration.as_secs());
+    info!("Finished pruning of {} nodes without edges after {} seconds!", nodes_before_pruning - osm_nodes.len(), time_duration.as_millis() as f32 / 1000.0);
 
     // HashSet to check whether a node is a sight or not
     let mut is_sight_node = HashSet::new();
     id_post_processing(&mut osm_nodes, &mut osm_edges, &mut osm_sights, &mut is_sight_node);
     let time_duration = time_start.elapsed();
-    info!("Finished id post processing after {} seconds!", time_duration.as_secs());
+    info!("Finished id post processing after {} seconds!", time_duration.as_millis() as f32 / 1000.0);
 
     integrate_sights_into_graph(&osm_nodes, &mut osm_edges, &osm_sights, &is_sight_node);
     let time_duration = time_start.elapsed();
-    info!("Finished mapping sights into graph after {} seconds!", time_duration.as_secs());
+    info!("Finished mapping sights into graph after {} seconds!", time_duration.as_millis() as f32 / 1000.0);
 
     osm_edges.sort_unstable_by(|e1, e2| {
         let id1 = e1.src;
@@ -245,12 +250,12 @@ pub fn parse_and_write_osm_data (osmpbf_file_path: &str, fmi_file_path: &str) ->
         })
     });
     let time_duration = time_start.elapsed();
-    info!("Finished sorting edges after {} seconds!", time_duration.as_secs());
+    info!("Finished sorting edges after {} seconds!", time_duration.as_millis() as f32 / 1000.0);
 
     let edges_before_pruning = osm_edges.len();
     prune_edges(&mut osm_edges);
     let time_duration = time_start.elapsed();
-    info!("Finished pruning of {} identical edges after {} seconds!", edges_before_pruning - osm_edges.len(), time_duration.as_secs());
+    info!("Finished pruning of {} identical edges after {} seconds!", edges_before_pruning - osm_edges.len(), time_duration.as_millis() as f32 / 1000.0);
 
     osm_edges.sort_unstable_by(|e1, e2| {
         let id1 = e1.src;
@@ -262,7 +267,7 @@ pub fn parse_and_write_osm_data (osmpbf_file_path: &str, fmi_file_path: &str) ->
         })
     });
     let time_duration = time_start.elapsed();
-    info!("Finished resorting edges after {} seconds!", time_duration.as_secs());
+    info!("Finished resorting edges after {} seconds!", time_duration.as_millis() as f32 / 1000.0);
 
     osm_sights.sort_unstable_by( |s1, s2| {
         if s1.lat > s2.lat {
@@ -274,37 +279,24 @@ pub fn parse_and_write_osm_data (osmpbf_file_path: &str, fmi_file_path: &str) ->
         }
     });
     let time_duration = time_start.elapsed();
-    info!("Finished sorting sights after {} seconds!", time_duration.as_secs());
+    info!("Finished sorting sights after {} seconds!", time_duration.as_millis() as f32 / 1000.0);
 
     let time_duration = time_start.elapsed();
-    info!("End of PBF data parsing after {} seconds!", time_duration.as_secs());
+    info!("End of PBF data parsing after {} seconds!", time_duration.as_millis() as f32 / 1000.0);
 
-    info!("Start writing the fmi file!");
-    let mut text = "".to_owned();
-    for osm_node in &*osm_nodes {
-        text.push_str(&format!("{} {} {}\n", osm_node.id, osm_node.lat, osm_node.lon));
-    }
-    for osm_sight in &*osm_sights {
-        text.push_str(&format!("{} {} {} {} {} {}\n", osm_sight.node_id, osm_sight.lat, osm_sight.lon, osm_sight.category.to_string(), osm_sight.name, osm_sight.opening_hours));
-    }
-    for osm_edge in &*osm_edges {
-        text.push_str(&format!("{} {} {}\n", osm_edge.src, osm_edge.tgt, osm_edge.dist));
-    }
-    let time_duration = time_start.elapsed();
-    info!("Created text after {} seconds!", time_duration.as_secs());
-
+    info!("Start writing the fmi binary file!");
     let path = std::path::Path::new(fmi_file_path);
     let prefix = path.parent().unwrap();
     create_dir_all(prefix)?;
+
     let file = File::create(fmi_file_path)?;
     let mut file = BufWriter::new(file);
-    file.write((format!("{}\n", osm_nodes.len())).as_bytes())?;
-    file.write((format!("{}\n", osm_sights.len())).as_bytes())?;
-    file.write((format!("{}\n", osm_edges.len())).as_bytes())?;
-    file.write(text.as_bytes())?;
+    bincode::serialize_into(&mut file, &osm_nodes).expect("Error serializing nodes");
+    bincode::serialize_into(&mut file, &osm_sights).expect("Error serializing sights");
+    bincode::serialize_into(&mut file, &osm_edges).expect("Error serializing edges");
 
     let time_duration = time_start.elapsed();
-    info!("End of writing fmi file after {} seconds!", time_duration.as_secs());
+    info!("End of writing fmi binary file after {} seconds!", time_duration.as_millis() as f32 / 1000.0);
     Ok(())
 }
 

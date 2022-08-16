@@ -1,11 +1,9 @@
-use std::collections::BTreeMap;
-
+use std::{collections::BTreeMap};
 use log::{info, trace};
 use once_cell::sync::Lazy;
 use rand::{Rng, thread_rng};
 use pathfinding::prelude::dijkstra;
-use trailscout_lib::data::graph::{Graph, Node};
-
+use trailscout_lib::data::{graph::{Graph, Node}};
 mod common;
 
 static GRAPH: Lazy<Graph> = Lazy::new(|| {
@@ -22,7 +20,7 @@ fn test_parsing_process_to_produce_graph_with_proper_number_of_elements() {
     info!("Finished creating graph with {} nodes, {} sights and {} edges", graph.num_nodes, graph.num_sights, graph.num_edges);
     if common::PATH.0.contains("bremen") {
         assert_eq!(graph.num_nodes, 236777, "nodes");
-        assert_eq!(graph.num_sights, 3014, "sights");
+        assert_eq!(graph.num_sights, 2971, "sights");
         assert_eq!(graph.num_edges, 524956, "edges");
     } else if common::PATH.0.contains("stg") {
         assert_eq!(graph.num_nodes, 4760, "nodes");
@@ -176,9 +174,7 @@ fn get_sights_with_radius_1000_meters() {
 #[test]
 fn test_paths_in_both_directions() {
     common::initialize_logger();
-
-    let graph = Graph::parse_from_file("./tests_data/output/bremen-latest.fmi")
-        .expect("Failed to parse graph file");
+    let graph: &Lazy<Graph> = &GRAPH;
 
     let mut rng = thread_rng();
 
@@ -189,7 +185,7 @@ fn test_paths_in_both_directions() {
             .collect::<Vec<(&Node, usize)>>();
 
     for round in 1..=50 {
-        trace!("Round {} / {}", round, 50);
+        info!("Round {} / {}", round, 50);
 
         let rand_src = rng.gen_range(0..graph.num_nodes);
         let rand_tgt = rng.gen_range(0..graph.num_nodes);

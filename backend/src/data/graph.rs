@@ -2,17 +2,18 @@ use std::collections::{HashMap, HashSet};
 use std::fmt::Formatter;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
-use std::io::{BufRead, BufReader};
+use std::io::{BufReader};
 use std::num::{ParseFloatError, ParseIntError};
-use futures::StreamExt;
+use std::time::Instant;
+use strum_macros::EnumString;
 use geoutils::{Distance, Location};
 use itertools::Itertools;
-use log::{debug, trace};
-use serde::Serialize;
+use log::{debug, trace, info};
+use serde::{Serialize, Deserialize};
 use serde_enum_str::{Deserialize_enum_str, Serialize_enum_str};
 use pathfinding::prelude::*;
 
-#[derive(Deserialize_enum_str, Serialize_enum_str, PartialEq, Eq, Debug)]
+#[derive(EnumString, Deserialize, Serialize, PartialEq, Eq, Debug)]
 #[serde(rename_all = "PascalCase")]
 pub enum Category {
     ThemePark,
@@ -55,7 +56,7 @@ pub trait INode {
 }
 
 /// A graph node located at a specific coordinate
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Node {
     pub id: usize,
     pub lat: f64,
@@ -89,7 +90,7 @@ impl Hash for Node {
 }
 
 /// A directed and weighted graph edge
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct Edge {
     /// The id of the edge's source node
     pub src: usize,
@@ -115,7 +116,7 @@ impl Hash for Edge {
 }
 
 /// A sight node mapped on its nearest node
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Sight {
     pub node_id: usize,
     pub lat: f64,
@@ -141,109 +142,24 @@ impl Graph {
     /// Parse graph data (in particular, nodes, edges and sights) from a file and create a new
     /// graph from it
     pub fn parse_from_file(graph_file_path: &str) -> Result<Self, ParseError> {
+        info!("Start creating the graph from fmi binary file!");
+        let time_start = Instant::now();
+
         let graph_file = File::open(graph_file_path)?;
-        let graph_reader = BufReader::new(graph_file);
+        let mut graph_reader = BufReader::new(graph_file);
 
-        let mut lines = graph_reader.lines();
-        let mut line_no = 0_usize;
+        let nodes:Vec<Node> = bincode::deserialize_from(&mut graph_reader).unwrap();
+        let sights:Vec<Sight> = bincode::deserialize_from(&mut graph_reader).unwrap();
+        let edges:Vec<Edge> = bincode::deserialize_from(&mut graph_reader).unwrap();
 
-        let num_nodes: usize = lines.next()
-            .expect("Unexpected EOF while parsing number of nodes")?
-            .parse()?;
-        let num_sights: usize = lines.next()
-            .expect("Unexpected EOF while parsing number of sights")?
-            .parse()?;
-        let num_edges: usize = lines.next()
-            .expect("Unexpected EOF while parsing number of edges")?
-            .parse()?;
-        line_no += 3;
-
-        let mut nodes = Vec::with_capacity(num_nodes);
-        for i in 0..num_nodes {
-            let line = lines.next()
-                .expect(&format!("Unexpected EOF while parsing nodes in line {}", line_no))?;
-            let mut split = line.split(" ");
-            line_no += 1;
-            split.next(); // id
-
-            let node = Node {
-                id: i,
-                lat: split.next()
-                    .expect(&format!("Unexpected EOL while parsing node latitude in line {}",
-                                     line_no))
-                    .parse()?,
-                lon: split.next()
-                    .expect(&format!("Unexpected EOL while parsing node longitude in line {}",
-                                     line_no))
-                    .parse()?
-            };
-            nodes.push(node);
-        }
-
-        let mut sights = Vec::with_capacity(num_sights);
-        for _ in 0..num_sights {
-            let line = lines.next()
-                .expect(&format!("Unexpected EOF while parsing nodes in line {}", line_no))?;
-            let mut split = line.split(" ");
-            line_no += 1;
-
-            let sight = Sight {
-                node_id: split.next()
-                    .expect(&format!("Unexpected EOL while parsing sight node id in line {}",
-                                     line_no))
-                    .parse()?,
-                lat: split.next()
-                    .expect(&format!("Unexpected EOL while parsing sight latitude in line {}",
-                                     line_no))
-                    .parse()?,
-                lon: split.next()
-                    .expect(&format!("Unexpected EOL while parsing sight longitude in line {}",
-                                     line_no))
-                    .parse()?,
-                category: split.next()
-                    .expect(&format!("Unexpected EOL while parsing sight category in line {}",
-                                     line_no))
-                    .parse()
-                    .unwrap(),
-                name: split.next()
-                    .expect(&format!("Unexpected EOL while parsing sight category in line {}",
-                                     line_no))
-                    .parse()
-                    .unwrap(),
-                opening_hours: split.next()
-                    .expect(&format!("Unexpected EOL while parsing sight category in line {}",
-                                     line_no))
-                    .parse()
-                    .unwrap()
-            };
-            sights.push(sight);
-        }
+        let num_nodes = nodes.len();
+        let num_sights = sights.len();
+        let num_edges = edges.len();
 
         let mut next_src: usize = 0;
         let mut offset: usize = 0;
-        let mut edges = Vec::with_capacity(num_edges);
         let mut offsets = vec![0; num_nodes + 1];
-        for _ in 0..num_edges {
-            let line = lines.next()
-                .expect(&format!("Unexpected EOF while parsing edges in line {}", line_no))?;
-            let mut split = line.split(" ");
-            line_no += 1;
-
-            let edge = Edge {
-                src: split.next()
-                    .expect(&format!("Unexpected EOL while parsing edge source in line {}",
-                                     line_no))
-                    .parse()?,
-                tgt: split.next()
-                    .expect(&format!("Unexpected EOL while parsing edge target in line {}",
-                                     line_no))
-                    .parse()?,
-                dist: split.next()
-                    .expect(&format!("Unexpected EOL while parsing edge weight in line {}",
-                                     line_no))
-                    .parse()?,
-            };
-
+        for edge in edges.iter() {
             if edge.src >= next_src {
                 for j in next_src..=edge.src {
                     offsets[j] = offset;
@@ -251,12 +167,13 @@ impl Graph {
                 next_src = edge.src + 1;
             }
             offset += 1;
-
-            edges.push(edge);
         }
-        for i in next_src..=num_nodes {
+        for i in next_src..= num_nodes {
             offsets[i] = num_edges;
         }
+        
+        let time_duration = time_start.elapsed();
+        info!("End graph creation after {} seconds!", time_duration.as_millis() as f32 / 1000.0);
 
         Ok(Self {
             nodes,
@@ -489,7 +406,7 @@ mod test {
     fn test_offsets() {
         init_logging();
 
-        let graph = Graph::parse_from_file("./tests_data/output/bremen-latest.fmi")
+        let graph = Graph::parse_from_file("./tests_data/output/bremen-latest.fmibin")
             .expect("Failed to parse graph file");
 
         let mut rng = thread_rng();
@@ -532,7 +449,7 @@ mod test {
     fn test_nearest_node() {
         init_logging();
 
-        let graph = Graph::parse_from_file("./tests_data/output/bremen-latest.fmi")
+        let graph = Graph::parse_from_file("./tests_data/output/bremen-latest.fmibin")
             .expect("Failed to parse graph file");
 
         let (lat, lon) = RADISSON_BLU_HOTEL;
