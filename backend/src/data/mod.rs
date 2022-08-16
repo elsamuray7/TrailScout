@@ -6,6 +6,8 @@ use std::fs;
 use serde::{Serialize, Deserialize};
 
 
+
+
 const SIGHTS_CONFIG_PATH :&str = "./sights_config.json";
 const EDGE_CONFIG_PATH :&str = "./edge_type_config.json";
 
@@ -18,6 +20,7 @@ pub struct SightsConfig {
 #[derive(Deserialize)]
 pub struct CategoryTagMap {
     category: String,
+    opening_hours: String,
     tags: Vec<Tag>
 }
 
@@ -38,6 +41,8 @@ pub struct EdgeTypeMap {
     edge_type: String,
     tags: Vec<Tag>,
 }
+
+
 
 //read config at SIGHTS_CONFIG_PATH and return it
 pub fn get_sights_config() -> SightsConfig {
