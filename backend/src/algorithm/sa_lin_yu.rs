@@ -318,6 +318,9 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
         let edge_radius = relevant_radius * EDGE_RADIUS_MULTIPLIER;
         let sights = graph.get_reachable_sights_in_area(area.lat, area.lon,
                                                         sights_radius, edge_radius);
+        if sights.is_empty() {
+            return Err(AlgorithmError::NoSightsFound);
+        }
 
         let root_id = graph.get_nearest_node(area.lat, area.lon);
         let scores = compute_scores(&sights, user_prefs);

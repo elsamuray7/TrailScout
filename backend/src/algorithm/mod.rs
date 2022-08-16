@@ -225,6 +225,10 @@ pub enum AlgorithmError {
     /// i.e., a negative time interval
     #[display(fmt = "End time is before start time")]
     NegativeTimeInterval,
+    /// Error indicating that no reachable sights have been found in the requested area or in the
+    /// area that can be traveled in the requested time interval
+    #[display(fmt = "No sights found in area that are reachable within time interval")]
+    NoSightsFound,
     /// Error indicating that no route between two nodes could be determined
     #[display(fmt = "No route found from node {} to {}", from, to)]
     NoRouteFound {
