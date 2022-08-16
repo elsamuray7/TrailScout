@@ -139,12 +139,12 @@ impl Sight{
 
         let opening_hours_parsed = match OpeningHours::parse(&self.opening_hours){
             Ok(res) => {
-                debug!("Using OSM Opening Times");
+                trace!("Using OSM Opening Times");
                 Some(res)
             }
             //Get default value if could not parse
             Err(err) => {
-                debug!("Parsing Default Opening Times");
+                trace!("Parsing Default Opening Times");
                 let parse = OpeningHours::parse(&self.get_default_opening_hour(&sights_config))
                     .expect("Could not parse default opening hours");
                 Some(parse)
@@ -155,25 +155,28 @@ impl Sight{
     }
     /// Get default opening hours from sights_config
     fn get_default_opening_hour(&self, sights_config : &SightsConfig) -> String {
-
         for cat_tag_map in &sights_config.category_tag_map{
-
             let cat = cat_tag_map.category.parse::<Category>().unwrap();
             if matches!(&self.category, cat){
-                debug!("Matched Default Time");
                 let default_opening_hours = cat_tag_map.opening_hours.clone();
                 return default_opening_hours
             }
-
         }
-        panic!("Error while parsing default time from config")
-
+        panic!("Error while parsing default time from config") //If this happens sights_config.json is wrong
     }
 }
 
+// Need custom debug to ignore parsed OpeningHours because it does not implement it
 impl Debug for Sight {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        todo!()
+        f.debug_struct("Sight")
+            .field("node_id", &self.node_id)
+            .field("lat", &self.lat)
+            .field("lon", &self.lon)
+            .field("category", &self.category)
+            .field("name", &self.name)
+            .field("opening_hours", &self.opening_hours)
+            .finish()
     }
 }
 
