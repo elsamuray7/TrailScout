@@ -6,6 +6,10 @@ germany-latest.osm.pbf
 baden-wuerttemberg-latest.osm.pbf
 # Ignore graph files generated from OSM data
 osm_graphs/**.fmi
+osm_graphs/**.fmibin
+tests_data/output/**.fmi
+tests_data/output/**.fmibin
+!tests_data/output/bremen-latest.fmibin
 
 # IntelliJ related stuff
 runConfigurations.xml
