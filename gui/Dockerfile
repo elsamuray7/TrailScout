@@ -26,6 +26,7 @@ RUN npm run $ENV
 FROM nginx:latest
 
 # Copy the build output to replace the default nginx contents.
+COPY ./nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /usr/local/app/dist/gui /usr/share/nginx/html
 
 # Expose port 80
