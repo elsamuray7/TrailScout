@@ -245,7 +245,7 @@ mod test {
     fn test_greedy() {
         init_logging();
 
-        let graph = Graph::parse_from_file("./tests_data/output/bremen-latest.fmi")
+        let graph = Graph::parse_from_file("./tests_data/output/bremen-latest.fmibin")
             .expect("Failed to parse graph file");
 
         let start_time = DateTime::parse_from_rfc3339("2022-07-01T10:00:00+01:00")
