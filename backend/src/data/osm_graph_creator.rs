@@ -1,51 +1,20 @@
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
-use std::fs::{File, create_dir_all};
+use std::fs::{create_dir_all, File};
 use std::{fs, io};
 use std::hash::{Hash, Hasher};
-use std::io::{Write, BufWriter};
+use std::io::{BufWriter, Write};
 use std::path::Path;
 use crossbeam::thread;
 use serde::{Deserialize, Serialize};
-use std::time::{Instant};
+use std::time::Instant;
 use geoutils::Location;
 use itertools::Itertools;
-use log::{info, error, trace};
-use osmpbf::{Element, BlobReader, BlobType, Way};
-use crate::data::graph::{get_nearest_node, Category, INode};
-
-const SIGHTS_CONFIG_PATH :&str = "./sights_config.json";
-const EDGE_CONFIG_PATH :&str = "./edge_type_config.json";
-
-//Deserialization of sights_config
-#[derive(Deserialize)]
-struct SightsConfig {
-    category_tag_map: Vec<CategoryTagMap>
-}
-
-#[derive(Deserialize)]
-struct CategoryTagMap {
-    category: String,
-    tags: Vec<Tag>
-}
-
-#[derive(Deserialize)]
-struct Tag {
-    key: String,
-    value: String
-}
-
-//Deserialization of edge_type_config
-#[derive(Deserialize)]
-struct EdgeTypeConfig {
-    edge_type_tag_map: Vec<EdgeTypeMap>
-}
-
-#[derive(Deserialize)]
-struct EdgeTypeMap {
-    edge_type: String,
-    tags: Vec<Tag>,
-}
+use log::{error, info, trace};
+use osmpbf::{BlobReader, BlobType, Element, Way};
+use crate::data;
+use crate::data::graph::{Category, get_nearest_node, INode};
+use crate::data::{EdgeTypeConfig, SightsConfig};
 
 /// A graph node located at a specific coordinate
 #[derive(Debug, Serialize, Deserialize)]
@@ -127,20 +96,6 @@ struct OSMSight {
     pub opening_hours: String
 }
 
-//read config at SIGHTS_CONFIG_PATH and return it
-fn get_sights_config() -> SightsConfig {
-    let data = fs::read_to_string(SIGHTS_CONFIG_PATH).expect("Unable to read file");
-    let sights_config: SightsConfig = serde_json::from_str(&data).expect("Unable to parse");
-    return sights_config;
-}
-
-//read config at EDGE_CONFIG_PATH and return it
-fn get_edge_type_config() -> EdgeTypeConfig {
-    let data = fs::read_to_string(EDGE_CONFIG_PATH).expect("Unable to read file");
-    let edge_type_config: EdgeTypeConfig = serde_json::from_str(&data).expect("Unable to parse");
-    return edge_type_config;
-}
-
 /// Parse given `graph_file`. If it does not exist yet, build it from `source_file` first.
 pub fn checked_create_fmi_graph(graph_file: &str, osm_source_file: &str) -> std::io::Result<()> {
     if !Path::new(graph_file).exists() && Path::new(osm_source_file).exists() {
@@ -154,8 +109,8 @@ pub fn parse_and_write_osm_data (osmpbf_file_path: &str, fmi_file_path: &str) ->
     let mut edges: Vec<OSMEdge> = Vec::new();
     let mut sights: Vec<OSMSight> = Vec::new();
 
-    let sight_config_orig = get_sights_config();
-    let edge_type_config_orig = get_edge_type_config();
+    let sight_config_orig = data::get_sights_config();
+    let edge_type_config_orig = data::get_edge_type_config();
 
     let reader = BlobReader::from_path(osmpbf_file_path)?;
 
