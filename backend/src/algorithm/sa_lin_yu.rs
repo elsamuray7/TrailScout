@@ -14,14 +14,17 @@ const USER_PREF_TO_SCORE: [usize; USER_PREF_MAX + 1] = [0, 1, 2, 4, 8, 16];
 /// Initial temperature
 const T_0: f64 = 0.1;
 /// Multiplier for iterations on a temperature
-const B: usize = 100;
+const B: usize = 1000;
 /// Factor by which the temperature is cooled down
-const ALPHA: f64 = 0.999;
+const ALPHA: f64 = 0.99;
 /// Maximum allowed computation time
-const MAX_TIME: u128 = 5000;
+const MAX_TIME: u128 = 10_000;
 /// Number of cooldowns that do not improve the result
 #[allow(dead_code)]
 const N_NON_IMPROVING: usize = 30;
+
+/// Maximum number of iterations on a temperature
+const MAX_ITER_PER_TEMP: usize = 100 * B;
 
 /// Compute scores for tourist attractions based on user preferences for categories or specific
 /// tourist attractions, respectively
@@ -353,19 +356,20 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
         randomized_sights.shuffle(&mut rng);
         log::debug!("Computed randomized initial solution");
 
-        log::debug!("Starting simulated annealing");
+        log::debug!("Starting simulated annealing (T_0: {}, B: {}, ALPHA: {}, MAX_TIME: {}, N_NON_IMPROVING: {})",
+            T_0, B, ALPHA, MAX_TIME, N_NON_IMPROVING);
 
-        let i_iter = randomized_sights.len() * B;
         let start_time = Instant::now();
+
+        let mut t = T_0;
+        let i_iter = (randomized_sights.len() * B).min(MAX_ITER_PER_TEMP);
+        let mut i = 0;
 
         let mut x = randomized_sights;
         let mut old_score = self.get_total_score(&x)?;
         log::debug!("Score of initial solution: {}", old_score);
         let mut x_best = x.clone();
         let mut f_best = old_score;
-
-        let mut t = T_0;
-        let mut i = 0;
 
         loop {
             let p = rng.gen::<f64>();
@@ -421,7 +425,8 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
 
                 let elapsed = start_time.elapsed().as_millis();
                 if elapsed > MAX_TIME {
-                    log::trace!("Reached time limit (elapsed: {} > limit: {})", elapsed, MAX_TIME);
+                    log::debug!("Reached time limit (elapsed: {}, current temperature: {})",
+                        elapsed, t);
                     break;
                 }
             }
