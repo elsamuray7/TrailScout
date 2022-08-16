@@ -145,8 +145,13 @@ impl Sight{
             //Get default value if could not parse
             Err(err) => {
                 trace!("Parsing Default Opening Times");
-                let parse = OpeningHours::parse(&self.get_default_opening_hour(&sights_config))
+                let default_openings = self.get_default_opening_hour(&sights_config);
+                let parse = OpeningHours::parse(&default_openings)
                     .expect("Could not parse default opening hours");
+
+                //override old (invalid) opening times with default
+                self.opening_hours = default_openings;
+
                 Some(parse)
             }
         };
