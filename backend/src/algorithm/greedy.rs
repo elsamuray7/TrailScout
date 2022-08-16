@@ -89,10 +89,12 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
                  .map(|edge| (self.graph.get_node(edge.tgt), edge.dist))
                  .collect::<Vec<(&Node, usize)>>();
 
+         log::debug!("Starting greedy search");
+
          let mut route: Route = vec![];
          let mut time_budget_left = (self.end_time.timestamp() - self.start_time.timestamp()) as usize;
          // Get all sights that can potentially be visited
-         let mut sights_left: HashSet<_> = self.sights.keys()
+         let mut unvisited_sights: HashSet<_> = self.sights.keys()
              .filter(|&sight_id| self.scores[sight_id] > 0)
              .map(usize::to_owned)
              .collect();
@@ -104,26 +106,29 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
                               |&node| successors(node));
 
              // sort sight nodes by their distance to curr_node
-             let sorted_dist_vec: Vec<_> = result_to_sights.values()
-                 .filter(|(node, _)| sights_left.contains(&node.id))
-                 .sorted_unstable_by(|(node1, dist1), (node2, dist2)| {
+             let sorted_dist_vec: Vec<_> = result_to_sights.iter()
+                 .filter(|(node, _)| unvisited_sights.contains(&node.id))
+                 .sorted_unstable_by(|(node1, (_, dist1)), (node2, (_, dist2))| {
                      let score1 = self.scores[&node1.id];
                      let score2 = self.scores[&node2.id];
 
-                     log::debug!("Comparing nodes {} and {}", node1.id, node2.id);
-                     log::debug!("Node1: score: {}, distance to current position: {}", score1, dist1);
-                     log::debug!("Node2: score: {}, distance to current position: {}", score2, dist2);
+                     log::trace!("Comparing nodes {} and {}", node1.id, node2.id);
+                     log::trace!("Node1: score: {}, distance to current position: {}", score1, dist1);
+                     log::trace!("Node2: score: {}, distance to current position: {}", score2, dist2);
 
                      let metric2 = score2 as f64 / *dist2.max(&1) as f64;
                      let metric1 = score1 as f64 / *dist1.max(&1) as f64;
                      metric2.total_cmp(&metric1)
                  })
+                 .map(|(&node, &(_, dist))| (node, dist))
                  .collect();
-             log::debug!("Sorted sights:\n{:?}", &sorted_dist_vec);
+             log::trace!("Number of unvisited reachable sights from current node {}: {}",
+                 curr_node_id, sorted_dist_vec.len());
+             log::trace!("Sorted sights:\n{:?}", &sorted_dist_vec);
 
              // for each sight node, check whether sight can be included in route without violating time budget
              let len_route_before = route.len();
-             for &(sight_node, dist) in sorted_dist_vec {
+             for (sight_node, dist) in sorted_dist_vec {
                  let secs_needed_to_sight = dist as f64 / self.walking_speed_mps;
                  let result_sight_to_root =
                      dijkstra(&self.graph.get_node(sight_node.id),
@@ -134,15 +139,15 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
                          let secs_needed_sight_to_root = dist_sight_to_root as f64 / self.walking_speed_mps;
                          let secs_total = (secs_needed_to_sight + secs_needed_sight_to_root) as usize + 1;
 
-                         log::debug!("Checking sight {}: secs to include sight: {}, left time budget: {}",
+                         log::trace!("Checking sight {}: secs to include sight: {}, left time budget: {}",
                              sight_node.id, secs_total, time_budget_left);
 
                          if secs_total <= time_budget_left {
-                             log::debug!("Adding sight to route");
+                             log::trace!("Adding sight to route");
 
                              // add sector containing sight and all intermediate nodes to route
                              let sector_nodes = build_path(&sight_node, &result_to_sights);
-                             log::debug!("Appending sector to route:\n{:?}", &sector_nodes);
+                             log::trace!("Appending sector to route:\n{:?}", &sector_nodes);
 
                              let sector = Sector::with_sight(secs_needed_to_sight as usize,
                                                              self.sights[&sight_node.id],
@@ -154,7 +159,7 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
                              });
 
                              time_budget_left -= secs_total;
-                             sights_left.remove(&sight_node.id);
+                             unvisited_sights.remove(&sight_node.id);
                              curr_node_id = sight_node.id;
                              break;
                         }
@@ -165,7 +170,7 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
 
             // check whether any sight has been included in route and if not, go back to root
             if route.len() == len_route_before {
-                log::debug!("Traveling back to root");
+                log::trace!("Traveling back to root");
 
                 let result_to_root =
                     dijkstra(&self.graph.get_node(curr_node_id),
@@ -175,13 +180,30 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
 
                 let (sector_nodes, dist_to_root) = result_to_root;
                 let secs_to_root = (dist_to_root as f64 / self.walking_speed_mps) as usize;
-                log::debug!("Appending sector to route:\n{:?}", &sector_nodes);
+                log::trace!("Appending sector to route:\n{:?}", &sector_nodes);
 
                 route.push(RouteSector::End(Sector::new(secs_to_root, sector_nodes)));
                 break;
             }
         }
 
+         let collected_score = self.get_collected_score(&route);
+         log::debug!("Finished greedy search. Computed walking route from node: {} including {} sights with total score: {}.",
+             self.root_id, route.len() - 1, collected_score);
+
         Ok(route)
+    }
+
+    fn get_collected_score(&self, route: &Route) -> usize {
+        route.iter()
+            .map(|route_sec| {
+                match route_sec {
+                    // Start and intermediate sectors contain a sight per definition
+                    RouteSector::Start(sector) => self.scores[&sector.sight.unwrap().node_id],
+                    RouteSector::Intermediate(sector) => self.scores[&sector.sight.unwrap().node_id],
+                    _ => 0,
+                }
+            })
+            .sum()
     }
 }

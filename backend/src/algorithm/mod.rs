@@ -146,6 +146,9 @@ trait _Algorithm<'a> {
     /// * an `Err` containing an `AlgorithmError`, otherwise
     fn compute_route(&self) -> Result<Route, AlgorithmError>;
 
+    /// Outputs the score collected by a route computed by this algorithm
+    fn get_collected_score(&self, route: &Route) -> usize;
+
     /// Returns a reference to this concrete implementation of the `_Algorithm` trait
     /// as a generic trait object
     fn as_algorithm(&'a self) -> &'a dyn _Algorithm where Self: Sized {
