@@ -305,7 +305,7 @@ pub fn get_nearest_node(nodes_sorted_by_lat: &Vec<&impl INode>, id_filter: &Hash
     // Search the index of the node with the closest latitude coordinate within the list of nodes
     let result = nodes_sorted_by_lat.binary_search_by(|n| n.lat().total_cmp(&lat));
     let found_index = result.unwrap_or_else(|index| index);
-    debug!("Starting to search for nearest node at index: {} for latitude: {}", found_index, lat);
+    trace!("Starting to search for nearest node at index: {} for latitude: {}", found_index, lat);
 
     let mut min_dist = Distance::from_meters(f64::MAX);
     let mut min_id = 0;
