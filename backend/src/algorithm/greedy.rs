@@ -10,28 +10,32 @@ const USER_PREF_TO_SCORE: [usize; USER_PREF_MAX + 1] = [0, 1, 2, 4, 8, 16];
 
 /// Compute scores for tourist attractions based on user preferences for categories or specific
 /// tourist attractions, respectively
-///
-/// TODO map user preference number to algorithm internal score number
-fn compute_scores(sights: &HashMap<usize, &Sight>, user_prefs: UserPreferences) -> ScoreMap {
+fn compute_scores(sights: &HashMap<usize, &Sight>, user_prefs: UserPreferences) -> Result<ScoreMap, AlgorithmError> {
     let mut scores: ScoreMap = sights.iter()
         .map(|(&sight_id, _)| (sight_id, 0_usize))
         .collect();
+
     for category in &user_prefs.categories {
         let category_enum = category.name.parse::<Category>()
-            .unwrap_or(Category::Other);
+            .ok().ok_or_else(|| AlgorithmError::UnknownCategory { unknown_name: category.name.clone() })?;
         sights.iter()
             .filter(|(_, sight)| sight.category == category_enum)
             .for_each(|(&sight_id, _)| {
                 scores.insert(sight_id, USER_PREF_TO_SCORE[category.get_valid_pref()]);
             });
     }
+
     for sight in &user_prefs.sights {
-        // TODO implement check whether SightPref really corresponds to sight
-        scores.insert(sight.id, USER_PREF_TO_SCORE[sight.get_valid_pref()]);
+        if sights.contains_key(&sight.id) {
+            scores.insert(sight.id, USER_PREF_TO_SCORE[sight.get_valid_pref()]);
+        } else {
+            return Err(AlgorithmError::NodeIsNotASight { node_id: sight.id });
+        }
     }
+
     log::debug!("Computed scores: {:?}", &scores);
 
-    scores
+    Ok(scores)
 }
 
 /// Greedy implementation of the `Algorithm` trait.
@@ -77,7 +81,7 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
         }
 
         let root_id = graph.get_nearest_node(area.lat, area.lon);
-        let scores = compute_scores(&sights, user_prefs);
+        let scores = compute_scores(&sights, user_prefs)?;
 
         Ok(Self {
             graph,

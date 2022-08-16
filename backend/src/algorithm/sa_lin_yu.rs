@@ -25,28 +25,32 @@ const N_NON_IMPROVING: usize = 30;
 
 /// Compute scores for tourist attractions based on user preferences for categories or specific
 /// tourist attractions, respectively
-///
-/// TODO map user preference number to algorithm internal score number
-fn compute_scores(sights: &HashMap<usize, &Sight>, user_prefs: UserPreferences) -> ScoreMap {
+fn compute_scores(sights: &HashMap<usize, &Sight>, user_prefs: UserPreferences) -> Result<ScoreMap, AlgorithmError> {
     let mut scores: ScoreMap = sights.iter()
         .map(|(&sight_id, _)| (sight_id, 0_usize))
         .collect();
+
     for category in &user_prefs.categories {
         let category_enum = category.name.parse::<Category>()
-            .unwrap_or(Category::Other);
+            .ok().ok_or_else(|| AlgorithmError::UnknownCategory { unknown_name: category.name.clone() })?;
         sights.iter()
             .filter(|(_, sight)| sight.category == category_enum)
             .for_each(|(&sight_id, _)| {
                 scores.insert(sight_id, USER_PREF_TO_SCORE[category.get_valid_pref()]);
             });
     }
+
     for sight in &user_prefs.sights {
-        // TODO implement check whether SightPref really corresponds to sight
-        scores.insert(sight.id, USER_PREF_TO_SCORE[sight.get_valid_pref()]);
+        if sights.contains_key(&sight.id) {
+            scores.insert(sight.id, USER_PREF_TO_SCORE[sight.get_valid_pref()]);
+        } else {
+            return Err(AlgorithmError::NodeIsNotASight { node_id: sight.id });
+        }
     }
+
     log::debug!("Computed scores: {:?}", &scores);
 
-    scores
+    Ok(scores)
 }
 
 /// Build a distance map with distances from relevant nodes, i.e. the root node and all sight nodes
@@ -173,12 +177,12 @@ impl<'a> SimAnnealingLinYu<'a> {
         for &sight in current_solution {
             let curr_distance_map = &self.distance_map[&curr_node_id];
             let &(_, sight_travel_dist) = curr_distance_map.get(&sight.node_id)
-                .ok_or(AlgorithmError::NoRouteFound { from: curr_node_id, to: sight.node_id })?;
+                .ok_or_else(|| AlgorithmError::NoRouteFound { from: curr_node_id, to: sight.node_id })?;
             let sight_travel_time = (sight_travel_dist as f64 / self.walking_speed_mps) as usize + 1;
 
             let sight_distance_map = &self.distance_map[&sight.node_id];
             let &(_, root_travel_dist) = sight_distance_map.get(&self.root_id)
-                .ok_or(AlgorithmError::NoRouteFound { from: sight.node_id, to: self.root_id })?;
+                .ok_or_else(|| AlgorithmError::NoRouteFound { from: sight.node_id, to: self.root_id })?;
             let root_travel_time = (root_travel_dist as f64 / self.walking_speed_mps) as usize + 1;
 
             if time_budget >= (sight_travel_time + root_travel_time) {
@@ -261,12 +265,12 @@ impl<'a> SimAnnealingLinYu<'a> {
         for sight in best_solution {
             let curr_distance_map = &self.distance_map[&curr_node_id];
             let &(_, sight_travel_dist) = curr_distance_map.get(&sight.node_id)
-                .ok_or(AlgorithmError::NoRouteFound { from: curr_node_id, to: sight.node_id })?;
+                .ok_or_else(|| AlgorithmError::NoRouteFound { from: curr_node_id, to: sight.node_id })?;
             let sight_travel_time = (sight_travel_dist as f64 / self.walking_speed_mps) as usize + 1;
 
             let sight_distance_map = &self.distance_map[&sight.node_id];
             let &(_, root_travel_dist) = sight_distance_map.get(&self.root_id)
-                .ok_or(AlgorithmError::NoRouteFound { from: sight.node_id, to: self.root_id })?;
+                .ok_or_else(|| AlgorithmError::NoRouteFound { from: sight.node_id, to: self.root_id })?;
             let root_travel_time = (root_travel_dist as f64 / self.walking_speed_mps) as usize + 1;
 
             if time_budget >= (sight_travel_time + root_travel_time) {
@@ -284,7 +288,7 @@ impl<'a> SimAnnealingLinYu<'a> {
             } else {
                 let curr_distance_map = &self.distance_map[&curr_node_id];
                 let &(_, root_travel_dist) = curr_distance_map.get(&self.root_id)
-                    .ok_or(AlgorithmError::NoRouteFound { from: curr_node_id, to: self.root_id })?;
+                    .ok_or_else(|| AlgorithmError::NoRouteFound { from: curr_node_id, to: self.root_id })?;
                 let root_travel_time = (root_travel_dist as f64 / self.walking_speed_mps) as usize + 1;
 
                 let path = build_path(&self.root_id, curr_distance_map)
@@ -323,7 +327,7 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
         }
 
         let root_id = graph.get_nearest_node(area.lat, area.lon);
-        let scores = compute_scores(&sights, user_prefs);
+        let scores = compute_scores(&sights, user_prefs)?;
         let distance_map = build_distance_map(
             graph, &area, edge_radius, &sights, root_id, &scores);
 

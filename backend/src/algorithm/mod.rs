@@ -229,6 +229,16 @@ pub enum AlgorithmError {
     /// area that can be traveled in the requested time interval
     #[display(fmt = "No sights found in area that are reachable within time interval")]
     NoSightsFound,
+    /// Error indicating that an unknown category was assigned a preference
+    #[display(fmt = "Unknown category name: {}", unknown_name)]
+    UnknownCategory {
+        unknown_name: String,
+    },
+    /// Error indicating that a non-sight or non-existent node was assigned a preference
+    #[display(fmt = "Node {} is not a sight", node_id)]
+    NodeIsNotASight {
+        node_id: usize,
+    },
     /// Error indicating that no route between two nodes could be determined
     #[display(fmt = "No route found from node {} to {}", from, to)]
     NoRouteFound {
