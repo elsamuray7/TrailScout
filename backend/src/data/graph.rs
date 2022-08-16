@@ -4,34 +4,13 @@ use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io::{BufRead, BufReader};
 use std::num::{ParseFloatError, ParseIntError};
+use futures::StreamExt;
 use geoutils::{Distance, Location};
 use itertools::Itertools;
 use log::{debug, trace};
 use serde::Serialize;
 use serde_enum_str::{Deserialize_enum_str, Serialize_enum_str};
 use pathfinding::prelude::*;
-
-/// Bounding box of a circular area around a coordinate
-struct BoundingBox {
-    min_lat: f64,
-    max_lat: f64,
-    min_lon: f64,
-    max_lon: f64,
-}
-
-impl BoundingBox {
-    /// Create the bounding box of a circular area, specified by `radius`, around a given
-    /// coordinate
-    fn from_coordinate_and_radius(lat: f64, lon: f64, radius: f64) -> Self {
-        /*
-        TODO
-         compute bounding box of circular area
-         Get the distance between two nodes
-         pub fn get_dist(&self, src_id: usize, tgt_id: usize) between two nodes
-         */
-        todo!()
-    }
-}
 
 #[derive(Deserialize_enum_str, Serialize_enum_str, PartialEq, Eq, Debug)]
 #[serde(rename_all = "PascalCase")]
@@ -69,14 +48,30 @@ pub enum EdgeType {
     Tertiary // Straßen, die Dörfer verbinden
 }
 
+pub trait INode {
+    fn id(&self) -> usize;
+    fn lat(&self) -> f64;
+    fn lon(&self) -> f64;
+}
+
 /// A graph node located at a specific coordinate
 #[derive(Debug, Serialize)]
 pub struct Node {
-    pub osm_id: usize,
     pub id: usize,
     pub lat: f64,
-    pub lon: f64,
-    pub info: String,
+    pub lon: f64
+}
+
+impl INode for Node {
+    fn id(&self) -> usize {
+        self.id
+    }
+    fn lat(&self) -> f64 {
+        self.lat
+    }
+    fn lon(&self) -> f64 {
+        self.lon
+    }
 }
 
 impl PartialEq<Self> for Node {
@@ -96,9 +91,6 @@ impl Hash for Node {
 /// A directed and weighted graph edge
 #[derive(Clone, Copy)]
 pub struct Edge {
-    pub(crate) osm_id: usize, // TODO delete later!
-    pub osm_src: usize,
-    pub osm_tgt: usize,
     /// The id of the edge's source node
     pub src: usize,
     /// The id of the edge's target node
@@ -125,20 +117,18 @@ impl Hash for Edge {
 /// A sight node mapped on its nearest node
 #[derive(Debug, Serialize)]
 pub struct Sight {
-    pub osm_id: usize,
     pub node_id: usize,
     pub lat: f64,
     pub lon: f64,
-    //pub tags: Tags,
-    //pub info: String,
     pub category: Category,
+    pub name: String,
+    pub opening_hours: String
 }
 
 /// A directed graph. In addition to nodes and edges, the definition also contains a set of sights
 /// mapped on their nearest nodes, respectively.
 pub struct Graph {
     nodes: Vec<Node>,
-    // TODO check if pub needed or pub (crate)
     pub edges: Vec<Edge>,
     pub offsets: Vec<usize>,
     pub num_nodes: usize,
@@ -177,7 +167,6 @@ impl Graph {
             split.next(); // id
 
             let node = Node {
-                osm_id: 0,
                 id: i,
                 lat: split.next()
                     .expect(&format!("Unexpected EOL while parsing node latitude in line {}",
@@ -186,8 +175,7 @@ impl Graph {
                 lon: split.next()
                     .expect(&format!("Unexpected EOL while parsing node longitude in line {}",
                                      line_no))
-                    .parse()?,
-                info: "".to_string()
+                    .parse()?
             };
             nodes.push(node);
         }
@@ -200,7 +188,6 @@ impl Graph {
             line_no += 1;
 
             let sight = Sight {
-                osm_id: 0,
                 node_id: split.next()
                     .expect(&format!("Unexpected EOL while parsing sight node id in line {}",
                                      line_no))
@@ -218,6 +205,16 @@ impl Graph {
                                      line_no))
                     .parse()
                     .unwrap(),
+                name: split.next()
+                    .expect(&format!("Unexpected EOL while parsing sight category in line {}",
+                                     line_no))
+                    .parse()
+                    .unwrap(),
+                opening_hours: split.next()
+                    .expect(&format!("Unexpected EOL while parsing sight category in line {}",
+                                     line_no))
+                    .parse()
+                    .unwrap()
             };
             sights.push(sight);
         }
@@ -233,9 +230,6 @@ impl Graph {
             line_no += 1;
 
             let edge = Edge {
-                osm_id: 0,
-                osm_src: 0,
-                osm_tgt: 0,
                 src: split.next()
                     .expect(&format!("Unexpected EOL while parsing edge source in line {}",
                                      line_no))
@@ -375,12 +369,12 @@ fn binary_search_sights_vector(sights: &Vec<Sight>, target_latitude: f64) -> usi
 
 /// Get the nearest node (that is not in `id_filter`) to a given coordinate (latitude / longitude).
 /// The function expects a node vector sorted by latitude.
-pub fn get_nearest_node(nodes_sorted_by_lat: &Vec<&Node>, id_filter: &HashSet<usize>, lat: f64, lon: f64) -> usize {
+pub fn get_nearest_node(nodes_sorted_by_lat: &Vec<&impl INode>, id_filter: &HashSet<usize>, lat: f64, lon: f64) -> usize {
     // Location to find the nearest node for
     let location = Location::new(lat, lon);
 
     // Search the index of the node with the closest latitude coordinate within the list of nodes
-    let result = nodes_sorted_by_lat.binary_search_by(|n| n.lat.total_cmp(&lat));
+    let result = nodes_sorted_by_lat.binary_search_by(|n| n.lat().total_cmp(&lat));
     let found_index = result.unwrap_or_else(|index| index);
     debug!("Starting to search for nearest node at index: {} for latitude: {}", found_index, lat);
 
@@ -397,27 +391,27 @@ pub fn get_nearest_node(nodes_sorted_by_lat: &Vec<&Node>, id_filter: &HashSet<us
             // If the distance with the current nodes longitude set to the longitude of the
             // location is greater than the minimum distance so far, abort and output the node
             // with the found distance
-            let node_loc_lon_aligned = Location::new(node.lat, location.longitude());
+            let node_loc_lon_aligned = Location::new(node.lat(), location.longitude());
             // Use haversine distance here for more efficiency
             let minimum_possible_distance = location.haversine_distance_to(&node_loc_lon_aligned);
             if minimum_possible_distance.meters() >= min_dist.meters() {
                 trace!("Minimum possible distance: {} for node: {} greater/equal to minimum distance so far: {} for node: {}",
-                minimum_possible_distance, node.id, min_dist, min_id);
+                minimum_possible_distance, node.id(), min_dist, min_id);
                 return min_id;
             }
 
             // If the node is not a sight and has a smaller distance to the location than the
             // minimum distance found so far, update the minimum distance and the id of the nearest
             // node
-            if !id_filter.contains(&node.id) {
-                let node_loc = Location::new(node.lat, node.lon);
+            if !id_filter.contains(&node.id()) {
+                let node_loc = Location::new(node.lat(), node.lon());
                 // Use haversine distance here for more efficiency
                 let dist = location.haversine_distance_to(&node_loc);
                 if dist.meters() < min_dist.meters() {
                     trace!("Updating minimum distance so far from: {} for node: {} to: {} for node: {}",
-                    min_dist, min_id, dist, node.id);
+                    min_dist, min_id, dist, node.id());
                     min_dist = dist;
-                    min_id = node.id;
+                    min_id = node.id();
                 }
             }
         }

@@ -2,16 +2,17 @@ use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs::{File, create_dir_all};
 use std::{fs, io};
+use std::hash::{Hash, Hasher};
 use std::io::{Write, BufWriter};
 use std::path::Path;
 use crossbeam::thread;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::time::{Instant};
 use geoutils::Location;
 use itertools::Itertools;
 use log::{info, error, trace, debug};
-use osmpbf::{Element, BlobReader, BlobType};
-use crate::data::graph::{get_nearest_node, Category, Edge, Graph, Node as GraphNode, Node, Sight};
+use osmpbf::{Element, BlobReader, BlobType, Node, Way};
+use crate::data::graph::{get_nearest_node, Category, Edge, Graph, Node as GraphNode, Sight, INode};
 
 const SIGHTS_CONFIG_PATH :&str = "./sights_config.json";
 const EDGE_CONFIG_PATH :&str = "./edge_type_config.json";
@@ -46,6 +47,81 @@ struct EdgeTypeMap {
     tags: Vec<Tag>,
 }
 
+/// A graph node located at a specific coordinate
+#[derive(Debug, Serialize)]
+struct OSMNode {
+    pub osm_id: usize,
+    pub id: usize,
+    pub lat: f64,
+    pub lon: f64
+}
+
+impl INode for OSMNode {
+    fn id(&self) -> usize {
+        self.id
+    }
+    fn lat(&self) -> f64 {
+        self.lat
+    }
+    fn lon(&self) -> f64 {
+        self.lon
+    }
+}
+
+impl PartialEq<Self> for OSMNode {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
+impl Eq for OSMNode {}
+
+impl Hash for OSMNode {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+    }
+}
+
+/// A directed and weighted graph edge
+#[derive(Clone, Copy)]
+struct OSMEdge {
+    osm_src: usize,
+    osm_tgt: usize,
+    /// The id of the edge's source node
+    src: usize,
+    /// The id of the edge's target node
+    tgt: usize,
+    /// The edge's weight, i.e., the distance between its source and target
+    dist: usize,
+}
+
+impl PartialEq<Self> for OSMEdge {
+    fn eq(&self, other: &Self) -> bool {
+        self.src == other.src && self.tgt == other.tgt
+    }
+}
+
+impl Eq for OSMEdge {}
+
+impl Hash for OSMEdge {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.src.hash(state);
+        self.tgt.hash(state);
+    }
+}
+
+/// A sight node mapped on its nearest node
+#[derive(Debug, Serialize)]
+struct OSMSight {
+    pub osm_id: usize,
+    pub node_id: usize,
+    pub lat: f64,
+    pub lon: f64,
+    pub category: Category,
+    pub name: String,
+    pub opening_hours: String
+}
+
 //read config at SIGHTS_CONFIG_PATH and return it
 fn get_sights_config() -> SightsConfig {
     let data = fs::read_to_string(SIGHTS_CONFIG_PATH).expect("Unable to read file");
@@ -60,50 +136,23 @@ fn get_edge_type_config() -> EdgeTypeConfig {
     return edge_type_config;
 }
 
-pub fn create_fmi_graph(in_graph: &str, out_graph: &str)-> Result<(), io::Error> {
-
-    info!("Starting to Parse OSM File");
-
-    let mut nodes : Vec<Node> = Vec::new();
-    let mut edges : Vec<Edge> = Vec::new();
-    let mut sights : Vec<Sight> = Vec::new();
-    parse_osm_data(in_graph, &mut nodes, &mut edges, &mut sights);
-    write_graph_file( out_graph, &mut nodes, &mut edges, &mut sights);
-
-    info!("Start creating the graph from fmi file!");
-    let time_start = Instant::now();
-
-    let graph = Graph::parse_from_file(out_graph).unwrap();
-
-    let time_duration = time_start.elapsed();
-    info!("End graph creation after {} seconds!", time_duration.as_secs());
-
-    info!("Nodes: {}", graph.num_nodes);
-    info!("Sights: {}", graph.num_sights);
-    info!("Edges: {}", graph.num_edges);
-    Ok(())
-}
-
 /// Parse given `graph_file`. If it does not exist yet, build it from `source_file` first.
 pub fn checked_create_fmi_graph(graph_file: &str, osm_source_file: &str) -> std::io::Result<()> {
     if !Path::new(graph_file).exists() && Path::new(osm_source_file).exists() {
-        create_fmi_graph(osm_source_file, graph_file)?
+        parse_and_write_osm_data(osm_source_file, graph_file)?
     }
     Ok(())
 }
 
-pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges: &mut Vec<Edge>, sights: &mut Vec<Sight>) -> Result<(), io::Error> {
+pub fn parse_and_write_osm_data (osmpbf_file_path: &str, fmi_file_path: &str) -> Result<(), io::Error> {
+    let mut nodes: Vec<OSMNode> = Vec::new();
+    let mut edges: Vec<OSMEdge> = Vec::new();
+    let mut sights: Vec<OSMSight> = Vec::new();
 
     let sight_config_orig = get_sights_config();
     let edge_type_config_orig = get_edge_type_config();
 
-    let reader = BlobReader::from_path(osmpbf_file_path)?;    
-
-    let mut osm_id_to_node_id: HashMap<usize, usize> = HashMap::new();
-    let mut is_street_node: BTreeMap<usize, bool> = BTreeMap::new(); // TODO when parsing ways mark street ndoes, filter nodes that are neither street nodes nor sight nodes
-
-    // hash set to check if a node is a sight
-    let mut is_sight_node = HashSet::new();
+    let reader = BlobReader::from_path(osmpbf_file_path)?;
 
     info!("Start reading the PBF file!");
     let time_start = Instant::now();
@@ -123,235 +172,21 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
             let edge_type_config = &edge_type_config_orig;
             let thread_result = s.spawn(move |d| {
                 let data = blob.to_primitiveblock().unwrap();
-                let mut result = (Vec::<GraphNode>::new(), Vec::<Edge>::new(), Vec::<Sight>::new());
+                let mut result = (Vec::<OSMNode>::new(), Vec::<OSMEdge>::new(), Vec::<OSMSight>::new());
                 //start iterating through the blob elements
                 data.for_each_element(|element| {
                     match element {
                         Element::Node(n) => {
-                            // TODO if no tags corrects tags for category + category enum
-                            /*
-                            let mut isSight = false;
-                            for (key, value) in n.tags() {
-                                match key {
-                                    "amenity" => {
-                                        isSight = true;
-                                        match value {
-                                            "restaurant" | "biergarten" | "cafe" | "fast_food" | "food_court" => {
-                                                let mut sight = Sight {
-                                                    node_id: n.id() as usize,
-                                                    lat: n.lat(),
-                                                    lon: n.lon(),
-                                                    category: Category::Restaurants,
-                                                };
-                                                sights.push(sight);
-                                                num_sights += 1;
-                                                node_count += 1;
-                                            }
-                                            _ => {}
-                                        }
-                                    }
-                                    _ => {}
-                                }
-                            }
-                            if(!isSight) {
-                                let mut node = GraphNode {
-                                    osm_id: n.id() as usize,
-                                    id: num_nodes,
-                                    lat: n.lat(),
-                                    lon: n.lon(),
-                                    //info: "".to_string()
-                                };
-                                osm_id_to_node_id.entry(node.osm_id)
-                                    .or_insert(num_nodes);
-                                nodes.push(node);
-                                num_nodes += 1;
-                                node_count += 1;
-                            }
-
-                            */
-
-                            let mut is_sight = false;
-                            for (key, value) in n.tags() {
-                                /*
-                                node.info.push_str("key: (");
-                                node.info.push_str(key);
-                                node.info.push_str(") value: (");
-                                node.info.push_str(value);
-                                node.info.push_str(")\n");
-
-                                */
-                                for cat_tag_map in &sight_config.category_tag_map {
-                                    for tag in &cat_tag_map.tags {
-                                        if key.eq(&tag.key) {
-                                            if value.eq(&tag.value) {
-                                                is_sight = true;
-                                                //we are saving the osm id because it's needed in the post processing
-                                                let sight = Sight {
-                                                    osm_id: n.id() as usize,
-                                                    node_id: 0,
-                                                    lat: n.lat(),
-                                                    lon: n.lon(),
-                                                    category: cat_tag_map.category.parse::<Category>().unwrap(),
-                                                };
-                                                result.2.push(sight);
-
-                                                let node = GraphNode {
-                                                    osm_id: n.id() as usize,
-                                                    id: 0,
-                                                    lat: n.lat(),
-                                                    lon: n.lon(),
-                                                    info: "".to_string()
-                                                };
-                                                result.0.push(node);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            if !is_sight {
-                                let node = GraphNode {
-                                    osm_id: n.id() as usize,
-                                    id: 0,
-                                    lat: n.lat(),
-                                    lon: n.lon(),
-                                    info: "".to_string()
-                                };
-                                result.0.push(node);
-                            }
+                            create_osm_node(n.id() as usize, n.lat(), n.lon(), n.tags().collect(), &sight_config, &mut result);
                         },
                         Element::DenseNode(n) => {
-                            // TODO if no tags corrects tags for category + category enum
-                            /*
-                            let mut isSight = false;
-                            for (key, value) in n.tags() {
-                                match key {
-                                    "amenity" => {
-                                        isSight = true;
-                                        match value {
-                                            "restaurant" | "biergarten" | "cafe" | "fast_food" | "food_court" => {
-                                                let mut sight = Sight {
-                                                    node_id: n.id() as usize,
-                                                    lat: n.lat(),
-                                                    lon: n.lon(),
-                                                    category: Category::Restaurants,
-                                                };
-                                                sights.push(sight);
-                                                num_sights += 1;
-                                                node_count += 1;
-                                            }
-                                            _ => {}
-                                        }
-                                    }
-                                    _ => {}
-                                }
-                            }
-                            if(!isSight) {
-                                let mut node = GraphNode {
-                                    osm_id: n.id() as usize,
-                                    id: num_nodes,
-                                    lat: n.lat(),
-                                    lon: n.lon(),
-                                    //info: "".to_string()
-                                };
-                                osm_id_to_node_id.entry(node.osm_id)
-                                    .or_insert(num_nodes);
-                                nodes.push(node);
-                                num_nodes += 1;
-                                node_count += 1;
-                            }
-
-                            */
-
-                            let mut is_sight = false;
-                            for (key, value) in n.tags() {
-                                /*
-                                node.info.push_str("key: (");
-                                node.info.push_str(key);
-                                node.info.push_str(") value: (");
-                                node.info.push_str(value);
-                                node.info.push_str(")\n");
-
-                                */
-                                for cat_tag_map in &sight_config.category_tag_map {
-                                    for tag in &cat_tag_map.tags {
-                                        if key.eq(&tag.key) {
-                                            if value.eq(&tag.value) {
-                                                is_sight = true;
-                                                //we are saving the osm id because it's needed in the post processing
-                                                let sight = Sight {
-                                                    osm_id: n.id() as usize,
-                                                    node_id: 0,
-                                                    lat: n.lat(),
-                                                    lon: n.lon(),
-                                                    category: cat_tag_map.category.parse::<Category>().unwrap(),
-                                                };
-                                                result.2.push(sight);
-
-                                                let node = GraphNode {
-                                                    osm_id: n.id() as usize,
-                                                    id: 0,
-                                                    lat: n.lat(),
-                                                    lon: n.lon(),
-                                                    info: "".to_string()
-                                                };
-                                                result.0.push(node);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            if !is_sight {
-                                let node = GraphNode {
-                                    osm_id: n.id() as usize,
-                                    id: 0,
-                                    lat: n.lat(),
-                                    lon: n.lon(),
-                                    info: "".to_string()
-                                };
-                                result.0.push(node);
-                            }
+                            create_osm_node(n.id() as usize, n.lat(), n.lon(), n.tags().collect(), &sight_config, &mut result);
                         },
                         Element::Way(w) => {
-                            // TODO way id; check way tags
-                            let way_tags = w.tags();
-                            for (key, value) in way_tags {
-                                for et_tag_map in &edge_type_config.edge_type_tag_map {
-                                    for tag in &et_tag_map.tags {
-                                        if key == tag.key && value == tag.value {
-                                            let mut way_ref_iter = w.refs();
-                                            let mut osm_src = way_ref_iter.next().unwrap() as usize;
-                                            for node_id  in way_ref_iter {
-                                                // undirected graph, create in and out edges
-                                                let osm_tgt = node_id as usize;
-                                                let out_edge = Edge {
-                                                    osm_id: w.id() as usize,
-                                                    osm_src: osm_src,
-                                                    osm_tgt: osm_tgt,
-                                                    src: 0,
-                                                    tgt: 0,
-                                                    dist: 0
-                                                };
-                                                result.1.push(out_edge);
-
-                                                let in_edge = Edge {
-                                                    osm_id: w.id() as usize,
-                                                    osm_src: osm_tgt,
-                                                    osm_tgt: osm_src,
-                                                    src: 0,
-                                                    tgt: 0,
-                                                    dist: 0
-                                                };
-                                                result.1.push(in_edge);
-
-                                                osm_src = osm_tgt;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                            create_osm_edges(w, &edge_type_config, &mut result);
                         },
                         Element::Relation(r) => {},
-                        _ => error!("Unrecognized Element")
+                        _ => error!("Relation element not implemented yet")
                     }
                 });
                 trace!("Finished processing one blob!");
@@ -371,138 +206,18 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
     info!("Finished reading PBF file after {} seconds!", time_duration.as_secs());
     }).ok();
 
-    let mut nodes_with_outgoing_edge = HashMap::<usize, bool>::new();
-    for edge in edges.iter() {
-        nodes_with_outgoing_edge.insert(edge.osm_src, true);
-    }
-    for sight in sights.iter() {
-        nodes_with_outgoing_edge.insert(sight.osm_id, true);
-    }
-
     let nodes_before_pruning = nodes.len();
-    let mut i = nodes.len();
-    while i > 0 {
-        i -= 1;
-        if !nodes_with_outgoing_edge.contains_key(&nodes.get(i).unwrap().osm_id) {
-            nodes.swap_remove(i);
-        }
-    }
-
+    prune_nodes_without_edges(&mut nodes, &edges, &sights);
     let time_duration = time_start.elapsed();
     info!("Finished pruning of {} nodes without edges after {} seconds!", nodes_before_pruning - nodes.len(), time_duration.as_secs());
 
-    //post processing of nodes and sights
-    let mut id_counter = 0;
-    let mut duplicate_position_list : Vec<usize> = Vec::new();
-    for node in nodes.iter_mut() {
-        node.id = id_counter;
-        //check for duplicate nodes
-        if osm_id_to_node_id.contains_key(&node.osm_id) {
-            // info!("duplicate node with id {} and osm_id {}", node.id, node.osm_id);
-            // safe position of duplicate (position is for all wright, when deleting starts with first one)
-            duplicate_position_list.push(id_counter);
-        } else {
-            // add new node and increase counter for id
-            osm_id_to_node_id.insert(node.osm_id, node.id);
-            id_counter += 1;
-        }
-    }
-
-    for current_id in duplicate_position_list {
-        /* only for testing and debugging:
-        checks whether the duplicates got the same lat and lon values
-        let old_node = nodes.get(current_id).unwrap();
-        let node = nodes.get(*osm_id_to_node_id.get_mut(&old_node.osm_id).unwrap()).unwrap();
-        if (old_node.lat == node.lat && old_node.lon == node.lon){
-            info!("normaler Fall aufgetreten");
-        } else {
-            info!("komischer Fall aufgetreten");
-        }*/
-        nodes.remove(current_id);
-        //info!("deleted entry {}",current_id)
-    }
-
-    //assign the same id as the corresponding node (sight and node should have the same osm_id)
-    is_sight_node.reserve(sights.len());
-    for sight in sights.iter_mut() {
-        sight.node_id = *osm_id_to_node_id.get(&sight.osm_id).unwrap();
-        is_sight_node.insert(sight.node_id);
-    }
+    // hash set to check if a node is a sight
+    let mut is_sight_node = HashSet::new();
+    id_post_processing(&mut nodes, &mut edges, &mut sights, &mut is_sight_node);
     let time_duration = time_start.elapsed();
-    info!("Finished building osm_id_to_node_id after {} seconds!", time_duration.as_secs());
-    
-    //post processing of edges
-    for edge in edges.iter_mut() {
-        let src = *osm_id_to_node_id.get(&edge.osm_src).unwrap();
-        let src_node = nodes.get(src).unwrap();
+    info!("Finished id post processing after {} seconds!", time_duration.as_secs());
 
-        let tgt = *osm_id_to_node_id.get(&edge.osm_tgt).unwrap();
-        let tgt_node = nodes.get(tgt).unwrap();
-
-        let src_loc = Location::new(src_node.lat, src_node.lon);
-        let tgt_loc = Location::new(tgt_node.lat, tgt_node.lon);
-
-        let mut edge = edge;
-        edge.src = src;
-        edge.tgt = tgt;
-        edge.dist = src_loc.distance_to(&tgt_loc)
-            .expect("Could not determine distance between edge source and target")
-            .meters() as usize
-    }
-
-    let time_duration = time_start.elapsed();
-    info!("Finished post processing of edges after {} seconds!", time_duration.as_secs());
-
-    for sight in sights.iter() {
-        if sight.osm_id == nodes.get(0).unwrap().osm_id {
-            info!("");
-        }
-    }
-
-    info!("Start mapping sights into graph!");
-
-    let nodes_sorted_by_lat = nodes.iter()
-        .sorted_unstable_by(|n1, n2|{
-            return n1.lat.total_cmp(&n2.lat);
-        })
-        .collect_vec();
-
-    // create edges between a sight and the nearest non sight node
-    let mut n = 0 as f64;
-    for sight in sights.iter() {
-        n += 1.0;
-        let nearest_node_id = get_nearest_node(&nodes_sorted_by_lat, &is_sight_node, sight.lat, sight.lon);
-        let nearest_node = &nodes[nearest_node_id];
-        let sight_loc = Location::new(sight.lat, sight.lon);
-        let nearest_node_loc = Location::new(nearest_node.lat, nearest_node.lon);
-        let nearest_dist = sight_loc.distance_to(&nearest_node_loc)
-            .expect("Could not determine distance between sight and its nearest node")
-            .meters() as usize;
-        let out_edge = Edge {
-            osm_id: 0,
-            osm_src: 0,
-            osm_tgt: 0,
-            src: sight.node_id,
-            tgt: nearest_node.id,
-            dist: nearest_dist
-        };
-        let in_edge = Edge {
-            osm_id: 0,
-            osm_src: 0,
-            osm_tgt: 0,
-            src: nearest_node.id,
-            tgt: sight.node_id,
-            dist: nearest_dist
-        };
-        edges.push(out_edge);
-        edges.push(in_edge);
-        trace!("Progress: {}", n / (sights.len() as f64));
-    }
-
-    // Just create a copy and sort that by latitude, should be less expensive probably
-    // nodes.sort_unstable_by(|n1, n2|{
-    //     return n1.id.cmp(&n2.id);
-    // });
+    integrate_sights_into_graph(&nodes, &mut edges, &sights, &is_sight_node);
 
     let time_duration = time_start.elapsed();
     info!("Finished mapping sights into graph after {} seconds!", time_duration.as_secs());
@@ -525,15 +240,7 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
     info!("Finished sorting edges after {} seconds!", time_duration.as_secs());
 
     let edges_before_pruning = edges.len();
-    let mut i = edges.len()-1;
-    while i > 0 {
-        let edge_a = edges.get(i-1).unwrap();
-        let edge_b = edges.get(i).unwrap();
-        if edge_a.src == edge_b.src && edge_a.tgt == edge_b.tgt {
-            edges.swap_remove(i);
-        }
-        i -= 1;
-    }
+    prune_edges(&mut edges);
 
     let time_duration = time_start.elapsed();
     info!("Finished pruning of {} identical edges after {} seconds!", edges_before_pruning - edges.len(), time_duration.as_secs());
@@ -564,44 +271,10 @@ pub fn parse_osm_data (osmpbf_file_path: &str, nodes: &mut Vec<GraphNode>, edges
     let time_duration = time_start.elapsed();
     info!("Finished sorting sights after {} seconds!", time_duration.as_secs());
 
-    /*
-    let mut n_id: usize = 0;
-    let mut num_useless_nodes: usize = 0;
-    for edge in &*edges {
-        if edge.src == n_id {
-            break;
-        } else if edge.src > n_id {
-            num_useless_nodes += 1;
-            info!("AHA scheizzn muss los Knoten {} ist ehrenlos", n_id);
-            break;
-        }
-    }
-
-    info!("Es gibt {} ehrenlose Knoten", num_useless_nodes);
-     */
-
     let time_duration = time_start.elapsed();
     info!("End of PBF data parsing after {} seconds!", time_duration.as_secs());
-    Ok(())
-}
 
-
-pub fn write_graph_file(graph_file_path_out: &str, nodes: &mut Vec<GraphNode>, edges: &mut Vec<Edge>, sights: &mut Vec<Sight>) -> std::io::Result<()> {
-    /*
-    file.write((format!("Number of Nodes: {}\n", nodes.len())).as_bytes())?;
-    file.write((format!("Number of Edges: {}\n", edges.len())).as_bytes())?;
-    file.write((format!("osm_id node_id lat lon\n")).as_bytes())?;
-    for node in &*nodes {
-        file.write((format!("{} {} {} {}\n", node.osm_id, node.id, node.lat, node.lon).as_bytes()))?;
-        file.write((format!("info\n{}\n", node.info)).as_bytes())?;
-    }
-    file.write((format!("osm_id osm_src osm_tgt src tgt dist\n")).as_bytes())?;
-    for edge in &*edges {
-        file.write((format!("{} {} {} {} {} {}\n", edge.osm_id, edge.osm_src, edge.osm_tgt, edge.src, edge.tgt, edge.dist)).as_bytes())?;
-    }
-     */
     info!("Start writing the fmi file!");
-    let time_start = Instant::now();
 
     let mut text = "".to_owned();
 
@@ -609,19 +282,19 @@ pub fn write_graph_file(graph_file_path_out: &str, nodes: &mut Vec<GraphNode>, e
         text.push_str(&format!("{} {} {}\n", node.id, node.lat, node.lon));
     }
     for sight in &*sights {
-        text.push_str(&format!("{} {} {} {}\n", sight.node_id, sight.lat, sight.lon, sight.category.to_string()));
+        text.push_str(&format!("{} {} {} {} {} {}\n", sight.node_id, sight.lat, sight.lon, sight.category.to_string(), sight.name, sight.opening_hours));
     }
     for edge in &*edges {
         text.push_str(&format!("{} {} {}\n", edge.src, edge.tgt, edge.dist));
     }
-    
+
     let time_duration = time_start.elapsed();
     info!("Created text after {} seconds!", time_duration.as_secs());
 
-    let path = std::path::Path::new(graph_file_path_out);
+    let path = std::path::Path::new(fmi_file_path);
     let prefix = path.parent().unwrap();
     create_dir_all(prefix)?;
-    let file = File::create(graph_file_path_out)?;
+    let file = File::create(fmi_file_path)?;
     let mut file = BufWriter::new(file);
 
     file.write((format!("{}\n", nodes.len())).as_bytes())?;
@@ -633,4 +306,207 @@ pub fn write_graph_file(graph_file_path_out: &str, nodes: &mut Vec<GraphNode>, e
     let time_duration = time_start.elapsed();
     info!("End of writing fmi file after {} seconds!", time_duration.as_secs());
     Ok(())
+}
+
+fn create_osm_node(osm_id: usize, lat: f64, lon: f64, tags: Vec<(&str, &str)>, sight_config: &SightsConfig, result: &mut (Vec<OSMNode>, Vec<OSMEdge>, Vec<OSMSight>)) {
+    // if sight has no name, osm_id is shown
+    let mut name = osm_id.to_string(); // default
+    let mut opening_hours = "empty".to_string(); // default
+    let mut category: Category = Category::ThemePark;
+    let mut is_sight = false;
+    for (key, value) in tags {
+        for cat_tag_map in &sight_config.category_tag_map {
+            for tag in &cat_tag_map.tags {
+                if key.eq("name") {
+                    name = value.parse().unwrap();
+                }
+                if key.eq("opening_hours") {
+                    opening_hours = value.parse().unwrap();
+                }
+                if key.eq(&tag.key) {
+                    if value.eq(&tag.value) {
+                        is_sight = true;
+                        category = cat_tag_map.category.parse::<Category>().unwrap();
+                    }
+                }
+            }
+        }
+    }
+    let osm_node = OSMNode {
+        osm_id: osm_id,
+        id: 0,
+        lat: lat,
+        lon: lon
+    };
+    result.0.push(osm_node);
+
+    if is_sight {
+        //we are saving the osm id because it's needed in the post processing
+        let osm_sight = OSMSight {
+            osm_id,
+            node_id: 0,
+            lat,
+            lon,
+            category,
+            name,
+            opening_hours
+        };
+        result.2.push(osm_sight);
+    }
+}
+
+fn create_osm_edges(w: Way, edge_type_config: &EdgeTypeConfig, result: &mut (Vec<OSMNode>, Vec<OSMEdge>, Vec<OSMSight>)) {
+    let way_tags = w.tags();
+    for (key, value) in way_tags {
+        for et_tag_map in &edge_type_config.edge_type_tag_map {
+            for tag in &et_tag_map.tags {
+                if key == tag.key && value == tag.value {
+                    let mut way_ref_iter = w.refs();
+                    let mut osm_src = way_ref_iter.next().unwrap() as usize;
+                    for node_id  in way_ref_iter {
+                        // undirected graph, create in and out edges
+                        let osm_tgt = node_id as usize;
+                        let out_edge = OSMEdge {
+                            osm_src: osm_src,
+                            osm_tgt: osm_tgt,
+                            src: 0,
+                            tgt: 0,
+                            dist: 0
+                        };
+                        result.1.push(out_edge);
+
+                        let in_edge = OSMEdge {
+                            osm_src: osm_tgt,
+                            osm_tgt: osm_src,
+                            src: 0,
+                            tgt: 0,
+                            dist: 0
+                        };
+                        result.1.push(in_edge);
+
+                        osm_src = osm_tgt;
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn prune_nodes_without_edges(nodes: &mut Vec<OSMNode>, edges: &Vec<OSMEdge>, sights: &Vec<OSMSight>) {
+    let mut nodes_with_outgoing_edge = HashMap::<usize, bool>::new();
+    for edge in edges.iter() {
+        nodes_with_outgoing_edge.insert(edge.osm_src, true);
+    }
+    for sight in sights.iter() {
+        nodes_with_outgoing_edge.insert(sight.osm_id, true);
+    }
+
+    let mut i = nodes.len();
+    while i > 0 {
+        i -= 1;
+        if !nodes_with_outgoing_edge.contains_key(&nodes.get(i).unwrap().osm_id) {
+            nodes.swap_remove(i);
+        }
+    }
+}
+
+//post processing of nodes and sights
+fn id_post_processing(nodes: &mut Vec<OSMNode>, edges: &mut Vec<OSMEdge>, sights: &mut Vec<OSMSight>, is_sight_node: &mut HashSet<usize>) {
+    let mut osm_id_to_node_id: HashMap<usize, usize> = HashMap::new();
+    let mut id_counter = 0;
+    let mut duplicate_position_list : Vec<usize> = Vec::new();
+    for node in nodes.iter_mut() {
+        node.id = id_counter;
+        //check for duplicate nodes
+        if osm_id_to_node_id.contains_key(&node.osm_id) {
+            // info!("duplicate node with id {} and osm_id {}", node.id, node.osm_id);
+            // safe position of duplicate (position is for all wright, when deleting starts with first one)
+            duplicate_position_list.push(id_counter);
+        } else {
+            // add new node and increase counter for id
+            osm_id_to_node_id.insert(node.osm_id, node.id);
+            id_counter += 1;
+        }
+    }
+
+    //remove duplicate nodes
+    for current_id in duplicate_position_list {
+        nodes.remove(current_id);
+    }
+
+    //assign the same id as the corresponding node (sight and node should have the same osm_id)
+    is_sight_node.reserve(sights.len());
+    for sight in sights.iter_mut() {
+        sight.node_id = *osm_id_to_node_id.get(&sight.osm_id).unwrap();
+        is_sight_node.insert(sight.node_id);
+    }
+
+    //post processing of edges
+    for edge in edges.iter_mut() {
+        let src = *osm_id_to_node_id.get(&edge.osm_src).unwrap();
+        let src_node = nodes.get(src).unwrap();
+
+        let tgt = *osm_id_to_node_id.get(&edge.osm_tgt).unwrap();
+        let tgt_node = nodes.get(tgt).unwrap();
+
+        let src_loc = Location::new(src_node.lat, src_node.lon);
+        let tgt_loc = Location::new(tgt_node.lat, tgt_node.lon);
+
+        let mut edge = edge;
+        edge.src = src;
+        edge.tgt = tgt;
+        edge.dist = src_loc.distance_to(&tgt_loc)
+            .expect("Could not determine distance between edge source and target")
+            .meters() as usize
+    }
+}
+
+// create edges between a sight and the nearest non sight node
+fn integrate_sights_into_graph(nodes: &Vec<OSMNode>, edges: &mut Vec<OSMEdge>, sights: &Vec<OSMSight>, is_sight_node: &HashSet<usize>) {
+    let nodes_sorted_by_lat = nodes.iter()
+        .sorted_unstable_by(|n1, n2|{
+            return n1.lat.total_cmp(&n2.lat);
+        })
+        .collect_vec();
+
+    let mut n = 0 as f64;
+    for sight in sights.iter() {
+        n += 1.0;
+        let nearest_node_id = get_nearest_node(&nodes_sorted_by_lat, &is_sight_node, sight.lat, sight.lon);
+        let nearest_node = &nodes[nearest_node_id];
+        let sight_loc = Location::new(sight.lat, sight.lon);
+        let nearest_node_loc = Location::new(nearest_node.lat, nearest_node.lon);
+        let nearest_dist = sight_loc.distance_to(&nearest_node_loc)
+            .expect("Could not determine distance between sight and its nearest node")
+            .meters() as usize;
+        let out_edge = OSMEdge {
+            osm_src: 0,
+            osm_tgt: 0,
+            src: sight.node_id,
+            tgt: nearest_node.id,
+            dist: nearest_dist
+        };
+        let in_edge = OSMEdge {
+            osm_src: 0,
+            osm_tgt: 0,
+            src: nearest_node.id,
+            tgt: sight.node_id,
+            dist: nearest_dist
+        };
+        edges.push(out_edge);
+        edges.push(in_edge);
+        trace!("Progress: {}", n / (sights.len() as f64));
+    }
+}
+
+fn prune_edges(edges: &mut Vec<OSMEdge>) {
+    let mut i = edges.len()-1;
+    while i > 0 {
+        let edge_a = edges.get(i-1).unwrap();
+        let edge_b = edges.get(i).unwrap();
+        if edge_a == edge_b {
+            edges.swap_remove(i);
+        }
+        i -= 1;
+    }
 }
