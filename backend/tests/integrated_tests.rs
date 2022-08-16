@@ -26,7 +26,7 @@ fn test_parsing_process_to_produce_graph_with_proper_number_of_elements() {
         assert_eq!(graph.num_edges, 524956, "edges");
     } else if common::PATH.0.contains("stg") {
         assert_eq!(graph.num_nodes, 4760, "nodes");
-        assert_eq!(graph.num_sights, 356, "sights");
+        assert_eq!(graph.num_sights, 352, "sights");
         assert_eq!(graph.num_edges, 10742, "edges");
     }
 }
