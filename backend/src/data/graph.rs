@@ -133,7 +133,7 @@ pub struct Sight {
     #[serde(skip)]
     pub opening_hours_parsed: Option<OpeningHours>,
     #[serde(skip_deserializing)]
-    pub duration_of_stay_minutes : u32 //default 0 when not overwritten by set_config_duration_of_stay
+    pub duration_of_stay_minutes : usize //default 0 when not overwritten by set_config_duration_of_stay
 }
 
 impl Sight{
