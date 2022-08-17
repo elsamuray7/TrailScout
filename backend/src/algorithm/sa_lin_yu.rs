@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, DurationRound, Utc};
 use itertools::Itertools;
 use pathfinding::prelude::*;
 use rand::prelude::*;
@@ -297,6 +297,8 @@ impl<'a> SimAnnealingLinYu<'a> {
                 let sector = Sector::new(root_travel_time, build_path(
                     &self.graph.get_node(self.root_id), curr_distance_map));
                 route.push(RouteSector::End(sector));
+
+                break;
             }
         }
         log::debug!("Computed walking route");
