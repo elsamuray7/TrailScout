@@ -4,6 +4,7 @@
         {
             "category": "ThemePark",
             "opening_hours": "Mo-Su 10:00-20:00",
+            "duration_of_stay_minutes": 60,
             "tags": [
                 {
                     "key": "tourism", 
@@ -14,6 +15,7 @@
         {
             "category": "Swimming",
             "opening_hours": "Mo-Su 10:00-20:00",
+            "duration_of_stay_minutes": 60,
             "tags": [
                 {
                     "key": "leisure", 
@@ -36,6 +38,7 @@
         {
             "category": "PicnicBarbequeSpot",
             "opening_hours": "24/7",
+            "duration_of_stay_minutes": 60,
             "tags": [
                 {
                     "key": "amenity", 
@@ -58,6 +61,7 @@
         {
             "category": "MuseumExhibition",
             "opening_hours": "Tu-Su 10:00-18:00",
+            "duration_of_stay_minutes": 60,
             "tags": [
                 {
                     "key": "tourism", 
@@ -72,6 +76,7 @@
         {
             "category": "Nature",
             "opening_hours": "24/7",
+            "duration_of_stay_minutes": 60,
             "tags": [
                 {
                     "key": "water", 
@@ -94,6 +99,7 @@
         {
             "category": "Nightlife",
             "opening_hours": "Mo-Sa 18:00-24:00",
+            "duration_of_stay_minutes": 60,
             "tags": [
                 {
                     "key": "amenity", 
@@ -116,6 +122,7 @@
         {
             "category": "Restaurants",
             "opening_hours": "Mo-Su 11:30-14:00 ,17:00-22:00 ",
+            "duration_of_stay_minutes": 60,
             "tags": [
                 {
                     "key": "shop", 
@@ -150,6 +157,7 @@
         {
             "category": "Sightseeing",
             "opening_hours": "Mo-Su 10:00-20:00",
+            "duration_of_stay_minutes": 60,
             "tags": [
                 {
                     "key": "building", 
@@ -200,6 +208,7 @@
         {
             "category": "Shopping",
             "opening_hours": "Mo-Su 10:00-20:00",
+            "duration_of_stay_minutes": 60,
             "tags": [
                 {
                     "key": "shop", 
@@ -229,6 +238,7 @@
         {
             "category": "Animals",
             "opening_hours": "Mo-Su 10:00-20:00",
+            "duration_of_stay_minutes": 60,
             "tags": [
                 {
                     "key": "tourism", 
@@ -243,6 +253,7 @@
         {
             "category": "Other",
             "opening_hours": "Mo-Su 10:00-20:00",
+            "duration_of_stay_minutes": 60,
             "tags": [
                 {
                     "key": "sport", 
