@@ -1,17 +1,22 @@
 use std::collections::{HashMap, HashSet};
-use std::fmt::Formatter;
+use std::fmt::{Debug, Formatter};
 use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io::{BufReader};
 use std::num::{ParseFloatError, ParseIntError};
 use std::time::Instant;
+use futures::future::err;
 use strum_macros::EnumString;
 use geoutils::{Distance, Location};
 use itertools::Itertools;
 use log::{debug, trace, info};
-use serde::{Serialize, Deserialize};
+use serde::{Serialize, Deserialize, Serializer, Deserializer};
 use serde_enum_str::{Deserialize_enum_str, Serialize_enum_str};
 use pathfinding::prelude::*;
+use serde::ser::SerializeStruct;
+use opening_hours::OpeningHours;
+use crate::data;
+use crate::data::SightsConfig;
 
 #[derive(EnumString, Deserialize, Serialize, PartialEq, Eq, Debug)]
 #[serde(rename_all = "PascalCase")]
@@ -116,15 +121,92 @@ impl Hash for Edge {
 }
 
 /// A sight node mapped on its nearest node
-#[derive(Debug, Serialize, Deserialize)]
+//#[derive(Debug, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct Sight {
     pub node_id: usize,
     pub lat: f64,
     pub lon: f64,
     pub category: Category,
     pub name: String,
-    pub opening_hours: String
+    pub opening_hours: String,
+    #[serde(skip)]
+    pub opening_hours_parsed: Option<OpeningHours>,
+    #[serde(skip_deserializing)]
+    pub duration_of_stay_minutes : usize //default 0 when not overwritten by set_config_duration_of_stay
 }
+
+impl Sight{
+    ///Tries to parse opening hours from osm and then sets opening_hours_parsed.
+    ///If osm value cannot be parsed use default value from sights config
+    ///Also overwrites opening_hours if default value is used
+    pub fn parse_opening_hours(&mut self, sights_config : &SightsConfig){
+
+        //Try to parse OSM opening hours
+        let opening_hours_parsed = match OpeningHours::parse(&self.opening_hours){
+            Ok(res) => {
+                trace!("Using OSM Opening Times");
+                Some(res)
+            }
+            //Get default value if could not parse
+            Err(err) => {
+                trace!("Parsing Default Opening Times");
+                let default_openings = self.get_default_opening_hour(&sights_config);
+                let parse = OpeningHours::parse(&default_openings)
+                    .expect("Could not parse default opening hours");
+
+                //override old (invalid) opening times with default
+                self.opening_hours = default_openings;
+
+                Some(parse)
+            }
+        };
+        self.opening_hours_parsed = opening_hours_parsed;
+
+    }
+    /// Get default opening hours from sights_config
+    fn get_default_opening_hour(&self, sights_config : &SightsConfig) -> String {
+        for cat_tag_map in &sights_config.category_tag_map{
+            let cat = cat_tag_map.category.parse::<Category>().unwrap();
+            if matches!(&self.category, cat){
+                let default_opening_hours = cat_tag_map.opening_hours.clone();
+                return default_opening_hours
+            }
+        }
+        panic!("Error while parsing default time from config") //If this happens sights_config.json is wrong
+    }
+
+    ///Sets the duration_of_stay_minutes value according to value in sights config
+    pub fn set_config_duration_of_stay(&mut self, sights_config : &SightsConfig){
+        //viel Code duplication mit get_default_opening_hour - vielleicht irgendwie refactoren?
+        for cat_tag_map in &sights_config.category_tag_map{
+            let cat = cat_tag_map.category.parse::<Category>().unwrap();
+            if matches!(&self.category, cat){
+                let default_opening_hours = cat_tag_map.duration_of_stay_minutes.clone();
+                self.duration_of_stay_minutes = default_opening_hours;
+                break
+            }
+        }
+
+    }
+}
+
+// Need custom debug to ignore parsed OpeningHours because it does not implement it
+impl Debug for Sight {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Sight")
+            .field("node_id", &self.node_id)
+            .field("lat", &self.lat)
+            .field("lon", &self.lon)
+            .field("category", &self.category)
+            .field("name", &self.name)
+            .field("opening_hours", &self.opening_hours)
+            .field("duration_of_stay_minutes", &self.duration_of_stay_minutes)
+            .finish()
+    }
+}
+
+
 
 /// A directed graph. In addition to nodes and edges, the definition also contains a set of sights
 /// mapped on their nearest nodes, respectively.
@@ -138,6 +220,7 @@ pub struct Graph {
     pub num_sights: usize,
 }
 
+
 impl Graph {
     /// Parse graph data (in particular, nodes, edges and sights) from a file and create a new
     /// graph from it
@@ -149,7 +232,7 @@ impl Graph {
         let mut graph_reader = BufReader::new(graph_file);
 
         let nodes:Vec<Node> = bincode::deserialize_from(&mut graph_reader).unwrap();
-        let sights:Vec<Sight> = bincode::deserialize_from(&mut graph_reader).unwrap();
+        let mut sights:Vec<Sight> = bincode::deserialize_from(&mut graph_reader).unwrap();
         let edges:Vec<Edge> = bincode::deserialize_from(&mut graph_reader).unwrap();
 
         let num_nodes = nodes.len();
@@ -171,6 +254,15 @@ impl Graph {
         for i in next_src..= num_nodes {
             offsets[i] = num_edges;
         }
+
+        //Parse the opening hours to fill Opening_hours_parsed: Option<OpeningHours>
+        //Also read duration_of_stay_minutes from sights config and set the value for the sight
+        let sights_config = data::get_sights_config();
+        for mut sight in &mut sights{
+            sight.parse_opening_hours(&sights_config);
+            sight.set_config_duration_of_stay(&sights_config);
+        }
+
         
         let time_duration = time_start.elapsed();
         info!("End graph creation after {} seconds!", time_duration.as_millis() as f32 / 1000.0);
