@@ -252,14 +252,14 @@ mod test {
     use chrono::{DateTime, Utc};
     use crate::algorithm::{_Algorithm, Area, RouteSector, SightCategoryPref, SightPref, UserPreferences};
     use crate::algorithm::greedy::GreedyAlgorithm;
-    use crate::data::graph::{Category, Graph};
+    use crate::data::graph::{Category, Graph, Sight};
     use crate::init_logging;
 
     /// Baba Hotel, ich schwör!!
     const RADISSON_BLU_HOTEL: Area = Area {
         lat: 53.074448,
         lon: 8.805105,
-        radius: 22.0,
+        radius: 1000.0,
     };
 
     #[test]
@@ -283,7 +283,7 @@ mod test {
                 categories: vec![SightCategoryPref { name: "Restaurants".to_string(), pref: 3 },
                                  SightCategoryPref { name: "Sightseeing".to_string(), pref: 5 },
                                  SightCategoryPref { name: "Nightlife".to_string(), pref: 4 }],
-                sights: vec![SightPref { id: 1274147, category: "Sightseeing".to_string(), pref: 0 }],
+                sights: vec![],
             }).unwrap();
         let route = algo.compute_route()
             .expect("Error during route computation");
@@ -301,14 +301,7 @@ mod test {
         });
         assert!(sector.is_none());
 
-        // Route should not contain a sector with sight node 1274147
-        let sector = route.iter().find(|&sector| match sector {
-            RouteSector::Start(sector) => sector.sight.unwrap().node_id == 1274147,
-            RouteSector::Intermediate(sector) => sector.sight.unwrap().node_id == 1274147,
-            _ => false,
-        });
-        assert!(sector.is_none());
-
+        // The used time budget should be smaller than or equal to the maximum available time budget
         let total_time_budget: usize = route.iter()
             .map(|sector|
                 match sector {
@@ -318,9 +311,9 @@ mod test {
                 }.time_budget
             )
             .sum();
-        let actual_time_budget = end_time.timestamp() - start_time.timestamp();
-        assert!((total_time_budget as i64) < actual_time_budget,
+        let max_avail_time_budget = end_time.signed_duration_since(start_time).num_seconds();
+        assert!((total_time_budget as i64) <= max_avail_time_budget,
                 "Used time budget: {}. Actual time budget: {}.",
-                total_time_budget, actual_time_budget);
+                total_time_budget, max_avail_time_budget);
     }
 }
