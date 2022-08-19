@@ -234,25 +234,23 @@ pub enum AlgorithmError {
     UnknownCategory {
         unknown_name: String,
     },
-    /// Error indicating that a non-sight or non-existent node was assigned a preference
-    #[display(fmt = "Node {} is not a sight", node_id)]
-    NodeIsNotASight {
-        node_id: usize,
-    },
     /// Error indicating that no route between two nodes could be determined
     #[display(fmt = "No route found from node {} to {}", from, to)]
     NoRouteFound {
         from: usize,
         to: usize,
     },
+    /// Error indicating that an algorithm has been requested without category or sight preferences
+    #[display(fmt = "No preferences for categories or sights provided")]
+    NoPreferencesProvided,
 }
 
 #[cfg(test)]
 mod test {
     use chrono::{DateTime, Utc};
-    use crate::algorithm::{_Algorithm, Area, RouteSector, SightCategoryPref, SightPref, UserPreferences};
+    use crate::algorithm::{_Algorithm, Area, RouteSector, SightCategoryPref, UserPreferences};
     use crate::algorithm::greedy::GreedyAlgorithm;
-    use crate::data::graph::{Category, Graph, Sight};
+    use crate::data::graph::{Category, Graph};
     use crate::init_logging;
 
     /// Baba Hotel, ich schwör!!

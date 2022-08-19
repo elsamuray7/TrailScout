@@ -43,10 +43,9 @@ fn compute_scores(sights: &HashMap<usize, &Sight>, user_prefs: UserPreferences) 
     }
 
     for sight in &user_prefs.sights {
+        // Ignore nodes and sights that are not in the fetched sights
         if sights.contains_key(&sight.id) {
             scores.insert(sight.id, USER_PREF_TO_SCORE[sight.get_valid_pref()]);
-        } else {
-            return Err(AlgorithmError::NodeIsNotASight { node_id: sight.id });
         }
     }
 
@@ -352,6 +351,9 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
         let mut randomized_sights = self.sights.iter()
             .filter(|(sight_id, _)| self.scores[*sight_id] > 0)
             .map(|(_, &sight)| sight).collect_vec();
+        if randomized_sights.is_empty() {
+            return Err(AlgorithmError::NoPreferencesProvided);
+        }
         randomized_sights.shuffle(&mut rng);
         log::debug!("Computed randomized initial solution");
 
