@@ -12,16 +12,15 @@ const USER_PREF_TO_SCORE: [usize; USER_PREF_MAX + 1] = [0, 1, 2, 4, 8, 16];
 
 // Constant parameters
 /// Initial temperature
-const T_0: f64 = 0.1;
+const T_0: f64 = 0.7;
 /// Multiplier for iterations on a temperature
-const B: usize = 1000;
+const B: usize = 100;
 /// Factor by which the temperature is cooled down
-const ALPHA: f64 = 0.99;
+const ALPHA: f64 = 0.7;
 /// Maximum allowed computation time
-const MAX_TIME: u128 = 10_000;
+const MAX_TIME: u128 = 60_000;
 /// Number of cooldowns that do not improve the result
-#[allow(dead_code)]
-const N_NON_IMPROVING: usize = 30;
+const N_NON_IMPROVING: usize = 5;
 
 /// Maximum number of iterations on a temperature
 const MAX_ITER_PER_TEMP: usize = 100 * B;
@@ -370,6 +369,7 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
         log::debug!("Score of initial solution: {}", old_score);
         let mut x_best = x.clone();
         let mut f_best = old_score;
+        let mut non_improving_count = 0;
 
         loop {
             let p = rng.gen::<f64>();
@@ -394,7 +394,7 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
             if old_score > new_score {
                 let score_dif = old_score - new_score;
                 let r = rng.gen::<f64>();
-                let heur = std::f64::consts::E.powf((score_dif as f64) / t);
+                let heur = std::f64::consts::E.powf(-(score_dif as f64) / t);
                 if r >= heur {
                     log::trace!("Continue with next iteration (r-value: {} >= heuristic: {})",
                         r, heur);
@@ -411,6 +411,7 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
                         new_score, f_best);
                     f_best = new_score;
                     x_best = x.clone();
+                    non_improving_count = 0;
                 }
             }
 
@@ -429,6 +430,12 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
                         elapsed, t);
                     break;
                 }
+                if non_improving_count == N_NON_IMPROVING {
+                    log::debug!("Reached non-improving limit (non-improving: {}, current temperature: {})",
+                        non_improving_count, t);
+                    break;
+                }
+                non_improving_count += 1;
             }
         }
 
