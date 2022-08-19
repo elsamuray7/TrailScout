@@ -26,10 +26,9 @@ fn compute_scores(sights: &HashMap<usize, &Sight>, user_prefs: UserPreferences) 
     }
 
     for sight in &user_prefs.sights {
+        // Ignore nodes and sights that are not in the fetched sights
         if sights.contains_key(&sight.id) {
             scores.insert(sight.id, USER_PREF_TO_SCORE[sight.get_valid_pref()]);
-        } else {
-            return Err(AlgorithmError::NodeIsNotASight { node_id: sight.id });
         }
     }
 
@@ -114,6 +113,9 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
              .filter(|&sight_id| self.scores[sight_id] > 0)
              .map(usize::to_owned)
              .collect();
+         if unvisited_sights.is_empty() {
+             return Err(AlgorithmError::NoPreferencesProvided);
+         }
          let mut curr_node_id = self.root_id;
          loop {
              // calculate distances from curr_node to all sight nodes
