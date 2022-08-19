@@ -396,7 +396,7 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
             if old_score > new_score {
                 let score_dif = old_score - new_score;
                 let r = rng.gen::<f64>();
-                let heur = std::f64::consts::E.powf(-(score_dif as f64) / t);
+                let heur = std::f64::consts::E.powf((score_dif as f64) / t);
                 if r >= heur {
                     log::trace!("Continue with next iteration (r-value: {} >= heuristic: {})",
                         r, heur);
