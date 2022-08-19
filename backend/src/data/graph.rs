@@ -12,11 +12,11 @@ use itertools::Itertools;
 use log::{debug, trace, info};
 use serde::{Serialize, Deserialize, Serializer, Deserializer};
 use serde_enum_str::{Deserialize_enum_str, Serialize_enum_str};
-use pathfinding::prelude::*;
 use serde::ser::SerializeStruct;
 use opening_hours::OpeningHours;
 use crate::data;
 use crate::data::SightsConfig;
+use crate::utils::dijkstra;
 
 #[derive(EnumString, Deserialize, Serialize, PartialEq, Eq, Debug)]
 #[serde(rename_all = "PascalCase")]
@@ -357,22 +357,13 @@ impl Graph {
     /// (latitude / longitude).
     /// `reachable_with` specifies within which radius reachability must be tested.
     pub fn get_reachable_sights_in_area(&self, lat: f64, lon: f64, radius: f64, reachable_within: f64) -> HashMap<usize, &Sight> {
-        let successors = |node_id: usize|
-            self.get_outgoing_edges_in_area(node_id, lat, lon, reachable_within)
-                .into_iter()
-                .map(|edge| (edge.tgt, edge.dist))
-                .collect::<Vec<(usize, usize)>>();
-
         // Get all nodes that are reachable from the node with the lowest distance to the center
         let center_id = self.get_nearest_node(lat, lon);
-        let reachable_nodes: HashSet<usize> = dijkstra_all(
-            &center_id,
-            |&node_id| successors(node_id))
-            .into_keys()
-            .collect();
+        let reachable_nodes = dijkstra::run_ota_dijkstra_in_area(
+            &self, center_id, lat, lon, reachable_within);
 
         let reachable_sights: HashMap<usize, &Sight> = self.get_sights_in_area(lat, lon, radius).into_iter()
-            .filter(|(sight_id, _)| reachable_nodes.contains(sight_id))
+            .filter(|&(sight_id, _)| reachable_nodes.dist_to(sight_id).is_some())
             .collect();
         debug!("Found {} reachable sights within the given area (of a total of {} sights)",
             reachable_sights.len(), self.sights.len());

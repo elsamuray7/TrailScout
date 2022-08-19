@@ -2,8 +2,8 @@ use std::collections::{HashMap, HashSet};
 use chrono::{DateTime, Utc};
 use crate::data::graph::{Category, Graph, Sight};
 use itertools::Itertools;
-use pathfinding::prelude::*;
 use crate::algorithm::{_Algorithm, AlgorithmError, Area, Route, RouteSector, ScoreMap, Sector, UserPreferences, USER_PREF_MAX, EDGE_RADIUS_MULTIPLIER};
+use crate::utils::dijkstra;
 
 /// Greedy internal user preference to score mapping
 const USER_PREF_TO_SCORE: [usize; USER_PREF_MAX + 1] = [0, 1, 2, 4, 8, 16];
@@ -99,11 +99,6 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
              .try_into().unwrap();
 
          let edge_radius = (self.walking_speed_mps * time_budget_left as f64) * EDGE_RADIUS_MULTIPLIER;
-         let successors = |node_id: usize|
-             self.graph.get_outgoing_edges_in_area(node_id, self.area.lat, self.area.lon, edge_radius)
-                 .into_iter()
-                 .map(|edge| (edge.tgt, edge.dist))
-                 .collect::<Vec<(usize, usize)>>();
 
          log::debug!("Starting greedy search");
 
@@ -119,42 +114,37 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
          let mut curr_node_id = self.root_id;
          loop {
              // calculate distances from curr_node to all sight nodes
-             let result_to_sights: HashMap<usize, (usize, usize)> =
-                 dijkstra_all(&curr_node_id,
-                              |&node_id| successors(node_id));
+             let result_to_sights = dijkstra::run_ota_dijkstra_in_area(
+                 self.graph, curr_node_id, self.area.lat, self.area.lon, edge_radius);
 
-             // sort sight nodes by their distance to curr_node
-             let sorted_dist_vec: Vec<_> = result_to_sights.iter()
-                 .filter(|&(node_id, _)| unvisited_sights.contains(node_id))
-                 .sorted_unstable_by(|&(node1_id, &(_, dist1)), &(node2_id, &(_, dist2))| {
-                     let score1 = self.scores[node1_id];
-                     let score2 = self.scores[node2_id];
+             // sort sight nodes by a metric derived from the sights score and its distance to
+             // the current node
+             let sorted_dist_vec = unvisited_sights.iter()
+                 .filter_map(|&sight_id| result_to_sights.dist_to(sight_id)
+                     .and_then(|dist| Some((sight_id, dist))))
+                 .sorted_unstable_by(|&(sight1_id, dist1), &(sight2_id, dist2)| {
+                     let score1 = self.scores[&sight1_id];
+                     let score2 = self.scores[&sight2_id];
 
-                     log::trace!("Comparing nodes {} and {}", node1_id, node2_id);
-                     log::trace!("Node1: score: {}, distance to current position: {}", score1, dist1);
-                     log::trace!("Node2: score: {}, distance to current position: {}", score2, dist2);
+                     log::trace!("Comparing sights {} and {}", sight1_id, sight2_id);
+                     log::trace!("Sight1: score: {}, distance to current position: {}", score1, dist1);
+                     log::trace!("Sight2: score: {}, distance to current position: {}", score2, dist2);
 
-                     let metric2 = score2 as f64 / dist2.max(1) as f64;
-                     let metric1 = score1 as f64 / dist1.max(1) as f64;
+                     let metric1 = score1 as f64 / dist1 as f64;
+                     let metric2 = score2 as f64 / dist2 as f64;
                      metric2.total_cmp(&metric1)
                  })
-                 .map(|(&node, &(_, dist))| (node, dist))
-                 .collect();
-             log::trace!("Number of unvisited reachable sights from current node {}: {}",
-                 curr_node_id, sorted_dist_vec.len());
-             log::trace!("Sorted sights:\n{:?}", &sorted_dist_vec);
+                 .collect_vec();
 
              // for each sight node, check whether sight can be included in route without violating time budget
              let len_route_before = route.len();
              for (sight_node_id, dist) in sorted_dist_vec {
                  let secs_needed_to_sight = dist as f64 / self.walking_speed_mps;
-                 let result_sight_to_root =
-                     dijkstra(&sight_node_id,
-                              |&node_id| successors(node_id),
-                              |&node_id| node_id == self.root_id);
+                 let result_sight_to_root = dijkstra::run_dijkstra_in_area(
+                     self.graph, sight_node_id, self.root_id, self.area.lat, self.area.lon, edge_radius);
                  match result_sight_to_root {
-                     Some((_, dist_sight_to_root)) => {
-                         let secs_needed_sight_to_root = dist_sight_to_root as f64 / self.walking_speed_mps;
+                     Some(result) => {
+                         let secs_needed_sight_to_root = result.dist() as f64 / self.walking_speed_mps;
                          let secs_total = (secs_needed_to_sight + secs_needed_sight_to_root) as usize + 1;
 
                          log::trace!("Checking sight {}: secs to include sight: {}, left time budget: {}",
@@ -164,14 +154,14 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
                              log::trace!("Adding sight to route");
 
                              // add sector containing sight and all intermediate nodes to route
-                             let sector_nodes = build_path(&sight_node_id, &result_to_sights);
+                             let sector_nodes = result_to_sights.build_path(self.graph,
+                                                                            sight_node_id);
                              log::trace!("Appending sector to route:\n{:?}", &sector_nodes);
 
-                             let path = sector_nodes.into_iter()
-                                 .map(|node_id| self.graph.get_node(node_id)).collect_vec();
-                             let sector = Sector::with_sight(secs_needed_to_sight as usize,
-                                                             self.sights[&sight_node_id],
-                                                             path);
+                             let sector = Sector::with_sight(
+                                 secs_needed_to_sight as usize,
+                                 self.sights[&sight_node_id],
+                                 sector_nodes);
                              route.push(if curr_node_id == self.root_id {
                                  RouteSector::Start(sector)
                              } else {
@@ -193,19 +183,16 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
             if len_route_after == len_route_before && len_route_after > 0 {
                 log::trace!("Traveling back to root");
 
-                let result_to_root =
-                    dijkstra(&curr_node_id,
-                             |&node_id| successors(node_id),
-                             |&node_id| node_id == self.root_id)
-                        .expect("No path from last visited sight to root");
+                let result_to_root = dijkstra::run_dijkstra_in_area(
+                    self.graph, curr_node_id, self.root_id, self.area.lat, self.area.lon, edge_radius)
+                    .expect("No path from last visited sight to root");
 
-                let (sector_nodes, dist_to_root) = result_to_root;
-                let secs_to_root = (dist_to_root as f64 / self.walking_speed_mps) as usize;
-                log::trace!("Appending sector to route:\n{:?}", &sector_nodes);
+                let secs_to_root = (result_to_root.dist() as f64 / self.walking_speed_mps) as usize;
 
-                let path = sector_nodes.into_iter()
-                    .map(|node_id| self.graph.get_node(node_id)).collect_vec();
-                route.push(RouteSector::End(Sector::new(secs_to_root, path)));
+                log::trace!("Appending sector to route:\n{:?}", result_to_root.path());
+
+                route.push(RouteSector::End(Sector::new(secs_to_root,
+                                                        result_to_root.consume_path())));
                 break;
             }
         }
