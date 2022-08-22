@@ -3,8 +3,9 @@ use std::path::Path;
 use log::info;
 use trailscout_lib::data::osm_graph_creator::parse_and_write_osm_data;
 
-pub const PATH:(&str, &str) = ("./tests_data/bremen-latest.osm.pbf", "./tests_data/output/test-bremen-latest.fmibin");
+//pub const PATH:(&str, &str) = ("./tests_data/bremen-latest.osm.pbf", "./tests_data/output/test-bremen-latest.fmibin");
 //pub const PATH:(&str, &str) = ("./tests_data/stgcenter.pbf", "./tests_data/output/test-stgcenter.fmibin");
+pub const PATH:(&str, &str) = ("./tests_data/bremen-compact.osm.pbf", "./tests_data/output/test-bremen-compact.fmibin");
 
 
 pub fn parse_pbf_to_fmi_file() {
