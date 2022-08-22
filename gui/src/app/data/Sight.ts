@@ -4,4 +4,5 @@ export class Sight {
   lon: number = -1;
   node_id: number = -1;
   name: string = "";
+  pref: number = -1;
 }

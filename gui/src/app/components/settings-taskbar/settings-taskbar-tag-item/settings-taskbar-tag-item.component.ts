@@ -1,9 +1,8 @@
 import { Component, Input, OnInit, Output, EventEmitter, ViewChild } from '@angular/core';
 import { NgbTypeahead } from '@ng-bootstrap/ng-bootstrap';
 import {Category} from "../../../data/Category";
-import { debounceTime, distinctUntilChanged, filter, map, merge, Observable, OperatorFunction, Subject } from 'rxjs';
+import { BehaviorSubject, debounceTime, distinctUntilChanged, filter, map, merge, Observable, OperatorFunction, Subject } from 'rxjs';
 import { Sight } from '../../../data/Sight';
-import { FormControl } from '@angular/forms';
 
 @Component({
   selector: 'app-settings-taskbar-tag-item',
@@ -18,7 +17,8 @@ export class SettingsTaskbarTagItemComponent implements OnInit {
   @ViewChild('sightSearch', {static: true}) sightSearch: NgbTypeahead;
   focus$ = new Subject<string>();
   click$ = new Subject<string>();
-  public model: FormControl;
+  public model: String;
+  sightsWithSpecialPref: BehaviorSubject<Sight[]> = new BehaviorSubject<Sight[]>([]);
 
   checked = false;
   prio: number = 3;
@@ -47,9 +47,20 @@ export class SettingsTaskbarTagItemComponent implements OnInit {
    }
 
   ngOnInit(): void {
+    this.sightsWithSpecialPref.next(this.category.getAllSightsWithSpecialPref());
     this.sightSearch.selectItem.subscribe((item) => {
       console.log(item);
+      var sight = item.item as Sight;
+      sight.pref = this.category.pref;
+      console.log(this.category.getAllSightsWithSpecialPref());
+      this.sightsWithSpecialPref.next(this.category.getAllSightsWithSpecialPref());
     });
+  }
+
+  removeSpecialPrefSight(sight: Sight) {
+    sight.pref = -1;
+    console.log("removing: " + sight);
+    this.sightsWithSpecialPref.next(this.category.getAllSightsWithSpecialPref());
   }
 
   checkedTag() {
