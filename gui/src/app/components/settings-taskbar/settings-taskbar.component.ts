@@ -91,6 +91,7 @@ export class SettingsTaskbarComponent implements OnInit {
 
   async calculate(){
     var categories: any[] = [];
+    var sights: any[] = [];
     this.sightsService.getCategories().forEach((category) => {
       if (category.pref > 0) {
         categories.push({
@@ -98,7 +99,14 @@ export class SettingsTaskbarComponent implements OnInit {
           "pref": category.pref
         })
       }
-    })
+      category.getAllSightsWithSpecialPref().forEach((sight) => {
+        sights.push({
+          "id": sight.node_id,
+          "category": sight.category,
+          "pref": sight.pref
+        });
+      });
+    });
     const request = {
       "start": this.transformTimeToISO8601Date(this._startTime),
       "end": this.transformTimeToISO8601Date(this._endTime, !this.isStartBeforeEnd()),
@@ -110,7 +118,7 @@ export class SettingsTaskbarComponent implements OnInit {
       },
       "user_prefs": {
         "categories": categories,
-        "sights": []
+        "sights": categories
       }
     }
     this.routeService.calculateRoute(request);
