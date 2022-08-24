@@ -44,6 +44,18 @@
                     </ng-template>
                 </ngb-panel>
             </ngb-accordion>
+            <div class="card" style="background-color: black; height: 24vh; margin-top: 3vh; ">
+                "start": {{startTime.hour}}:{{startTime.minute}}
+                "end": {{endTime.hour}}:{{startTime.minute}}
+                <br>
+                "radius": {{mapService.getRadius()}}km
+                <br>
+                "categories":
+                <br>
+                <div *ngFor="let category of categories" style="text-align: center;">
+                    {{category.name}}: {{category.pref}}
+                </div>
+            </div>
             <div class="row justify-content-around">
                 <button class="btn-primary btn btn-lg col" type="button"
                     id="setting-btn" (click)="calculate()" [disabled]="!calculationAllowed()">
