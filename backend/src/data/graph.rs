@@ -132,11 +132,21 @@ pub struct Sight {
     #[serde(skip)]
     pub opening_hours_parsed: Option<OpeningHours>,
     #[serde(skip_deserializing)]
-    pub duration_of_stay_minutes : usize, //default 0 when not overwritten by set_config_duration_of_stay
+    pub duration_of_stay_minutes: i64, //default 0 when not overwritten by set_config_duration_of_stay
     pub wikidata_id: String
 }
 
 impl Sight{
+    /// Get this sights opening hours
+    pub fn opening_hours(&self) -> &OpeningHours {
+        self.opening_hours_parsed.as_ref().unwrap()
+    }
+
+    /// Get the estimated time to spend at this sight in seconds
+    pub fn duration_of_stay_secs(&self) -> i64 {
+        self.duration_of_stay_minutes * 60
+    }
+
     ///Tries to parse opening hours from osm and then sets opening_hours_parsed.
     ///If osm value cannot be parsed use default value from sights config
     ///Also overwrites opening_hours if default value is used
@@ -181,9 +191,8 @@ impl Sight{
         for cat_tag_map in &sights_config.category_tag_map{
             let cat = cat_tag_map.category.parse::<Category>().unwrap();
             if self.category == cat {
-                let default_opening_hours = cat_tag_map.duration_of_stay_minutes.clone();
-                self.duration_of_stay_minutes = default_opening_hours;
-                break
+                self.duration_of_stay_minutes = cat_tag_map.duration_of_stay_minutes;
+                break;
             }
         }
     }

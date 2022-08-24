@@ -106,8 +106,8 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
     }
 
      fn compute_route(&self) -> Result<Route, AlgorithmError> {
-         let mut time_budget_left: usize = self.end_time.signed_duration_since(self.start_time).num_seconds()
-             .try_into().unwrap();
+         let mut time_budget_left = self.end_time.signed_duration_since(self.start_time)
+             .num_seconds();
 
          let edge_radius = self.walking_speed_mps * time_budget_left as f64 / std::f64::consts::PI / 2.0;
 
@@ -162,7 +162,7 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
                  match result_from_root.dist_to(sight_node_id) {
                      Some(dist_to_root) => {
                          let secs_needed_sight_to_root = dist_to_root as f64 / self.walking_speed_mps;
-                         let secs_total = (secs_needed_to_sight + secs_needed_sight_to_root) as usize + 1;
+                         let secs_total = (secs_needed_to_sight + secs_needed_sight_to_root) as i64 + 1;
 
                          log::trace!("Checking sight {}: secs to include sight: {}, left time budget: {}",
                              sight_node_id, secs_total, time_budget_left);
@@ -176,7 +176,9 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
                              log::trace!("Appending sector to route:\n{:?}", &sector_nodes);
 
                              let sector = Sector::with_sight(
-                                 secs_needed_to_sight as usize,
+                                 secs_needed_to_sight as i64,
+                                 // TODO incorporate time windows into Greedy algorithm for comparison purposes
+                                 0, 0,
                                  self.sights.iter().find(|&sight|
                                      sight.node_id == sight_node_id
                                          && sight.category == self.scores[&sight_node_id].1).unwrap(),
@@ -207,7 +209,7 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
                  let result_to_root = result_from_root.result_of(
                      self.graph, curr_node_id).unwrap();
 
-                 let secs_to_root = (result_to_root.dist() as f64 / self.walking_speed_mps) as usize;
+                 let secs_to_root = (result_to_root.dist() as f64 / self.walking_speed_mps) as i64;
                  let mut sector_nodes = result_to_root.consume_path();
                  // Reverse because path is in reverse direction
                  sector_nodes.reverse();

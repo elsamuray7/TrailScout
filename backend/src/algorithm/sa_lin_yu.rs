@@ -1,6 +1,7 @@
 use std::collections::HashMap;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use itertools::Itertools;
+use opening_hours_syntax::rules::RuleKind;
 use pathfinding::prelude::*;
 use rand::prelude::*;
 use crate::algorithm::{_Algorithm, AlgorithmError, Area, Route, RouteSector, ScoreMap, Sector, USER_PREF_MAX, UserPreferences};
@@ -177,29 +178,103 @@ impl<'a> SimAnnealingLinYu<'a> {
     /// Unique string identifier of this algorithm implementation
     pub const ALGORITHM_NAME: &'static str = "DerAllerbesteste";
 
+    /// Compute wait and service time for given sight based on the already used time budget
+    fn compute_wait_and_service_time(&self, sight: &Sight, used_time_budget: i64) -> Result<Option<(i64, i64)>, AlgorithmError> {
+        let time_window = sight.opening_hours();
+
+        // Determine current time (after given used time budget)
+        let curr_time: NaiveDateTime = (self.start_time + Duration::seconds(used_time_budget))
+            .naive_utc();
+
+        // Determine the sights current open state
+        // TODO handle DateLimitExceeded error properly
+        let curr_state = time_window.state(curr_time)
+            .expect("Failed to determine open state");
+
+        // Initialize closure for computing the sights service time
+        let latest_time = Utc::now().date().and_hms(23, 59, 59)
+            .naive_utc();
+        let secs_to_latest_time = latest_time.signed_duration_since(curr_time)
+            .num_seconds();
+        // Service time cannot exceed tomorrow midnight
+        let max_service_time = sight.duration_of_stay_secs().min(secs_to_latest_time);
+        let compute_service_time = |close_time: NaiveDateTime| {
+            let possible_service_time = close_time.signed_duration_since(curr_time)
+                .num_seconds();
+            max_service_time.min(possible_service_time)
+        };
+
+        // Determine wait and service time based on the sights current open state
+        let result = match curr_state {
+            RuleKind::Open => {
+                match time_window.next_change(curr_time) {
+                    Ok(close_time) => {
+                        if !time_window.is_closed(close_time) {
+                            return Err(AlgorithmError::BadTimeWindow);
+                        }
+                        Some((0, compute_service_time(close_time)))
+                    }
+                    _ => Some((0, max_service_time))
+                }
+            }
+            RuleKind::Closed => {
+                match time_window.next_change(curr_time) {
+                    Ok(open_time) => {
+                        if !time_window.is_open(open_time) {
+                            return Err(AlgorithmError::BadTimeWindow);
+                        }
+                        let wait_time = open_time.signed_duration_since(curr_time).num_seconds();
+                        match time_window.next_change(curr_time) {
+                            Ok(close_time) => {
+                                if !time_window.is_closed(close_time) {
+                                    return Err(AlgorithmError::BadTimeWindow);
+                                }
+                                Some((wait_time, compute_service_time(close_time)))
+                            }
+                            _ => Some((wait_time, max_service_time))
+                        }
+                    }
+                    _ => None // The time window will not open again before midnight
+                }
+            }
+            RuleKind::Unknown => {
+                return Err(AlgorithmError::BadTimeWindow);
+            }
+        };
+
+        Ok(result)
+    }
+
     /// Get the total score of `current_solution`.
     /// The total score is computed as the sum of the individual scores of all sights that can be
     /// included in the route without violating the time budget.
     fn get_total_score(&self, current_solution: &Vec<&'a Sight>) -> Result<usize, AlgorithmError> {
         let mut score = 0;
-        let mut time_budget: usize = self.end_time.signed_duration_since(self.start_time).num_seconds()
-            .try_into().unwrap();
+        let total_time_budget = self.end_time.signed_duration_since(self.start_time).num_seconds();
+        let mut left_time_budget = total_time_budget;
         let mut curr_node_id = self.root_id;
 
         for &sight in current_solution {
             let curr_distance_map = &self.distance_map[&curr_node_id];
             let &(_, sight_travel_dist) = curr_distance_map.get(&sight.node_id)
                 .ok_or_else(|| AlgorithmError::NoRouteFound { from: curr_node_id, to: sight.node_id })?;
-            let sight_travel_time = (sight_travel_dist as f64 / self.walking_speed_mps) as usize + 1;
+            let sight_travel_time = (sight_travel_dist as f64 / self.walking_speed_mps) as i64 + 1;
 
             let sight_distance_map = &self.distance_map[&sight.node_id];
             let &(_, root_travel_dist) = sight_distance_map.get(&self.root_id)
                 .ok_or_else(|| AlgorithmError::NoRouteFound { from: sight.node_id, to: self.root_id })?;
-            let root_travel_time = (root_travel_dist as f64 / self.walking_speed_mps) as usize + 1;
+            let root_travel_time = (root_travel_dist as f64 / self.walking_speed_mps) as i64 + 1;
 
-            if time_budget >= (sight_travel_time + root_travel_time) {
+            let (wait_time, service_time) = match self.compute_wait_and_service_time(
+                sight, total_time_budget - left_time_budget)? {
+                Some(result) => result,
+                None => break
+            };
+
+            let sight_total_time = sight_travel_time + wait_time + service_time;
+            if left_time_budget >= (sight_total_time + root_travel_time) {
                 score += self.scores[&sight.node_id].0;
-                time_budget -= sight_travel_time;
+                left_time_budget -= sight_total_time;
                 curr_node_id = sight.node_id;
             } else {
                 break;
@@ -270,38 +345,46 @@ impl<'a> SimAnnealingLinYu<'a> {
     /// Build a walking route from the best solution found so far
     fn build_route(&self, best_solution: Vec<&'a Sight>) -> Result<Route, AlgorithmError> {
         let mut route = Route::new();
-        let mut time_budget: usize = self.end_time.signed_duration_since(self.start_time).num_seconds()
-            .try_into().unwrap();
+        let total_time_budget = self.end_time.signed_duration_since(self.start_time).num_seconds();
+        let mut left_time_budget = total_time_budget;
         let mut curr_node_id = self.root_id;
 
         for sight in best_solution {
             let curr_distance_map = &self.distance_map[&curr_node_id];
             let &(_, sight_travel_dist) = curr_distance_map.get(&sight.node_id)
                 .ok_or_else(|| AlgorithmError::NoRouteFound { from: curr_node_id, to: sight.node_id })?;
-            let sight_travel_time = (sight_travel_dist as f64 / self.walking_speed_mps) as usize + 1;
+            let sight_travel_time = (sight_travel_dist as f64 / self.walking_speed_mps) as i64 + 1;
 
             let sight_distance_map = &self.distance_map[&sight.node_id];
             let &(_, root_travel_dist) = sight_distance_map.get(&self.root_id)
                 .ok_or_else(|| AlgorithmError::NoRouteFound { from: sight.node_id, to: self.root_id })?;
-            let root_travel_time = (root_travel_dist as f64 / self.walking_speed_mps) as usize + 1;
+            let root_travel_time = (root_travel_dist as f64 / self.walking_speed_mps) as i64 + 1;
 
-            if time_budget >= (sight_travel_time + root_travel_time) {
+            let (wait_time, service_time) = match self.compute_wait_and_service_time(
+                sight, total_time_budget - left_time_budget)? {
+                Some(result) => result,
+                None => break
+            };
+
+            let sight_total_time = sight_travel_time + wait_time + service_time;
+            if left_time_budget >= (sight_total_time + root_travel_time) {
                 let path = build_path(&sight.node_id, curr_distance_map)
                     .into_iter().map(|node_id| self.graph.get_node(node_id)).collect_vec();
                 let sector =
-                    Sector::with_sight(sight_travel_time, sight, path);
+                    Sector::with_sight(sight_travel_time, wait_time, service_time,
+                                       sight, path);
                 if route.is_empty() {
                     route.push(RouteSector::Start(sector));
                 } else {
                     route.push(RouteSector::Intermediate(sector));
                 }
+                left_time_budget -= sight_total_time;
                 curr_node_id = sight.node_id;
-                time_budget -= sight_travel_time;
             } else {
                 let curr_distance_map = &self.distance_map[&curr_node_id];
                 let &(_, root_travel_dist) = curr_distance_map.get(&self.root_id)
                     .ok_or_else(|| AlgorithmError::NoRouteFound { from: curr_node_id, to: self.root_id })?;
-                let root_travel_time = (root_travel_dist as f64 / self.walking_speed_mps) as usize + 1;
+                let root_travel_time = (root_travel_dist as f64 / self.walking_speed_mps) as i64 + 1;
 
                 let path = build_path(&self.root_id, curr_distance_map)
                     .into_iter().map(|node_id| self.graph.get_node(node_id)).collect_vec();

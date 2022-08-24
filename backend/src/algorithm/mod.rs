@@ -75,7 +75,9 @@ pub enum RouteSector<'a> {
 /// Concrete representation of a route sector
 #[derive(Serialize, Debug)]
 pub struct Sector<'a> {
-    time_budget: usize,
+    tgt_travel_time: i64,
+    wait_time: i64,
+    service_time: i64,
     sight: Option<&'a Sight>,
     nodes: Vec<&'a Node>,
 }
@@ -84,13 +86,15 @@ impl<'a> Sector<'a> {
     /// Creates a new route sector
     ///
     /// # Arguments
-    /// * `time_budget` - The required time budget in seconds to travel from the sectors source
+    /// * `tgt_travel_time` - The required time budget in seconds to travel from the sectors source
     /// to its target node
     /// * `nodes` - A vector containing a sequence of nodes from the sectors source to its
     /// target node (both inclusive)
-    fn new(time_budget: usize, nodes: Vec<&'a Node>) -> Self {
+    fn new(tgt_travel_time: i64, nodes: Vec<&'a Node>) -> Self {
         Self {
-            time_budget,
+            tgt_travel_time,
+            wait_time: 0,
+            service_time: 0,
             sight: None,
             nodes,
         }
@@ -99,14 +103,18 @@ impl<'a> Sector<'a> {
     /// Creates a new route sector with a target sight
     ///
     /// # Arguments
-    /// * `time_budget` - The required time budget in seconds to travel from the sectors source
+    /// * `tgt_travel_time` - The required time budget in seconds to travel from the sectors source
     /// to its target node
+    /// * `wait_time` - The number of seconds between arrival and the next time the sight is open
+    /// * `service_time` - The number of seconds spend at this particular sight
     /// * `sight` - The target sight of this sector
     /// * `nodes` - A vector containing a sequence of nodes from the sectors source to its
     /// target node (both inclusive)
-    fn with_sight(time_budget: usize, sight: &'a Sight, nodes: Vec<&'a Node>) -> Self {
+    fn with_sight(tgt_travel_time: i64, wait_time: i64, service_time: i64, sight: &'a Sight, nodes: Vec<&'a Node>) -> Self {
         Self {
-            time_budget,
+            tgt_travel_time,
+            wait_time,
+            service_time,
             sight: Some(sight),
             nodes,
         }
@@ -239,6 +247,9 @@ pub enum AlgorithmError {
     /// Error indicating that an algorithm has been requested without category or sight preferences
     #[display(fmt = "No preferences for categories or sights provided")]
     NoPreferencesProvided,
+    /// Error indicating that a sight has a bad time window
+    #[display(fmt = "Bad time window")]
+    BadTimeWindow,
 }
 
 #[cfg(test)]
@@ -297,13 +308,14 @@ mod test {
 
         // The used time budget should be smaller than or equal to the maximum available time budget
         let total_time_budget: usize = route.iter()
-            .map(|sector|
-                match sector {
+            .map(|route_sector| {
+                let sector = match route_sector {
                     RouteSector::Start(sector) => sector,
                     RouteSector::Intermediate(sector) => sector,
                     RouteSector::End(sector) => sector,
-                }.time_budget
-            )
+                };
+                sector.tgt_travel_time + sector.wait_time + sector.service_time
+            })
             .sum();
         let max_avail_time_budget = end_time.signed_duration_since(start_time).num_seconds();
         assert!((total_time_budget as i64) <= max_avail_time_budget,
