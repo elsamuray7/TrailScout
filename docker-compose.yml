@@ -29,15 +29,15 @@ services:
     image: trailscout-backend:latest
     ports:
       - 8080:8080
-    command: [./trailscout_service]
+    command: ["./trailscout_service"]
     restart: always
-#    volumes:
-#      - ./graphs:/app/data
+    volumes:
+      - data:/backend
     networks:
       - ts
 
-#volumes:
-#  graphs:
+volumes:
+  data:
 networks:
   ts:
     name: trailscout
