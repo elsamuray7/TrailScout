@@ -5,7 +5,7 @@
 }
 
 .btn-lg {
-  margin: 30px !important;
+  margin: 10px !important;
 }
 #radiusInput {
   display: inline-block;
@@ -19,11 +19,11 @@
 .inputs {
   width: 90%;
   margin: auto;
-  margin-top: 5vh;
+  margin-top: 1vh;
   max-height: 100%;
 }
 
 ::ng-deep .accordion .accordion-item {
-    max-height: 70vh !important;
+    max-height: 50vh !important;
     overflow: auto !important;
 }
