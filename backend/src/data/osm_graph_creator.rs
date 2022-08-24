@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::time::Instant;
 use geoutils::Location;
 use itertools::Itertools;
-use log::{error, info, trace};
+use log::{debug, error, info, trace};
 use osmpbf::{BlobReader, BlobType, Element, Way};
 use crate::data;
 use crate::data::graph::{Category, get_nearest_node, INode};
@@ -99,7 +99,8 @@ struct OSMSight {
     lon: f64,
     category: Category,
     name: String,
-    opening_hours: String
+    opening_hours: String,
+    wikidata_id: String
 }
 
 /// Parse given `graph_file`. If it does not exist yet, build it from `source_file` first.
@@ -263,16 +264,11 @@ fn create_osm_node(osm_id: usize, lat: f64, lon: f64, tags: Vec<(&str, &str)>, s
     let mut name = osm_id.to_string(); // default
     let mut opening_hours = "empty".to_string(); // default
     let mut category: Category = Category::ThemePark;
+    let mut wikidata_id = "empty".to_string();
     let mut is_sight = false;
     for (key, value) in tags {
         for cat_tag_map in &sight_config.category_tag_map {
             for tag in &cat_tag_map.tags {
-                if key.eq("name") {
-                    name = value.parse().unwrap();
-                }
-                if key.eq("opening_hours") {
-                    opening_hours = value.parse().unwrap();
-                }
                 if key.eq(&tag.key) {
                     if value.eq(&tag.value) {
                         is_sight = true;
@@ -280,6 +276,15 @@ fn create_osm_node(osm_id: usize, lat: f64, lon: f64, tags: Vec<(&str, &str)>, s
                     }
                 }
             }
+        }
+        if key.eq("name") {
+            name = value.parse().unwrap();
+        }
+        if key.eq("opening_hours") {
+            opening_hours = value.parse().unwrap();
+        }
+        if key.eq("wikidata"){
+            wikidata_id = value.parse().unwrap();
         }
     }
     let osm_node = OSMNode {
@@ -299,7 +304,8 @@ fn create_osm_node(osm_id: usize, lat: f64, lon: f64, tags: Vec<(&str, &str)>, s
             lon,
             category,
             name,
-            opening_hours
+            opening_hours,
+            wikidata_id
         };
         result.2.push(osm_sight);
     }
