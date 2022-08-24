@@ -37,6 +37,7 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
   @Input() startPoint?: L.LatLng;
 
   @Output() markerLocation = new EventEmitter;
+  @Output('sections') _sectionEvent = new EventEmitter; 
   private marker?: L.Marker;
   private circle?: L.Circle;
   private activeLayers = new Map<string, any>();
@@ -172,7 +173,9 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
     var r = 55;
     var g = 255;
     var colorStepsize = (g-r) / _route.route!.length;
+    const _sections: L.LatLng[][] = [] = [];
     _route.route!.map(section => {
+      _sections.push(section.nodes.map(node => new L.LatLng(node.lat, node.lon)));
       var sectionNodes: L.LatLng[] = [];
       section.nodes.map(node => {
           sectionNodes.push(new L.LatLng(node.lat, node.lon));
@@ -182,6 +185,7 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
       g -= colorStepsize;
       });
     this.routeLayer.addTo(this.map);
+    this._sectionEvent.emit(_sections);
   }
 
   hideRoute() {
@@ -208,4 +212,5 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
       }
     });
   }
+
 }

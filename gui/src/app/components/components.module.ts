@@ -7,6 +7,7 @@ import { FormsModule } from '@angular/forms';
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 import { SettingsTaskbarTagItemComponent } from './settings-taskbar/settings-taskbar-tag-item/settings-taskbar-tag-item.component';
 import { ToastComponent } from './toast/toast.component';
+import { RouteTrackerComponent } from './route-tracker/route-tracker.component';
 
 
 @NgModule({
@@ -15,7 +16,8 @@ import { ToastComponent } from './toast/toast.component';
     SettingsTaskbarComponent,
     MapContainerComponent,
     SettingsTaskbarTagItemComponent,
-    ToastComponent
+    ToastComponent,
+    RouteTrackerComponent
   ],
   imports: [
     CommonModule,
