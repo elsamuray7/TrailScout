@@ -1,3 +1,5 @@
-<div>
-    
+<div class="box" >
+    <div *ngFor="let section of sections">
+        <app-route-tracker-item class="item" [section]="section"></app-route-tracker-item>
+    </div>
 </div>

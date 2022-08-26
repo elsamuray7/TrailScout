@@ -29,6 +29,7 @@ export class MainPageComponent implements OnInit, OnDestroy {
 
   sub?: Subscription;
   blockSub?: Subscription;
+  sections: L.LatLng[][] = [];
 
   radius?: number;
   constructor(
@@ -110,5 +111,6 @@ export class MainPageComponent implements OnInit, OnDestroy {
     }
     this.mapContainer.drawRoute(route);
     this.mapContainer.drawSightsOnRoute(route);
+    this.sections = route.route?.map(ls => ls.nodes.map(l => new L.LatLng(l.lat, l.lon))) || [];
   }
 }

@@ -8,6 +8,7 @@ import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 import { SettingsTaskbarTagItemComponent } from './settings-taskbar/settings-taskbar-tag-item/settings-taskbar-tag-item.component';
 import { ToastComponent } from './toast/toast.component';
 import { RouteTrackerComponent } from './route-tracker/route-tracker.component';
+import { RouteTrackerItemComponent } from './route-tracker/route-tracker-item/route-tracker-item.component';
 
 
 @NgModule({
@@ -17,7 +18,8 @@ import { RouteTrackerComponent } from './route-tracker/route-tracker.component';
     MapContainerComponent,
     SettingsTaskbarTagItemComponent,
     ToastComponent,
-    RouteTrackerComponent
+    RouteTrackerComponent,
+    RouteTrackerItemComponent
   ],
   imports: [
     CommonModule,
@@ -28,7 +30,8 @@ import { RouteTrackerComponent } from './route-tracker/route-tracker.component';
     NavigationTaskbarComponent,
     SettingsTaskbarComponent,
     MapContainerComponent,
-    ToastComponent
+    ToastComponent,
+    RouteTrackerComponent
   ],
   bootstrap: [
     SettingsTaskbarComponent
