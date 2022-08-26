@@ -6,6 +6,7 @@ import { Subscription } from 'rxjs';
 import { ApplicationStateService } from 'src/app/services/application-state.service';
 import { RouteResponse, RouteService } from 'src/app/services/route.service';
 import { ToastService } from 'src/app/services/toast.service';
+import { RouteTrackerSection } from 'src/app/types.utils';
 import { MapContainerComponent } from '../../components/map-container/map-container.component';
 import {MapService} from "../../services/map.service";
 
@@ -29,7 +30,7 @@ export class MainPageComponent implements OnInit, OnDestroy {
 
   sub?: Subscription;
   blockSub?: Subscription;
-  sections: L.LatLng[][] = [];
+  routeTrackerSections: RouteTrackerSection[] = [];
 
   radius?: number;
   constructor(
@@ -111,6 +112,12 @@ export class MainPageComponent implements OnInit, OnDestroy {
     }
     this.mapContainer.drawRoute(route);
     this.mapContainer.drawSightsOnRoute(route);
-    this.sections = route.route?.map(ls => ls.nodes.map(l => new L.LatLng(l.lat, l.lon))) || [];
+    this.routeTrackerSections = [];
+    route.route?.forEach(route => {
+      const sight = route.sight;
+      const section = route.nodes.map(l => new L.LatLng(l.lat, l.lon));
+      this.routeTrackerSections.push({section: section, sight: sight!})
+    });
+    
   }
 }

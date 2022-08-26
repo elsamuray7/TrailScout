@@ -1,7 +1,8 @@
 .item {
     border: 1px solid green;
     padding: 1px;
-    height: 12vh;
+    height: 11vh;
     width: 15vw;
-    backdrop-filter: blur(2px);
+    flex-shrink: 0;
+    color: black;
 }

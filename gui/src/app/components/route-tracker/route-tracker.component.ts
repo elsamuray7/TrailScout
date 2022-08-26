@@ -1,4 +1,8 @@
 import { Component, Input, OnInit } from '@angular/core';
+import { Category } from 'src/app/data/Category';
+import { RouteTrackerSection } from 'src/app/types.utils';
+
+
 
 @Component({
   selector: 'app-route-tracker',
@@ -7,7 +11,7 @@ import { Component, Input, OnInit } from '@angular/core';
 })
 export class RouteTrackerComponent implements OnInit {
 
-  @Input() sections!: L.LatLng[][];
+  @Input() sections!: RouteTrackerSection[];
 
   constructor() { }
 

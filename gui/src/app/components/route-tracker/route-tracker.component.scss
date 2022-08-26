@@ -2,10 +2,10 @@
     border: 2px solid black;
     padding: 1px;
     height: 13vh;
+    width: 100%;
     backdrop-filter: blur(2px);
-    text-align: justify;
+    display: flex;
+    overflow-x: auto;
 }
 
-.item {
-    display: inline-block;
-}
+

@@ -11,7 +11,7 @@
         
     </div>
     <div class="wrapper">
-        <app-route-tracker id="route-tracker" [sections]="sections"></app-route-tracker>
+        <app-route-tracker id="route-tracker" [sections]="routeTrackerSections"></app-route-tracker>
         <div #collapse="ngbCollapse" [(ngbCollapse)]="isCollapsed" id="collapse" [class.mobile]="mobile" [animation]="false">
             <app-settings-taskbar
             [startRadius]="radius"
