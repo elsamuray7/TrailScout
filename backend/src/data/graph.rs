@@ -12,11 +12,11 @@ use itertools::Itertools;
 use log::{debug, trace, info};
 use serde::{Serialize, Deserialize, Serializer, Deserializer};
 use serde_enum_str::{Deserialize_enum_str, Serialize_enum_str};
-use pathfinding::prelude::*;
 use serde::ser::SerializeStruct;
 use opening_hours::OpeningHours;
 use crate::data;
 use crate::data::SightsConfig;
+use crate::utils::dijkstra;
 
 #[derive(EnumString, Deserialize, Serialize, PartialEq, Eq, Debug)]
 #[serde(rename_all = "PascalCase")]
@@ -330,20 +330,6 @@ impl Graph {
     pub fn get_sights_in_area(&self, lat: f64, lon: f64, radius: f64) -> HashMap<usize, &Sight> {
         debug!("Computing sights in area: lat: {}, lon: {}, radius: {}", lat, lon, radius);
 
-        let successors = |node: &Node|
-            self.get_outgoing_edges_in_area(node.id, lat, lon, radius)
-                .into_iter()
-                .map(|edge| (self.get_node(edge.tgt), edge.dist))
-                .collect::<Vec<(&Node, usize)>>();
-
-        // Get all nodes that are reachable from the node with the lowest distance to the center
-        let center_id = self.get_nearest_node(lat, lon);
-        let reachable_nodes: HashSet<&Node> = dijkstra_all(
-            &self.get_node(center_id),
-            |node| successors(node))
-            .into_keys()
-            .collect();
-
         //estimate bounding box with 111111 meters = 1 longitude degree
         //use binary search to find the range of elements that should be considered
         let lower_bound = binary_search_sights_vector(&self.sights, lat - radius / 111111.0);
@@ -360,13 +346,30 @@ impl Graph {
                 location.is_in_circle(&center, radius)
                     .expect("Could not determine whether sight lies in given area")
             })
-            .filter(|sight| reachable_nodes.contains(self.get_node(sight.node_id)))
             .map(|sight| (sight.node_id, sight))
             .collect();
-        debug!("Found {} reachable sights within the given area (of a total of {} sights)",
+        debug!("Found {} sights within the given area (of a total of {} sights)",
             sights_in_area.len(), self.sights.len());
 
         sights_in_area
+    }
+
+    /// Get all reachable sights within a circular area, specified by `radius` (in meters), around a given coordinate
+    /// (latitude / longitude).
+    /// `reachable_with` specifies within which radius reachability must be tested.
+    pub fn get_reachable_sights_in_area(&self, lat: f64, lon: f64, radius: f64, reachable_within: f64) -> HashMap<usize, &Sight> {
+        // Get all nodes that are reachable from the node with the lowest distance to the center
+        let center_id = self.get_nearest_node(lat, lon);
+        let reachable_nodes = dijkstra::run_ota_dijkstra_in_area(
+            &self, center_id, lat, lon, reachable_within);
+
+        let reachable_sights: HashMap<usize, &Sight> = self.get_sights_in_area(lat, lon, radius).into_iter()
+            .filter(|&(sight_id, _)| reachable_nodes.dist_to(sight_id).is_some())
+            .collect();
+        debug!("Found {} reachable sights within the given area (of a total of {} sights)",
+            reachable_sights.len(), self.sights.len());
+
+        reachable_sights
     }
 }
 
@@ -386,7 +389,7 @@ pub fn get_nearest_node(nodes_sorted_by_lat: &Vec<&impl INode>, id_filter: &Hash
     // Search the index of the node with the closest latitude coordinate within the list of nodes
     let result = nodes_sorted_by_lat.binary_search_by(|n| n.lat().total_cmp(&lat));
     let found_index = result.unwrap_or_else(|index| index);
-    debug!("Starting to search for nearest node at index: {} for latitude: {}", found_index, lat);
+    trace!("Starting to search for nearest node at index: {} for latitude: {}", found_index, lat);
 
     let mut min_dist = Distance::from_meters(f64::MAX);
     let mut min_id = 0;
