@@ -24,8 +24,8 @@ export class MainPageComponent implements OnInit, OnDestroy {
 
   mobile = false;
 
-  defaultStartPointLong = 8.806422;
-  defaultStartPointLat = 53.073635;
+  defaultStartPointLong = 9.183333;
+  defaultStartPointLat = 48.783333;
 
   sub?: Subscription;
   blockSub?: Subscription;
