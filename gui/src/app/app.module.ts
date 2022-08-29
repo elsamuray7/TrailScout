@@ -11,10 +11,11 @@ import {NgcCookieConsentModule, NgcCookieConsentConfig} from 'ngx-cookieconsent'
 import { CookieHandlerService } from './services/cookie-handler.service';
 import { HttpClientModule } from '@angular/common/http';
 import { BlockUIModule } from 'ng-block-ui';
+import { environment } from 'src/environments/environment';
 
 const cookieConfig:NgcCookieConsentConfig = {
   cookie: {
-    domain: 'seewalze.informatik.uni-stuttgart.de' // or 'your.domain.com' // it is mandatory to set a domain, for cookies to work properly (see https://goo.gl/S2Hy2A)
+    domain: environment.domain
   },
   palette: {
     popup: {
