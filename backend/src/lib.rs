@@ -2,6 +2,7 @@ use env_logger::Env;
 
 pub mod data;
 pub mod algorithm;
+pub mod utils;
 
 /// Initialize logging
 pub fn init_logging() {
