@@ -3,7 +3,7 @@ use std::time::Instant;
 use env_logger::Env;
 use std::env;
 use trailscout_lib::data::graph::{Edge, Sight, Node, Graph};
-use trailscout_lib::data::osm_graph_creator::{create_fmi_graph, parse_osm_data, write_graph_file};
+use trailscout_lib::data::osm_graph_creator::{parse_and_write_osm_data};
 #[macro_use]
 extern crate log;
 
@@ -16,10 +16,18 @@ pub fn main() -> Result<(), io::Error> {
     info!("starting up");
 
     let in_graph = env::var("i").unwrap_or("./osm_graphs/bremen-latest.osm.pbf".to_string());
-    let out_graph = env::var("o").unwrap_or("./osm_graphs/bremen-latest.fmi".to_string());
+    let out_graph = env::var("o").unwrap_or("./osm_graphs/bremen-latest.fmibin".to_string());
 
     println!("Input file is {}.", &in_graph);
     println!("Output file is {}.", &out_graph);
-    
-    create_fmi_graph(&in_graph,&out_graph)
+
+    parse_and_write_osm_data(&in_graph, &out_graph);
+
+    let graph = Graph::parse_from_file(&out_graph).unwrap();
+
+    info!("Nodes: {}", graph.num_nodes);
+    info!("Sights: {}", graph.num_sights);
+    info!("Edges: {}", graph.num_edges);
+
+    Ok(())
 }
