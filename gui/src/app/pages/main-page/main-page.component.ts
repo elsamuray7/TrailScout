@@ -26,8 +26,6 @@ export class MainPageComponent implements OnInit, OnDestroy {
 
   mobile = false;
 
-  
-
   sub?: Subscription;
   blockSub?: Subscription;
   routeTrackerSections: RouteTrackerSection[] = [];

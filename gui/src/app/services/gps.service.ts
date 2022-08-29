@@ -14,17 +14,17 @@ export class GPSService {
         })
     }
 
-    async getCurrentLocation(): Promise<L.LatLng> {
+    async getCurrentLocation(): Promise<L.LatLng | undefined> {
         return new Promise((resolve: any, reject: any) => {
             navigator.geolocation.getCurrentPosition(pos => {
                 if (pos) {
                     resolve(new LatLng(pos.coords.latitude, pos.coords.longitude))
                 } else {
-                    alert("Geolocation is not supported by this browser.");
+                    reject("Geolocation is not supported by this browser.");
                 }
                 
             },
-            (error: any) => reject(error),
+            (error: any) => resolve(undefined),
             {timeout: 2000});
         })
         

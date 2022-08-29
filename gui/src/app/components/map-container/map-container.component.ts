@@ -89,8 +89,8 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
 
   async loadMap() {
     if (!this.initLat && !this.initLng) {
-      this.initLat = (await this.gpsService.getCurrentLocation()).lat;
-      this.initLng = (await this.gpsService.getCurrentLocation()).lng;
+      this.initLat = (await this.gpsService.getCurrentLocation())?.lat;
+      this.initLng = (await this.gpsService.getCurrentLocation())?.lng;
       if (!this.initLat && !this.initLng) {
         this.initLat = 48.783333;
         this.initLng = 9.183333;
