@@ -9,6 +9,7 @@ import { SettingsTaskbarTagItemComponent } from './settings-taskbar/settings-tas
 import { ToastComponent } from './toast/toast.component';
 import { RouteTrackerComponent } from './route-tracker/route-tracker.component';
 import { RouteTrackerItemComponent } from './route-tracker/route-tracker-item/route-tracker-item.component';
+import { GPSService } from '../services/gps.service';
 
 
 @NgModule({
@@ -35,6 +36,9 @@ import { RouteTrackerItemComponent } from './route-tracker/route-tracker-item/ro
   ],
   bootstrap: [
     SettingsTaskbarComponent
+  ],
+  providers: [
+    GPSService
   ]
 })
 export class ComponentsModule { }

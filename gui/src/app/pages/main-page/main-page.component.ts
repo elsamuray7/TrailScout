@@ -26,8 +26,7 @@ export class MainPageComponent implements OnInit, OnDestroy {
 
   mobile = false;
 
-  defaultStartPointLong = 9.183333;
-  defaultStartPointLat = 48.783333;
+  
 
   sub?: Subscription;
   blockSub?: Subscription;
@@ -77,10 +76,6 @@ export class MainPageComponent implements OnInit, OnDestroy {
 
   async ngOnInit() {
     this.gpsPosition = await this.gpsService.getCurrentLocation();
-    if (this.gpsPosition) {
-      this.defaultStartPointLat = this.gpsPosition.lat;
-      this.defaultStartPointLong = this.gpsPosition.lng;
-    }
   }
 
   radiusChange(radius: number) {

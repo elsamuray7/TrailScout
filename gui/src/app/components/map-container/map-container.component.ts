@@ -1,11 +1,12 @@
-import { AfterViewInit, Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
+import { AfterViewInit, Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
 import * as L from 'leaflet';
 import { GeoSearchControl, OpenStreetMapProvider } from 'leaflet-geosearch';
 import { LatLngExpression } from 'leaflet';
-import {Category} from "../../data/Category";
+import { Category } from "../../data/Category";
 import * as Icons from './icons';
 import { Sight } from 'src/app/data/Sight';
 import { RouteResponse } from 'src/app/services/route.service';
+import { GPSService } from 'src/app/services/gps.service';
 
 const iconRetinaUrl = 'assets/marker-icon-2x.png';
 const iconUrl = 'assets/marker-icon.png';
@@ -30,14 +31,14 @@ L.Marker.prototype.options.icon = iconDefault;
 export class MapContainerComponent implements AfterViewInit, OnChanges {
   map!: L.Map;
 
-  @Input() initLat: number;
-  @Input() initLng:number;
+  @Input() initLat?: number;
+  @Input() initLng?: number;
   @Input() initZoom = 10;
   @Input() circleRadius?: number;
   @Input() startPoint?: L.LatLng;
 
   @Output() markerLocation = new EventEmitter;
-  @Output('sections') _sectionEvent = new EventEmitter; 
+  @Output('sections') _sectionEvent = new EventEmitter;
   private marker?: L.Marker;
   private circle?: L.Circle;
   private activeLayers = new Map<string, any>();
@@ -46,34 +47,35 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
   routeLayer: L.LayerGroup;
   routePoly?: L.Polyline;
 
-  constructor() {
+  constructor(private gpsService: GPSService) {
   }
+
   ngOnChanges(changes: SimpleChanges): void {
     this.addCircle(this.marker?.getLatLng()!);
   }
 
-  ngAfterViewInit(): void {
-    this.loadMap();
+  async ngAfterViewInit() {
+    await this.loadMap();
     this.map.on('click', event => this.onClick(event, this.map));
 
     const searchControl = GeoSearchControl({
       provider: new OpenStreetMapProvider(),
       style: 'bar',
       position: 'topleft',
-          showMarker: false,
-          marker: {
-            draggable: true,
-          },
-          maxMarker: 1,
-          autoClose: true,
-          autoComplete: true,
-          retainZoomLevel: true,
-          maxSuggestions: 5,
-          keepResult: true,
-          resultFormat: function(t:any) {
-            return "" + t.result.label;
-          },
-          updateMap: !0
+      showMarker: false,
+      marker: {
+        draggable: true,
+      },
+      maxMarker: 1,
+      autoClose: true,
+      autoComplete: true,
+      retainZoomLevel: true,
+      maxSuggestions: 5,
+      keepResult: true,
+      resultFormat: function (t: any) {
+        return "" + t.result.label;
+      },
+      updateMap: !0
     });
     this.map.addControl(searchControl);
 
@@ -85,9 +87,17 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
     }
   }
 
-  loadMap() {
+  async loadMap() {
+    if (!this.initLat && !this.initLng) {
+      this.initLat = (await this.gpsService.getCurrentLocation()).lat;
+      this.initLng = (await this.gpsService.getCurrentLocation()).lng;
+      if (!this.initLat && !this.initLng) {
+        this.initLat = 48.783333;
+        this.initLng = 9.183333;
+      }
+    }
     this.map = L.map('map', {
-      center: [this.initLat, this.initLng],
+      center: [this.initLat!, this.initLng!],
       zoom: this.initZoom
     });
 
@@ -131,8 +141,8 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
       }
       const icon = this.getIcon(sight);
 
-      let newMarker = new L.Marker(latlng, {icon: icon,}).addTo(newLayer);
-      newMarker.bindPopup(sight.category,{closeButton: false});
+      let newMarker = new L.Marker(latlng, { icon: icon, }).addTo(newLayer);
+      newMarker.bindPopup(sight.category, { closeButton: false });
       newLayer.addTo(this.map);
     });
     this.activeLayers.set(category.name, newLayer);
@@ -146,7 +156,7 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
 
   getIcon(sight: Sight) {
     const cat = sight.category;
-    switch(cat) {
+    switch (cat) {
       case "Sightseeing":
         return Icons.sightsIcon;
       case "Nightlife":
@@ -172,18 +182,18 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
     this.routeLayer = new L.LayerGroup<any>();
     var r = 55;
     var g = 255;
-    var colorStepsize = (g-r) / _route.route!.length;
+    var colorStepsize = (g - r) / _route.route!.length;
     const _sections: L.LatLng[][] = [] = [];
     _route.route!.map(section => {
       _sections.push(section.nodes.map(node => new L.LatLng(node.lat, node.lon)));
       var sectionNodes: L.LatLng[] = [];
       section.nodes.map(node => {
-          sectionNodes.push(new L.LatLng(node.lat, node.lon));
-        });
-      this.routePoly = new L.Polyline(sectionNodes, {color: "rgb("+r+" ,"+g+",0)", weight: 6}).addTo(this.routeLayer);
+        sectionNodes.push(new L.LatLng(node.lat, node.lon));
+      });
+      this.routePoly = new L.Polyline(sectionNodes, { color: "rgb(" + r + " ," + g + ",0)", weight: 6 }).addTo(this.routeLayer);
       r += colorStepsize;
       g -= colorStepsize;
-      });
+    });
     this.routeLayer.addTo(this.map);
     this._sectionEvent.emit(_sections);
   }
@@ -206,8 +216,8 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
           lng: section.sight.lon
         }
         const icon = this.getIcon(section.sight);
-        var newMarker = new L.Marker(latlng, {icon: icon}).addTo(this.routeSightLayer);
-        newMarker.bindPopup(section.sight.category,{closeButton: false});
+        var newMarker = new L.Marker(latlng, { icon: icon }).addTo(this.routeSightLayer);
+        newMarker.bindPopup(section.sight.category, { closeButton: false });
         this.routeSightLayer.addTo(this.map);
       }
     });
