@@ -30,8 +30,8 @@ L.Marker.prototype.options.icon = iconDefault;
 export class MapContainerComponent implements AfterViewInit, OnChanges {
   map!: L.Map;
 
-  @Input() initLat = 48.7758459;
-  @Input() initLng = 9.1829321;
+  @Input() initLat: number;
+  @Input() initLng:number;
   @Input() initZoom = 10;
   @Input() circleRadius?: number;
   @Input() startPoint?: L.LatLng;

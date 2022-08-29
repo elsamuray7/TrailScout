@@ -4,6 +4,7 @@ import * as L from 'leaflet';
 import { BlockUI, NgBlockUI } from 'ng-block-ui';
 import { Subscription } from 'rxjs';
 import { ApplicationStateService } from 'src/app/services/application-state.service';
+import { GPSService } from 'src/app/services/gps.service';
 import { RouteResponse, RouteService } from 'src/app/services/route.service';
 import { ToastService } from 'src/app/services/toast.service';
 import { RouteTrackerSection } from 'src/app/types.utils';
@@ -32,13 +33,16 @@ export class MainPageComponent implements OnInit, OnDestroy {
   blockSub?: Subscription;
   routeTrackerSections: RouteTrackerSection[] = [];
 
+  gpsPosition?: L.LatLng;
+
   radius?: number;
   constructor(
     private mapService: MapService,
     private offcanvasService: NgbOffcanvas,
     private applicationStateService: ApplicationStateService,
     private routeService: RouteService,
-    private toastService: ToastService) {
+    private toastService: ToastService,
+    private gpsService: GPSService) {
 
     this.mobile =  applicationStateService.getIsMobileResolution();
 
@@ -49,6 +53,13 @@ export class MainPageComponent implements OnInit, OnDestroy {
     this.blockSub = this.routeService.startRouteCall.subscribe(() => {
       this.blockUIMap.start('Loading route...');
     });
+
+   
+
+    const gps = this.gpsService.getLocation().subscribe(pos => {
+      this.gpsPosition = pos as L.LatLng;
+    });
+
 
     const coords = this.mapService.getCoordniates();
     if (coords) {
@@ -64,8 +75,12 @@ export class MainPageComponent implements OnInit, OnDestroy {
     this.sub?.unsubscribe();
   }
 
-  ngOnInit(): void {
-
+  async ngOnInit() {
+    this.gpsPosition = await this.gpsService.getCurrentLocation();
+    if (this.gpsPosition) {
+      this.defaultStartPointLat = this.gpsPosition.lat;
+      this.defaultStartPointLong = this.gpsPosition.lng;
+    }
   }
 
   radiusChange(radius: number) {
