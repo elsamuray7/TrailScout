@@ -474,32 +474,3 @@ fn prune_edges(osm_edges: &mut Vec<OSMEdge>) {
         i -= 1;
     }
 }
-
-
-fn write_osmium_filter_file (outPath: &str, edgeConfig: &EdgeTypeConfig, sightConfig: &SightsConfig) {
-    let path = std::path::Path::new(outPath);
-    let prefix = path.parent().unwrap();
-    create_dir_all(prefix);
-
-    let file = File::create(outPath).unwrap();
-    let mut file = BufWriter::new(file);
-
-    for e in edgeConfig.edge_type_tag_map.iter() {
-        for eT in e.tags.iter() {
-            file.write(format!("w/{}={}\n", eT.key, eT.value).as_bytes());
-        }
-    }
-
-    for s in sightConfig.category_tag_map.iter() {
-        for sT in s.tags.iter() {
-            file.write(format!("n/{}={}\n", sT.key, sT.value).as_bytes());
-        }
-    }
-}
-
-#[test]
-fn test_osmium_filter_write() {
-    let sight_config_orig = data::get_sights_config();
-    let edge_type_config_orig = data::get_edge_type_config();
-    write_osmium_filter_file("./osm_graphs/filter.txt", &edge_type_config_orig, &sight_config_orig);
-}
