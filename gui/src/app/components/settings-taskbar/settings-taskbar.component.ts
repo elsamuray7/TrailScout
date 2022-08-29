@@ -88,7 +88,8 @@ export class SettingsTaskbarComponent implements OnInit {
   }
 
   calculationAllowed() {
-    return this.radius > 0 && this.startPointSet && !!this.getCategories().find(cat => cat.pref > 0);
+    return this.radius > 0 && this.startPointSet && !!this.getCategories().find(cat => cat.pref > 0
+      || !!cat.getAllSightsWithSpecialPref().find(sight => sight.pref > 0));
   }
 
   async calculate(){
