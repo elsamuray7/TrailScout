@@ -34,8 +34,6 @@ export class SightsServiceService {
       }
       this.sights = sights as Sight[];
       for (let sight of sights as Sight[]) {
-        // TODO: remove next line when backend sends us a name
-        sight.name = sight.node_id.toString();
         var categoryFound = false;
         for (let category of this.categories) {
           if (category.name === sight.category) {
