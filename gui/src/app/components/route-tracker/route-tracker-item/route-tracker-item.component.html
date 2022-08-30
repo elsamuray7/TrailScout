@@ -1,4 +1,4 @@
-<div class="item">
-    {{section.sight.category}} <br>
-    {{section.sight.lat}} \ {{section.sight.lon}}
+<div class="item" (mouseover)="hover()" (mouseout)="unhover()" [class.currentSection]="currentSection">
+    {{section?.sight?.category}} <br>
+    {{section?.sight?.lat}} \ {{section?.sight?.lon}}
 </div>

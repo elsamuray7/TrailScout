@@ -118,13 +118,14 @@ export class MainPageComponent implements OnInit, OnDestroy {
       this.toastService.showDanger(route.error.message ?? 'Something went wrong!');
       return;
     }
+    route.route?.map((r,index) => r.id = index);
     this.mapContainer.drawRoute(route);
     this.mapContainer.drawSightsOnRoute(route);
     this.routeTrackerSections = [];
     route.route?.forEach(route => {
       const sight = route.sight;
       const section = route.nodes.map(l => new L.LatLng(l.lat, l.lon));
-      this.routeTrackerSections.push({section: section, sight: sight!})
+      this.routeTrackerSections.push({section: section, sight: sight!, routeId: route.id!});
     });
     
   }

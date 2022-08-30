@@ -5,7 +5,7 @@ import { LatLngExpression } from 'leaflet';
 import { Category } from "../../data/Category";
 import * as Icons from './icons';
 import { Sight } from 'src/app/data/Sight';
-import { RouteResponse } from 'src/app/services/route.service';
+import { RouteResponse, RouteService } from 'src/app/services/route.service';
 import { GPSService } from 'src/app/services/gps.service';
 
 const iconRetinaUrl = 'assets/marker-icon-2x.png';
@@ -45,9 +45,9 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
 
   routeSightLayer: L.LayerGroup;
   routeLayer: L.LayerGroup;
-  routePoly?: L.Polyline;
+  routePoly: L.Polyline[] = [];
 
-  constructor(private gpsService: GPSService) {
+  constructor(private gpsService: GPSService, private routeService: RouteService) {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -85,10 +85,12 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
       this.addCircle(this.startPoint);
       this.markerLocation.emit(this.startPoint)
     }
+
   }
 
   async loadMap() {
     if (!this.initLat && !this.initLng) {
+      console.log('?')
       this.initLat = (await this.gpsService.getCurrentLocation())?.lat;
       this.initLng = (await this.gpsService.getCurrentLocation())?.lng;
       if (!this.initLat && !this.initLng) {
@@ -108,6 +110,10 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
     });
 
     tiles.addTo(this.map);
+
+    this.routeService.id$.subscribe(id => {
+      this.highlightSection(id);
+    })
   }
 
   async onClick(event: any, map: L.Map) {
@@ -180,6 +186,7 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
   drawRoute(_route: RouteResponse) {
     this.hideRoute()
     this.routeLayer = new L.LayerGroup<any>();
+    this.routePoly = [];
     var r = 55;
     var g = 255;
     var colorStepsize = (g - r) / _route.route!.length;
@@ -190,9 +197,10 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
       section.nodes.map(node => {
         sectionNodes.push(new L.LatLng(node.lat, node.lon));
       });
-      this.routePoly = new L.Polyline(sectionNodes, { color: "rgb(" + r + " ," + g + ",0)", weight: 6 }).addTo(this.routeLayer);
-      r += colorStepsize;
-      g -= colorStepsize;
+      this.routePoly.push(new L.Polyline(sectionNodes, { color: "rgb(" + r + " ," + g + ",0)", weight: 6, attribution: section.id?.toString() }).addTo(this.routeLayer));
+        r += colorStepsize;
+        g -= colorStepsize;
+     
     });
     this.routeLayer.addTo(this.map);
     this._sectionEvent.emit(_sections);
@@ -221,6 +229,16 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
         this.routeSightLayer.addTo(this.map);
       }
     });
+  }
+
+  highlightSection(id: number | null) {
+    console.log(id)
+    if (!id) {
+      this.routePoly.forEach(r => r.setStyle({weight: 6}));
+      return;
+    }
+    const poly = this.routePoly.find((r: any) => r.getAttribution() === id.toString());
+    poly?.setStyle({weight: 10});
   }
 
 }

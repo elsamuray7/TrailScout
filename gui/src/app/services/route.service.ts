@@ -1,7 +1,7 @@
 import {EventEmitter, Injectable} from '@angular/core';
 import {HttpClient} from "@angular/common/http";
 import {environment} from "../../environments/environment";
-import { catchError, of, timeout } from 'rxjs';
+import { catchError, of, Subject, timeout } from 'rxjs';
 import { Sight } from '../data/Sight';
 
 
@@ -15,6 +15,7 @@ interface route {
   time_budget: number;
   sight: Sight | null;
   nodes: latlng[];
+  id?: number;
 }
 export interface RouteResponse {
   route?: route[];
@@ -31,9 +32,11 @@ export class RouteService {
   private route?: RouteResponse;
   public routeUpdated = new EventEmitter<any>();
   public startRouteCall = new EventEmitter<any>();
+  public  id$: Subject<number | null> = new Subject(); 
 
   constructor(private http: HttpClient) {
     this.backendUrl = environment.backendUrl;
+    this.id$.next(null);
   }
 
   public async calculateRoute(request: any) {
