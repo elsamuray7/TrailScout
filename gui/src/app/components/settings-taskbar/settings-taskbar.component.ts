@@ -123,7 +123,7 @@ export class SettingsTaskbarComponent implements OnInit {
       },
       "user_prefs": {
         "categories": categories,
-        "sights": categories
+        "sights": sights
       }
     }
     this.routeService.calculateRoute(request);
@@ -174,5 +174,14 @@ export class SettingsTaskbarComponent implements OnInit {
       this.toastService.showStandard('Updating sights...');
       this.sightsService.updateSights(root, this.radius);
     }
+  }
+
+  foundAnySights(): boolean {
+    for (let category of this.sightsService.getCategories()) {
+      if (category.sights.length > 0) {
+        return true;
+      }
+    }
+    return false;
   }
 }
