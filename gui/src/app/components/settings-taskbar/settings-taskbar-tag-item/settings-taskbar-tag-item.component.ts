@@ -13,6 +13,7 @@ export class SettingsTaskbarTagItemComponent implements OnInit {
 
   @Input() category!: Category;
   @Output('checked') checkedEvent = new EventEmitter;
+  @Output() showSightEvent = new EventEmitter<Sight>();
 
   @ViewChild('sightSearch', {static: true}) sightSearch: NgbTypeahead;
   focus$ = new Subject<string>();
@@ -63,6 +64,10 @@ export class SettingsTaskbarTagItemComponent implements OnInit {
     this.sightsWithSpecialPref.next(this.category.getAllSightsWithSpecialPref());
   }
 
+  showSight(sight: Sight) {
+    this.showSightEvent.emit(sight);
+  }
+
   checkedTag() {
     this.checked = !this.checked;
     this.checkedEvent.emit(this.checked);
@@ -83,9 +88,5 @@ export class SettingsTaskbarTagItemComponent implements OnInit {
 
   getImage() {
     return {'background-image' : 'url(assets/sights/' + this.category.name + '.jpg)' };
-  }
-
-  addSingleSight(value: Event) {
-    console.log(value);
   }
 }

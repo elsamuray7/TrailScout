@@ -6,6 +6,7 @@ import {MapService} from "../../services/map.service";
 import {RouteService} from "../../services/route.service";
 import { ToastService } from '../../services/toast.service';
 import { CookieHandlerService } from 'src/app/services/cookie-handler.service';
+import {Sight} from "../../data/Sight";
 
 @Component({
   selector: 'app-settings-taskbar',
@@ -21,6 +22,7 @@ export class SettingsTaskbarComponent implements OnInit {
   @Output() radiusChange = new EventEmitter;
   @Output() closeButton = new EventEmitter;
   @Output() drawSightsEvent = new EventEmitter;
+  @Output() showSightEvent = new EventEmitter<Sight>();
 
   public _radius!: number;
   private _startTime: NgbTimeStruct;

@@ -208,4 +208,9 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
       }
     });
   }
+
+  showSight(sight: Sight) {
+    console.log("showing Sight:" + sight.lat + " " + sight.lon);
+    this.map.flyTo(new L.LatLng(sight.lat, sight.lon), 19);
+  }
 }

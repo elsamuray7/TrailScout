@@ -45,13 +45,14 @@
                     <ng-template class="row" ngbPanelContent>
                         <div *ngFor="let category of this.getCategories()">
                             <app-settings-taskbar-tag-item [category]="category"
+                                                           (showSightEvent)="this.showSightEvent.emit($event)"
                                 (checked)="drawSights($event, category)"></app-settings-taskbar-tag-item>
                         </div>
 
                     </ng-template>
                 </ngb-panel>
             </ngb-accordion>
-            
+
             <div class="card" style="background-color: black; height: 24vh; margin-top: 3vh; ">
                 "start": {{startTime.hour}}:{{startTime.minute}}
                 "end": {{endTime.hour}}:{{startTime.minute}}
