@@ -144,12 +144,17 @@ export class SettingsTaskbarComponent implements OnInit {
   }
 
   drawSights(drawSight: boolean, category: Category) {
-   this.categories = this.sightsService.getCategories();
     const response = {
       "drawSight": drawSight,
       "category": category
     }
     this.drawSightsEvent.emit(response);
+  }
+
+  hideAllSights(): void {
+    this.sightsService.getCategories().forEach(category => {
+      this.drawSights(false, category);
+    })
   }
 
   close() {
