@@ -6,7 +6,6 @@ use chrono::DateTime;
 use serde::Deserialize;
 use std::{env, str};
 use std::fs;
-use std::process::Command;
 use log::{debug, error};
 use serde_json;
 
