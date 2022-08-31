@@ -1,39 +1,24 @@
 use std::collections::{HashMap, HashSet};
-use std::fmt::Formatter;
+use std::fmt::{Debug, Formatter};
 use std::fs::File;
 use std::hash::{Hash, Hasher};
-use std::io::{BufRead, BufReader};
+use std::io::{BufReader};
 use std::num::{ParseFloatError, ParseIntError};
+use std::time::Instant;
+use futures::future::err;
+use strum_macros::EnumString;
 use geoutils::{Distance, Location};
 use itertools::Itertools;
-use log::{debug, trace};
-use serde::Serialize;
+use log::{debug, trace, info};
+use serde::{Serialize, Deserialize, Serializer, Deserializer};
 use serde_enum_str::{Deserialize_enum_str, Serialize_enum_str};
-use pathfinding::prelude::*;
+use serde::ser::SerializeStruct;
+use opening_hours::OpeningHours;
+use crate::data;
+use crate::data::SightsConfig;
+use crate::utils::dijkstra;
 
-/// Bounding box of a circular area around a coordinate
-struct BoundingBox {
-    min_lat: f64,
-    max_lat: f64,
-    min_lon: f64,
-    max_lon: f64,
-}
-
-impl BoundingBox {
-    /// Create the bounding box of a circular area, specified by `radius`, around a given
-    /// coordinate
-    fn from_coordinate_and_radius(lat: f64, lon: f64, radius: f64) -> Self {
-        /*
-        TODO
-         compute bounding box of circular area
-         Get the distance between two nodes
-         pub fn get_dist(&self, src_id: usize, tgt_id: usize) between two nodes
-         */
-        todo!()
-    }
-}
-
-#[derive(Deserialize_enum_str, Serialize_enum_str, PartialEq, Eq, Debug)]
+#[derive(EnumString, Deserialize, Serialize, PartialEq, Eq, Debug)]
 #[serde(rename_all = "PascalCase")]
 pub enum Category {
     ThemePark,
@@ -69,14 +54,30 @@ pub enum EdgeType {
     Tertiary // Straßen, die Dörfer verbinden
 }
 
+pub trait INode {
+    fn id(&self) -> usize;
+    fn lat(&self) -> f64;
+    fn lon(&self) -> f64;
+}
+
 /// A graph node located at a specific coordinate
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Node {
-    pub osm_id: usize,
     pub id: usize,
     pub lat: f64,
-    pub lon: f64,
-    pub info: String,
+    pub lon: f64
+}
+
+impl INode for Node {
+    fn id(&self) -> usize {
+        self.id
+    }
+    fn lat(&self) -> f64 {
+        self.lat
+    }
+    fn lon(&self) -> f64 {
+        self.lon
+    }
 }
 
 impl PartialEq<Self> for Node {
@@ -94,11 +95,8 @@ impl Hash for Node {
 }
 
 /// A directed and weighted graph edge
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct Edge {
-    pub(crate) osm_id: usize, // TODO delete later!
-    pub osm_src: usize,
-    pub osm_tgt: usize,
     /// The id of the edge's source node
     pub src: usize,
     /// The id of the edge's target node
@@ -123,22 +121,98 @@ impl Hash for Edge {
 }
 
 /// A sight node mapped on its nearest node
-#[derive(Debug, Serialize)]
+//#[derive(Debug, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct Sight {
-    pub osm_id: usize,
     pub node_id: usize,
     pub lat: f64,
     pub lon: f64,
-    //pub tags: Tags,
-    //pub info: String,
     pub category: Category,
+    pub name: String,
+    pub opening_hours: String,
+    #[serde(skip)]
+    pub opening_hours_parsed: Option<OpeningHours>,
+    #[serde(skip_deserializing)]
+    pub duration_of_stay_minutes : usize, //default 0 when not overwritten by set_config_duration_of_stay
+    pub wikidata_id: String
 }
+
+impl Sight{
+    ///Tries to parse opening hours from osm and then sets opening_hours_parsed.
+    ///If osm value cannot be parsed use default value from sights config
+    ///Also overwrites opening_hours if default value is used
+    pub fn parse_opening_hours(&mut self, sights_config : &SightsConfig){
+
+        //Try to parse OSM opening hours
+        let opening_hours_parsed = match OpeningHours::parse(&self.opening_hours){
+            Ok(res) => {
+                trace!("Using OSM Opening Times");
+                Some(res)
+            }
+            //Get default value if could not parse
+            Err(err) => {
+                trace!("Parsing Default Opening Times");
+                let default_openings = self.get_default_opening_hour(&sights_config);
+                let parse = OpeningHours::parse(&default_openings)
+                    .expect("Could not parse default opening hours");
+
+                //override old (invalid) opening times with default
+                self.opening_hours = default_openings;
+
+                Some(parse)
+            }
+        };
+        self.opening_hours_parsed = opening_hours_parsed;
+
+    }
+    /// Get default opening hours from sights_config
+    fn get_default_opening_hour(&self, sights_config : &SightsConfig) -> String {
+        for cat_tag_map in &sights_config.category_tag_map{
+            let cat = cat_tag_map.category.parse::<Category>().unwrap();
+            if matches!(&self.category, cat){
+                let default_opening_hours = cat_tag_map.opening_hours.clone();
+                return default_opening_hours
+            }
+        }
+        panic!("Error while parsing default time from config") //If this happens sights_config.json is wrong
+    }
+
+    ///Sets the duration_of_stay_minutes value according to value in sights config
+    pub fn set_config_duration_of_stay(&mut self, sights_config : &SightsConfig){
+        //viel Code duplication mit get_default_opening_hour - vielleicht irgendwie refactoren?
+        for cat_tag_map in &sights_config.category_tag_map{
+            let cat = cat_tag_map.category.parse::<Category>().unwrap();
+            if matches!(&self.category, cat){
+                let default_opening_hours = cat_tag_map.duration_of_stay_minutes.clone();
+                self.duration_of_stay_minutes = default_opening_hours;
+                break
+            }
+        }
+
+    }
+}
+
+// Need custom debug to ignore parsed OpeningHours because it does not implement it
+impl Debug for Sight {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Sight")
+            .field("node_id", &self.node_id)
+            .field("lat", &self.lat)
+            .field("lon", &self.lon)
+            .field("category", &self.category)
+            .field("name", &self.name)
+            .field("opening_hours", &self.opening_hours)
+            .field("duration_of_stay_minutes", &self.duration_of_stay_minutes)
+            .finish()
+    }
+}
+
+
 
 /// A directed graph. In addition to nodes and edges, the definition also contains a set of sights
 /// mapped on their nearest nodes, respectively.
 pub struct Graph {
     nodes: Vec<Node>,
-    // TODO check if pub needed or pub (crate)
     pub edges: Vec<Edge>,
     pub offsets: Vec<usize>,
     pub num_nodes: usize,
@@ -147,109 +221,29 @@ pub struct Graph {
     pub num_sights: usize,
 }
 
+
 impl Graph {
     /// Parse graph data (in particular, nodes, edges and sights) from a file and create a new
     /// graph from it
     pub fn parse_from_file(graph_file_path: &str) -> Result<Self, ParseError> {
+        info!("Start creating the graph from fmi binary file!");
+        let time_start = Instant::now();
+
         let graph_file = File::open(graph_file_path)?;
-        let graph_reader = BufReader::new(graph_file);
+        let mut graph_reader = BufReader::new(graph_file);
 
-        let mut lines = graph_reader.lines();
-        let mut line_no = 0_usize;
+        let nodes:Vec<Node> = bincode::deserialize_from(&mut graph_reader).unwrap();
+        let mut sights:Vec<Sight> = bincode::deserialize_from(&mut graph_reader).unwrap();
+        let edges:Vec<Edge> = bincode::deserialize_from(&mut graph_reader).unwrap();
 
-        let num_nodes: usize = lines.next()
-            .expect("Unexpected EOF while parsing number of nodes")?
-            .parse()?;
-        let num_sights: usize = lines.next()
-            .expect("Unexpected EOF while parsing number of sights")?
-            .parse()?;
-        let num_edges: usize = lines.next()
-            .expect("Unexpected EOF while parsing number of edges")?
-            .parse()?;
-        line_no += 3;
-
-        let mut nodes = Vec::with_capacity(num_nodes);
-        for i in 0..num_nodes {
-            let line = lines.next()
-                .expect(&format!("Unexpected EOF while parsing nodes in line {}", line_no))?;
-            let mut split = line.split(" ");
-            line_no += 1;
-            split.next(); // id
-
-            let node = Node {
-                osm_id: 0,
-                id: i,
-                lat: split.next()
-                    .expect(&format!("Unexpected EOL while parsing node latitude in line {}",
-                                     line_no))
-                    .parse()?,
-                lon: split.next()
-                    .expect(&format!("Unexpected EOL while parsing node longitude in line {}",
-                                     line_no))
-                    .parse()?,
-                info: "".to_string()
-            };
-            nodes.push(node);
-        }
-
-        let mut sights = Vec::with_capacity(num_sights);
-        for _ in 0..num_sights {
-            let line = lines.next()
-                .expect(&format!("Unexpected EOF while parsing nodes in line {}", line_no))?;
-            let mut split = line.split(" ");
-            line_no += 1;
-
-            let sight = Sight {
-                osm_id: 0,
-                node_id: split.next()
-                    .expect(&format!("Unexpected EOL while parsing sight node id in line {}",
-                                     line_no))
-                    .parse()?,
-                lat: split.next()
-                    .expect(&format!("Unexpected EOL while parsing sight latitude in line {}",
-                                     line_no))
-                    .parse()?,
-                lon: split.next()
-                    .expect(&format!("Unexpected EOL while parsing sight longitude in line {}",
-                                     line_no))
-                    .parse()?,
-                category: split.next()
-                    .expect(&format!("Unexpected EOL while parsing sight category in line {}",
-                                     line_no))
-                    .parse()
-                    .unwrap(),
-            };
-            sights.push(sight);
-        }
+        let num_nodes = nodes.len();
+        let num_sights = sights.len();
+        let num_edges = edges.len();
 
         let mut next_src: usize = 0;
         let mut offset: usize = 0;
-        let mut edges = Vec::with_capacity(num_edges);
         let mut offsets = vec![0; num_nodes + 1];
-        for _ in 0..num_edges {
-            let line = lines.next()
-                .expect(&format!("Unexpected EOF while parsing edges in line {}", line_no))?;
-            let mut split = line.split(" ");
-            line_no += 1;
-
-            let edge = Edge {
-                osm_id: 0,
-                osm_src: 0,
-                osm_tgt: 0,
-                src: split.next()
-                    .expect(&format!("Unexpected EOL while parsing edge source in line {}",
-                                     line_no))
-                    .parse()?,
-                tgt: split.next()
-                    .expect(&format!("Unexpected EOL while parsing edge target in line {}",
-                                     line_no))
-                    .parse()?,
-                dist: split.next()
-                    .expect(&format!("Unexpected EOL while parsing edge weight in line {}",
-                                     line_no))
-                    .parse()?,
-            };
-
+        for edge in edges.iter() {
             if edge.src >= next_src {
                 for j in next_src..=edge.src {
                     offsets[j] = offset;
@@ -257,12 +251,22 @@ impl Graph {
                 next_src = edge.src + 1;
             }
             offset += 1;
-
-            edges.push(edge);
         }
-        for i in next_src..=num_nodes {
+        for i in next_src..= num_nodes {
             offsets[i] = num_edges;
         }
+
+        //Parse the opening hours to fill Opening_hours_parsed: Option<OpeningHours>
+        //Also read duration_of_stay_minutes from sights config and set the value for the sight
+        let sights_config = data::get_sights_config();
+        for mut sight in &mut sights{
+            sight.parse_opening_hours(&sights_config);
+            sight.set_config_duration_of_stay(&sights_config);
+        }
+
+        
+        let time_duration = time_start.elapsed();
+        info!("End graph creation after {} seconds!", time_duration.as_millis() as f32 / 1000.0);
 
         Ok(Self {
             nodes,
@@ -326,20 +330,6 @@ impl Graph {
     pub fn get_sights_in_area(&self, lat: f64, lon: f64, radius: f64) -> HashMap<usize, &Sight> {
         debug!("Computing sights in area: lat: {}, lon: {}, radius: {}", lat, lon, radius);
 
-        let successors = |node: &Node|
-            self.get_outgoing_edges_in_area(node.id, lat, lon, radius)
-                .into_iter()
-                .map(|edge| (self.get_node(edge.tgt), edge.dist))
-                .collect::<Vec<(&Node, usize)>>();
-
-        // Get all nodes that are reachable from the node with the lowest distance to the center
-        let center_id = self.get_nearest_node(lat, lon);
-        let reachable_nodes: HashSet<&Node> = dijkstra_all(
-            &self.get_node(center_id),
-            |node| successors(node))
-            .into_keys()
-            .collect();
-
         //estimate bounding box with 111111 meters = 1 longitude degree
         //use binary search to find the range of elements that should be considered
         let lower_bound = binary_search_sights_vector(&self.sights, lat - radius / 111111.0);
@@ -356,13 +346,30 @@ impl Graph {
                 location.is_in_circle(&center, radius)
                     .expect("Could not determine whether sight lies in given area")
             })
-            .filter(|sight| reachable_nodes.contains(self.get_node(sight.node_id)))
             .map(|sight| (sight.node_id, sight))
             .collect();
-        debug!("Found {} reachable sights within the given area (of a total of {} sights)",
+        debug!("Found {} sights within the given area (of a total of {} sights)",
             sights_in_area.len(), self.sights.len());
 
         sights_in_area
+    }
+
+    /// Get all reachable sights within a circular area, specified by `radius` (in meters), around a given coordinate
+    /// (latitude / longitude).
+    /// `reachable_with` specifies within which radius reachability must be tested.
+    pub fn get_reachable_sights_in_area(&self, lat: f64, lon: f64, radius: f64, reachable_within: f64) -> HashMap<usize, &Sight> {
+        // Get all nodes that are reachable from the node with the lowest distance to the center
+        let center_id = self.get_nearest_node(lat, lon);
+        let reachable_nodes = dijkstra::run_ota_dijkstra_in_area(
+            &self, center_id, lat, lon, reachable_within);
+
+        let reachable_sights: HashMap<usize, &Sight> = self.get_sights_in_area(lat, lon, radius).into_iter()
+            .filter(|&(sight_id, _)| reachable_nodes.dist_to(sight_id).is_some())
+            .collect();
+        debug!("Found {} reachable sights within the given area (of a total of {} sights)",
+            reachable_sights.len(), self.sights.len());
+
+        reachable_sights
     }
 }
 
@@ -375,14 +382,14 @@ fn binary_search_sights_vector(sights: &Vec<Sight>, target_latitude: f64) -> usi
 
 /// Get the nearest node (that is not in `id_filter`) to a given coordinate (latitude / longitude).
 /// The function expects a node vector sorted by latitude.
-pub fn get_nearest_node(nodes_sorted_by_lat: &Vec<&Node>, id_filter: &HashSet<usize>, lat: f64, lon: f64) -> usize {
+pub fn get_nearest_node(nodes_sorted_by_lat: &Vec<&impl INode>, id_filter: &HashSet<usize>, lat: f64, lon: f64) -> usize {
     // Location to find the nearest node for
     let location = Location::new(lat, lon);
 
     // Search the index of the node with the closest latitude coordinate within the list of nodes
-    let result = nodes_sorted_by_lat.binary_search_by(|n| n.lat.total_cmp(&lat));
+    let result = nodes_sorted_by_lat.binary_search_by(|n| n.lat().total_cmp(&lat));
     let found_index = result.unwrap_or_else(|index| index);
-    debug!("Starting to search for nearest node at index: {} for latitude: {}", found_index, lat);
+    trace!("Starting to search for nearest node at index: {} for latitude: {}", found_index, lat);
 
     let mut min_dist = Distance::from_meters(f64::MAX);
     let mut min_id = 0;
@@ -397,27 +404,27 @@ pub fn get_nearest_node(nodes_sorted_by_lat: &Vec<&Node>, id_filter: &HashSet<us
             // If the distance with the current nodes longitude set to the longitude of the
             // location is greater than the minimum distance so far, abort and output the node
             // with the found distance
-            let node_loc_lon_aligned = Location::new(node.lat, location.longitude());
+            let node_loc_lon_aligned = Location::new(node.lat(), location.longitude());
             // Use haversine distance here for more efficiency
             let minimum_possible_distance = location.haversine_distance_to(&node_loc_lon_aligned);
             if minimum_possible_distance.meters() >= min_dist.meters() {
                 trace!("Minimum possible distance: {} for node: {} greater/equal to minimum distance so far: {} for node: {}",
-                minimum_possible_distance, node.id, min_dist, min_id);
+                minimum_possible_distance, node.id(), min_dist, min_id);
                 return min_id;
             }
 
             // If the node is not a sight and has a smaller distance to the location than the
             // minimum distance found so far, update the minimum distance and the id of the nearest
             // node
-            if !id_filter.contains(&node.id) {
-                let node_loc = Location::new(node.lat, node.lon);
+            if !id_filter.contains(&node.id()) {
+                let node_loc = Location::new(node.lat(), node.lon());
                 // Use haversine distance here for more efficiency
                 let dist = location.haversine_distance_to(&node_loc);
                 if dist.meters() < min_dist.meters() {
                     trace!("Updating minimum distance so far from: {} for node: {} to: {} for node: {}",
-                    min_dist, min_id, dist, node.id);
+                    min_dist, min_id, dist, node.id());
                     min_dist = dist;
-                    min_id = node.id;
+                    min_id = node.id();
                 }
             }
         }
@@ -495,7 +502,7 @@ mod test {
     fn test_offsets() {
         init_logging();
 
-        let graph = Graph::parse_from_file("./tests_data/output/bremen-latest.fmi")
+        let graph = Graph::parse_from_file("./tests_data/output/bremen-latest.fmibin")
             .expect("Failed to parse graph file");
 
         let mut rng = thread_rng();
@@ -538,7 +545,7 @@ mod test {
     fn test_nearest_node() {
         init_logging();
 
-        let graph = Graph::parse_from_file("./tests_data/output/bremen-latest.fmi")
+        let graph = Graph::parse_from_file("./tests_data/output/bremen-latest.fmibin")
             .expect("Failed to parse graph file");
 
         let (lat, lon) = RADISSON_BLU_HOTEL;

@@ -27,9 +27,10 @@ export class SettingsTaskbarComponent implements OnInit {
   private _endTime: NgbTimeStruct;
   private currentDate: Date;
   refreshing: boolean = false;
+  categories: any[] = [];
 
   constructor(private sightsService: SightsServiceService,
-              private mapService: MapService,
+              public mapService: MapService,
               private routeService: RouteService,
               private cookieService: CookieHandlerService,
               private toastService: ToastService) {
@@ -54,6 +55,7 @@ export class SettingsTaskbarComponent implements OnInit {
         this.toastService.showDanger('Something went wrong!');
       }
     });
+    this.categories = this.sightsService.getCategories();
   }
 
   set radius(r: number) {
@@ -86,7 +88,7 @@ export class SettingsTaskbarComponent implements OnInit {
   }
 
   calculationAllowed() {
-    return this.radius > 0 && this.startPointSet;
+    return this.radius > 0 && this.startPointSet && !!this.getCategories().find(cat => cat.pref > 0);
   }
 
   async calculate(){
@@ -150,6 +152,7 @@ export class SettingsTaskbarComponent implements OnInit {
   }
 
   drawSights(drawSight: boolean, category: Category) {
+   this.categories = this.sightsService.getCategories();
     const response = {
       "drawSight": drawSight,
       "category": category
