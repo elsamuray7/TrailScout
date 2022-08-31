@@ -2,8 +2,8 @@
     "ip": "0.0.0.0",
     "port": 8080,
     "log_level": "debug",
-    "graph_file_path": "./osm_graphs/bremen-latest.fmibin",
-    "source_file": "./osm_graphs/bremen-latest.osm.pbf",
+    "graph_file_path": "./osm_graphs/bremen31-8-22.fmi",
+    "source_file": "./osm_graphs/bremen31-8-22.osm.pbf",
     "routing_algorithm": "DerAllerbesteste"
 }
 

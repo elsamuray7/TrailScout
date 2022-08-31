@@ -6,6 +6,7 @@ use chrono::DateTime;
 use serde::Deserialize;
 use std::{env, str};
 use std::fs;
+use std::process::Command;
 use log::{debug, error};
 use serde_json;
 
@@ -123,8 +124,6 @@ async fn post_route(request:  web::Json<RouteProviderReq>, data: web::Data<AppSt
 async fn update_graph(){
     unimplemented!();
 }
-
-
 
 //server main
 #[actix_web::main]
