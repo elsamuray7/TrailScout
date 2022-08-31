@@ -32,7 +32,8 @@ export class RouteService {
   private route?: RouteResponse;
   public routeUpdated = new EventEmitter<any>();
   public startRouteCall = new EventEmitter<any>();
-  public  id$: Subject<number | null> = new Subject(); 
+  public id$: Subject<number | null> = new Subject(); 
+  public id_clicked$: Subject<number> = new Subject();
 
   constructor(private http: HttpClient) {
     this.backendUrl = environment.backendUrl;

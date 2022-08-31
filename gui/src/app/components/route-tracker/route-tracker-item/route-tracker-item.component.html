@@ -1,4 +1,7 @@
-<div class="item" (mouseover)="hover()" (mouseout)="unhover()" [class.currentSection]="currentSection">
+<div class="item" (mouseover)="hover()" (mouseout)="unhover()" [class.currentSection]="currentSection" [class.hover]="_hover" (click)="onClick()">
     {{section?.sight?.category}} <br>
     {{section?.sight?.lat}} \ {{section?.sight?.lon}}
+    <div *ngIf="currentSection">
+        Auf diesem Abschnitt befinden sie sich gerade
+    </div>
 </div>

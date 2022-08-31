@@ -11,6 +11,9 @@ export class RouteTrackerItemComponent implements OnInit {
   @Input() section?: RouteTrackerSection;
   @Input() currentSection: boolean = false;
   @Output() hoverEvent = new EventEmitter;
+  @Output() clickEvent = new EventEmitter;
+
+  _hover = false;
 
   constructor() { }
 
@@ -21,11 +24,16 @@ export class RouteTrackerItemComponent implements OnInit {
   }
 
   hover() {
-    this.hoverEvent.emit(this.section!.routeId);
-    console.log(this.section);
+    this.hoverEvent.emit(this.section?.routeId);
+    this._hover = true;
   }
 
   unhover() {
     this.hoverEvent.emit(null);
+    this._hover = false;
+  }
+
+  onClick() {
+    this.clickEvent.emit(this.section?.routeId)
   }
 }

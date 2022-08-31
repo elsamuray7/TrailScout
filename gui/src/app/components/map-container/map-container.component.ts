@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
+import { AfterViewInit, Component, EventEmitter, Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges } from '@angular/core';
 import * as L from 'leaflet';
 import { GeoSearchControl, OpenStreetMapProvider } from 'leaflet-geosearch';
 import { LatLngExpression } from 'leaflet';
@@ -7,6 +7,7 @@ import * as Icons from './icons';
 import { Sight } from 'src/app/data/Sight';
 import { RouteResponse, RouteService } from 'src/app/services/route.service';
 import { GPSService } from 'src/app/services/gps.service';
+import { Subscription } from 'rxjs';
 
 const iconRetinaUrl = 'assets/marker-icon-2x.png';
 const iconUrl = 'assets/marker-icon.png';
@@ -28,7 +29,7 @@ L.Marker.prototype.options.icon = iconDefault;
   templateUrl: './map-container.component.html',
   styleUrls: ['./map-container.component.scss']
 })
-export class MapContainerComponent implements AfterViewInit, OnChanges {
+export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestroy {
   map!: L.Map;
 
   @Input() initLat?: number;
@@ -47,7 +48,14 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
   routeLayer: L.LayerGroup;
   routePoly: L.Polyline[] = [];
 
+  sub1?: Subscription;
+  sub2?: Subscription;
+
   constructor(private gpsService: GPSService, private routeService: RouteService) {
+  }
+  ngOnDestroy() {
+    this.sub1?.unsubscribe();
+    this.sub2?.unsubscribe();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -111,8 +119,11 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
 
     tiles.addTo(this.map);
 
-    this.routeService.id$.subscribe(id => {
+    this.sub1 = this.routeService.id$.subscribe(id => {
       this.highlightSection(id);
+    });
+    this.sub2 = this.routeService.id_clicked$.subscribe(id => {
+      this.showSection(id);
     })
   }
 
@@ -232,13 +243,21 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
   }
 
   highlightSection(id: number | null) {
-    console.log(id)
     if (!id) {
       this.routePoly.forEach(r => r.setStyle({weight: 6}));
       return;
     }
     const poly = this.routePoly.find((r: any) => r.getAttribution() === id.toString());
-    poly?.setStyle({weight: 10});
+    poly?.setStyle({weight: 14});
+  }
+
+  showSection(id: number) {
+    const poly = this.routePoly.find((r: any) => r.getAttribution() === id.toString());
+    const latlngs = poly?.getLatLngs()[0] as L.LatLng;
+    if (latlngs) {
+      this.map.flyTo(new L.LatLng(latlngs?.lat, latlngs?.lng), 19);
+    }
+    
   }
 
   showSight(sight: Sight) {

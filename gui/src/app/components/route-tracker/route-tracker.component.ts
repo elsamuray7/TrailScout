@@ -56,4 +56,8 @@ export class RouteTrackerComponent implements OnInit {
   hoveredItem(id: number | null) {
       this.routeService.id$.next(id);
   }
+
+  clickedItem(id: number) {
+    this.routeService.id_clicked$.next(id);
+  }
 }

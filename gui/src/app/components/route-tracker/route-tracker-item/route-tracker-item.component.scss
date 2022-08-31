@@ -5,13 +5,14 @@
     width: 15vw;
     flex-shrink: 0;
     color: black;
-    :hover {
-        color: red !important;
-        border: 2px solid red !important;
-    }
 }
 
 .currentSection {
     color: red !important;
     border: 2px solid red !important;
+}
+
+.hover {
+    color: darkslategrey;
+    border: 2px solid darkslategrey;
 }
