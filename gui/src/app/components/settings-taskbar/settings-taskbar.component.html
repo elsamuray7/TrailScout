@@ -8,7 +8,7 @@
                         [disableTooltip]="calculationAllowed()">Calculate</span></button>
                 <button type="button" class="btn btn-secondary btn-lg close col" (click)="close()">Close</button>
             </div>
-            <ngb-accordion #acc="ngbAccordion" [closeOthers]="true" activeIds="radius" [destroyOnHide]="false">
+            <ngb-accordion #acc="ngbAccordion" [closeOthers]="true" activeIds="radius">
                 <ngb-panel id="radius" [title]="radius > 0 ? 'Radius: ' + radius + 'km' : 'Radius'" [disabled]="!startPointSet"
                     [class.disabled]="!startPointSet">
                     <ng-template ngbPanelContent >
@@ -41,7 +41,7 @@
                         </div>
                     </ng-template>
                 </ngb-panel>
-                <ngb-panel [title]="'Tags'" [disabled]="!startPointSet" >
+                <ngb-panel [title]="'Tags'" [disabled]="!startPointSet" (hidden)="hideAllSights()">
                     <ng-template class="row" ngbPanelContent>
                         <small *ngIf="!foundAnySights()"> No Sights were found. Please check your Settings and hit "Refresh"! </small>
                         <div *ngFor="let category of this.getCategories()">

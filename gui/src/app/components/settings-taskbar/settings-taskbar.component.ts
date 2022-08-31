@@ -49,6 +49,10 @@ export class SettingsTaskbarComponent implements OnInit {
       }
   }, 0);
 
+    this.sightsService.updating.subscribe((_) => {
+      this.refreshing = true;
+      this.toastService.showStandard('Updating sights...');
+    })
     this.sightsService.updateSuccessful.subscribe((success) => {
       this.refreshing = false;
       if (success) {
@@ -155,12 +159,17 @@ export class SettingsTaskbarComponent implements OnInit {
   }
 
   drawSights(drawSight: boolean, category: Category) {
-   this.categories = this.sightsService.getCategories();
     const response = {
       "drawSight": drawSight,
       "category": category
     }
     this.drawSightsEvent.emit(response);
+  }
+
+  hideAllSights(): void {
+    this.sightsService.getCategories().forEach(category => {
+      this.drawSights(false, category);
+    })
   }
 
   close() {
@@ -170,8 +179,6 @@ export class SettingsTaskbarComponent implements OnInit {
   refreshSights() {
     const root: L.LatLng = this.mapService.getCoordniates();
     if (root && this.radius > 0) {
-      this.refreshing = true;
-      this.toastService.showStandard('Updating sights...');
       this.sightsService.updateSights(root, this.radius);
     }
   }

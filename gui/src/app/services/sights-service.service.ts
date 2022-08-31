@@ -12,6 +12,7 @@ export class SightsServiceService {
   private categories: Category[] = [];
   private presetCategories = ["Sightseeing", "Other", "Nightlife", "Restaurants", "Shopping", "PicnicBarbequeSpot",
     "MuseumExhibition", "Nature", "Swimming"];
+  public updating = new EventEmitter();
   public updateSuccessful = new EventEmitter<boolean>();
 
   constructor(private http: HttpClient) {
@@ -27,6 +28,7 @@ export class SightsServiceService {
       "lon": coords["lng"],
       "radius": radius * 1000 // convert to meters
     }
+    this.updating.emit();
     this.http.post(this.backendUrl + "/sights", body).subscribe((sights ) => {
       for (let category of this.categories) {
         // reduce sights array to only those with a Special Preference, those should be kept on refresh
