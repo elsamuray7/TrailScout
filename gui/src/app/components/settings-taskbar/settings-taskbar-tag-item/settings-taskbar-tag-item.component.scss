@@ -14,6 +14,13 @@
     text-align: left;
 }
 
+.sight-name {
+  flex-grow: 2;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
 .item {
   background-image:linear-gradient(
     to bottom,
@@ -24,7 +31,17 @@
   background-size: cover;
 }
 
-.btn {
+.sight{
+  color: white;
+  font-size: 2vh;
+  font-style: italic;
+}
+
+.sight-card{
+  padding: 0 14px;
+}
+
+.custom-btn {
   width: 100%;
   text-align: left;
   border: none;

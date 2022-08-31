@@ -147,8 +147,8 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
       }
       const icon = this.getIcon(sight);
 
-      let newMarker = new L.Marker(latlng, { icon: icon, }).addTo(newLayer);
-      newMarker.bindPopup(sight.category, { closeButton: false });
+      let newMarker = new L.Marker(latlng, {icon: icon,}).addTo(newLayer);
+      newMarker.bindPopup(sight.name,{closeButton: false});
       newLayer.addTo(this.map);
     });
     this.activeLayers.set(category.name, newLayer);
@@ -224,8 +224,8 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
           lng: section.sight.lon
         }
         const icon = this.getIcon(section.sight);
-        var newMarker = new L.Marker(latlng, { icon: icon }).addTo(this.routeSightLayer);
-        newMarker.bindPopup(section.sight.category, { closeButton: false });
+        var newMarker = new L.Marker(latlng, {icon: icon}).addTo(this.routeSightLayer);
+        newMarker.bindPopup(section.sight.name,{closeButton: false});
         this.routeSightLayer.addTo(this.map);
       }
     });
@@ -241,4 +241,7 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
     poly?.setStyle({weight: 10});
   }
 
+  showSight(sight: Sight) {
+    this.map.flyTo(new L.LatLng(sight.lat, sight.lon), 19);
+  }
 }
