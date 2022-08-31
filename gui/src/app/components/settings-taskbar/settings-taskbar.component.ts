@@ -6,6 +6,7 @@ import {MapService} from "../../services/map.service";
 import {RouteService} from "../../services/route.service";
 import { ToastService } from '../../services/toast.service';
 import { CookieHandlerService } from 'src/app/services/cookie-handler.service';
+import {Sight} from "../../data/Sight";
 
 @Component({
   selector: 'app-settings-taskbar',
@@ -21,6 +22,7 @@ export class SettingsTaskbarComponent implements OnInit {
   @Output() radiusChange = new EventEmitter;
   @Output() closeButton = new EventEmitter;
   @Output() drawSightsEvent = new EventEmitter;
+  @Output() showSightEvent = new EventEmitter<Sight>();
 
   public _radius!: number;
   private _startTime: NgbTimeStruct;
@@ -88,7 +90,8 @@ export class SettingsTaskbarComponent implements OnInit {
   }
 
   calculationAllowed() {
-    return this.radius > 0 && this.startPointSet && !!this.getCategories().find(cat => cat.pref > 0);
+    return this.radius > 0 && this.startPointSet && !!this.getCategories().find(cat => cat.pref > 0
+      || !!cat.getAllSightsWithSpecialPref().find(sight => sight.pref > 0));
   }
 
   async calculate(){
@@ -120,7 +123,7 @@ export class SettingsTaskbarComponent implements OnInit {
       },
       "user_prefs": {
         "categories": categories,
-        "sights": categories
+        "sights": sights
       }
     }
     this.routeService.calculateRoute(request);
@@ -171,5 +174,14 @@ export class SettingsTaskbarComponent implements OnInit {
       this.toastService.showStandard('Updating sights...');
       this.sightsService.updateSights(root, this.radius);
     }
+  }
+
+  foundAnySights(): boolean {
+    for (let category of this.sightsService.getCategories()) {
+      if (category.sights.length > 0) {
+        return true;
+      }
+    }
+    return false;
   }
 }

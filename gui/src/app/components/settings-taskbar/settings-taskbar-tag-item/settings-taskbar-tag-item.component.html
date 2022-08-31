@@ -30,11 +30,19 @@
         #sightSearch="ngbTypeahead"
       />
       <div *ngFor='let sight of sightsWithSpecialPref | async' class='row align-items-center'>
-        <div class='sight col'>
-          {{sight.name}}
+        <div class='sight row'>
+          <p class="col sight-name">{{sight.name}}</p>
+          <div class="col" style="white-space: nowrap; width: 30%">
+            <button class='btn' type='button'
+                    (click)='this.showSight(sight)'><i class="bi bi-geo-alt-fill"></i>
+            </button>
+            <button class='btn' type='button'
+                    (click)='this.removeSpecialPrefSight(sight)'><i class="bi bi-x-lg"></i>
+            </button>
+          </div>
         </div>
-        <div ngbDropdown class='col flex-grow-1'>
-          <button type="button" class="custom-btn btn btn-outline-primary" id="dropdownBasic2"  style='padding: 14px 0;' ngbDropdownToggle>{{priorityLabels.get(sight.pref)}}</button>
+        <div ngbDropdown class='row flex-grow-1'>
+          <button type="button" class="custom-btn btn btn-outline-primary" id="dropdownBasic2" style="margin-left: 7px;" ngbDropdownToggle>Priorität - {{priorityLabels.get(sight.pref)}}</button>
           <div ngbDropdownMenu aria-labelledby="dropdownBasic2">
             <button (click)='sight.pref = 0;' ngbDropdownItem>Gar nicht</button>
             <button (click)='sight.pref = 1;' ngbDropdownItem>Niedriger</button>
@@ -44,9 +52,6 @@
             <button (click)='sight.pref = 5;' ngbDropdownItem>Höher</button>
           </div>
         </div>
-        <button class='col btn' type='button'
-                (click)='this.removeSpecialPrefSight(sight)'><i class="bi bi-x-lg"></i>
-        </button>
         </div>
     </div>
 </div>

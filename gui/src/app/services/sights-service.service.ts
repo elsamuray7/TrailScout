@@ -9,7 +9,6 @@ import { Category } from '../data/Category';
 })
 export class SightsServiceService {
   private readonly backendUrl: String;
-  private sights: Sight[];
   private categories: Category[] = [];
   private presetCategories = ["Sightseeing", "Other", "Nightlife", "Restaurants", "Shopping", "PicnicBarbequeSpot",
     "MuseumExhibition", "Nature", "Swimming"];
@@ -30,33 +29,21 @@ export class SightsServiceService {
     }
     this.http.post(this.backendUrl + "/sights", body).subscribe((sights ) => {
       for (let category of this.categories) {
-        category.sights = [];
+        // reduce sights array to only those with a Special Preference, those should be kept on refresh
+        category.sights = category.getAllSightsWithSpecialPref();
       }
-      this.sights = sights as Sight[];
       for (let sight of sights as Sight[]) {
-        // TODO: remove next line when backend sends us a name
-        sight.name = sight.node_id.toString();
-        var categoryFound = false;
         for (let category of this.categories) {
-          if (category.name === sight.category) {
+          if (category.name === sight.category && !category.sights.includes(sight)
+              && category.sights.findIndex(s => sight.node_id == s.node_id) == -1) {
             category.sights.push(sight);
-            categoryFound = true;
           }
-        }
-        if (!categoryFound) {
-          this.categories.push(new Category(sight.category))
-          //add sight to this new category
-          this.categories[this.categories.length-1].sights.push(sight);
         }
       }
       this.updateSuccessful.emit(true);
     }, (error => {
       this.updateSuccessful.emit(false);
     }));
-  }
-
-  public getSights() {
-    return this.sights;
   }
 
   public getCategories(): Category[] {
