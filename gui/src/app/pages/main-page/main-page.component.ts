@@ -8,7 +8,9 @@ import { RouteResponse, RouteService } from 'src/app/services/route.service';
 import { ToastService } from 'src/app/services/toast.service';
 import { MapContainerComponent } from '../../components/map-container/map-container.component';
 import {MapService} from "../../services/map.service";
+import {Sight} from "../../data/Sight";
 import {SightsServiceService} from "../../services/sights-service.service";
+
 
 @Component({
   selector: 'app-main-page',
@@ -112,5 +114,9 @@ export class MainPageComponent implements OnInit, OnDestroy {
     }
     this.mapContainer.drawRoute(route);
     this.mapContainer.drawSightsOnRoute(route);
+  }
+
+  showSight(sight: Sight) {
+    this.mapContainer.showSight(sight);
   }
 }
