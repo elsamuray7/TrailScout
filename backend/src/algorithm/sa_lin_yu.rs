@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 use itertools::Itertools;
 use pathfinding::prelude::*;
 use rand::prelude::*;
-use crate::algorithm::{_Algorithm, AlgorithmError, Area, EDGE_RADIUS_MULTIPLIER, Route, RouteSector, ScoreMap, Sector, USER_PREF_MAX, UserPreferences};
+use crate::algorithm::{_Algorithm, AlgorithmError, Area, Route, RouteSector, ScoreMap, Sector, USER_PREF_MAX, UserPreferences};
 use crate::data::graph::{Category, Graph, Sight};
 use std::time::Instant;
 
@@ -83,7 +83,7 @@ fn build_distance_map<'a>(graph: &'a Graph,
             |&node_id| successors(node_id));
         distance_map.insert(node_id, dijkstra_result);
     }
-    log::debug!("Pre-computed distances from relevant nodes");
+    log::debug!("Pre-computed distances from {} relevant nodes", count);
 
     distance_map
 }
@@ -318,9 +318,8 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
         }
 
         let time_budget = end_time.signed_duration_since(start_time).num_seconds() as f64;
-        let relevant_radius = walking_speed_mps * time_budget;
-        let sights_radius = relevant_radius.min(area.radius);
-        let edge_radius = relevant_radius * EDGE_RADIUS_MULTIPLIER;
+        let edge_radius = walking_speed_mps * time_budget / std::f64::consts::PI / 2.0;
+        let sights_radius = edge_radius.min(area.radius);
         let sights = graph.get_reachable_sights_in_area(area.lat, area.lon,
                                                         sights_radius, edge_radius);
         if sights.is_empty() {
