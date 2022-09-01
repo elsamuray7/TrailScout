@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use chrono::{DateTime, Utc};
 use itertools::Itertools;
 use pathfinding::prelude::*;
@@ -27,25 +27,39 @@ const MAX_ITER_PER_TEMP: usize = 100 * B;
 
 /// Compute scores for tourist attractions based on user preferences for categories or specific
 /// tourist attractions, respectively
-fn compute_scores(sights: &HashMap<usize, &Sight>, user_prefs: UserPreferences) -> Result<ScoreMap, AlgorithmError> {
+fn compute_scores(sights: &Vec<&Sight>, user_prefs: UserPreferences) -> Result<ScoreMap, AlgorithmError> {
     let mut scores: ScoreMap = sights.iter()
-        .map(|(&sight_id, _)| (sight_id, 0_usize))
+        .map(|&sight| (sight.node_id, 0_usize))
         .collect();
 
     for category in &user_prefs.categories {
+        let category_score = USER_PREF_TO_SCORE[category.get_valid_pref()];
         let category_enum = category.name.parse::<Category>()
             .ok().ok_or_else(|| AlgorithmError::UnknownCategory { unknown_name: category.name.clone() })?;
         sights.iter()
-            .filter(|(_, sight)| sight.category == category_enum)
-            .for_each(|(&sight_id, _)| {
-                scores.insert(sight_id, USER_PREF_TO_SCORE[category.get_valid_pref()]);
+            .filter(|sight| sight.category == category_enum)
+            .for_each(|sight| {
+                scores
+                    .entry(sight.node_id)
+                    .and_modify(|old_score| {
+                        if (*old_score < category_score) {
+                            *old_score = category_score;
+                        }})
+                    .or_insert(category_score);
             });
     }
 
+    let sight_ids: HashSet<usize> = sights.iter().map(|&sight| sight.node_id).collect();
     for sight in &user_prefs.sights {
         // Ignore nodes and sights that are not in the fetched sights
-        if sights.contains_key(&sight.id) {
-            scores.insert(sight.id, USER_PREF_TO_SCORE[sight.get_valid_pref()]);
+        if sight_ids.contains(&sight.id) {
+            let sight_pref_score = USER_PREF_TO_SCORE[sight.get_valid_pref()];
+            scores.entry(sight.id)
+                .and_modify(|old_score| {
+                    if (*old_score < sight_pref_score) {
+                        *old_score = sight_pref_score;
+                    }})
+                .or_insert(sight_pref_score);
         }
     }
 
@@ -59,7 +73,7 @@ fn compute_scores(sights: &HashMap<usize, &Sight>, user_prefs: UserPreferences) 
 fn build_distance_map<'a>(graph: &'a Graph,
                           area: &Area,
                           edge_radius: f64,
-                          sights: &HashMap<usize, &'a Sight>,
+                          sights: &Vec<&'a Sight>,
                           root_id: usize,
                           scores: &ScoreMap) -> HashMap<usize, HashMap<usize, (usize, usize)>> {
     let successors = |node_id: usize|
@@ -69,7 +83,7 @@ fn build_distance_map<'a>(graph: &'a Graph,
             .collect::<Vec<(usize, usize)>>();
 
     let mut distance_map = HashMap::with_capacity(sights.len());
-    let mut sights_and_root = sights.iter().map(|(&sight_id, _)| sight_id)
+    let mut sights_and_root = sights.iter().map(|&sight| sight.node_id)
         .filter(|sight_id| scores[sight_id] > 0).collect_vec();
     sights_and_root.push(root_id);
 
@@ -156,7 +170,7 @@ pub struct SimAnnealingLinYu<'a> {
     /// Walking speed in meters per second
     walking_speed_mps: f64,
     area: Area,
-    sights: HashMap<usize, &'a Sight>,
+    sights: Vec<&'a Sight>,
     root_id: usize,
     scores: ScoreMap,
     distance_map: HashMap<usize, HashMap<usize, (usize, usize)>>,
@@ -349,8 +363,8 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
         // Create a random initial route
         let mut rng = thread_rng();
         let mut randomized_sights = self.sights.iter()
-            .filter(|(sight_id, _)| self.scores[*sight_id] > 0)
-            .map(|(_, &sight)| sight).collect_vec();
+            .filter(|sight| self.scores[&sight.node_id] > 0)
+            .map(|&sight| sight).collect_vec();
         if randomized_sights.is_empty() {
             return Err(AlgorithmError::NoPreferencesProvided);
         }

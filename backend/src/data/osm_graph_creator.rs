@@ -261,10 +261,10 @@ pub fn parse_and_write_osm_data (osmpbf_file_path: &str, fmi_file_path: &str) ->
 /// Only creates OSMSights with a specific tag defined in the `sight_config`.
 fn create_osm_node(osm_id: usize, lat: f64, lon: f64, tags: Vec<(&str, &str)>, sight_config: &SightsConfig, result: &mut (Vec<OSMNode>, Vec<OSMEdge>, Vec<OSMSight>)) {
     // if sight has no name, osm_id is shown
-    let mut name = osm_id.to_string(); // default
-    let mut opening_hours = "empty".to_string(); // default
-    let mut category: Category = Category::ThemePark;
-    let mut wikidata_id = "empty".to_string();
+    let mut osm_name = osm_id.to_string(); // default
+    let mut osm_opening_hours = "empty".to_string(); // default
+    let mut categories: Vec<Category> = Vec::new();
+    let mut osm_wikidata_id = "empty".to_string();
     let mut is_sight = false;
     for (key, value) in tags {
         for cat_tag_map in &sight_config.category_tag_map {
@@ -272,19 +272,19 @@ fn create_osm_node(osm_id: usize, lat: f64, lon: f64, tags: Vec<(&str, &str)>, s
                 if key.eq(&tag.key) {
                     if value.eq(&tag.value) {
                         is_sight = true;
-                        category = cat_tag_map.category.parse::<Category>().unwrap();
+                        categories.push(cat_tag_map.category.parse::<Category>().unwrap());
                     }
                 }
             }
         }
         if key.eq("name") {
-            name = value.parse().unwrap();
+            osm_name = value.parse().unwrap();
         }
         if key.eq("opening_hours") {
-            opening_hours = value.parse().unwrap();
+            osm_opening_hours = value.parse().unwrap();
         }
         if key.eq("wikidata"){
-            wikidata_id = value.parse().unwrap();
+            osm_wikidata_id = value.parse().unwrap();
         }
     }
     let osm_node = OSMNode {
@@ -297,17 +297,22 @@ fn create_osm_node(osm_id: usize, lat: f64, lon: f64, tags: Vec<(&str, &str)>, s
 
     if is_sight {
         //we are saving the osm id because it's needed in the post processing
-        let osm_sight = OSMSight {
-            osm_id,
-            node_id: 0,
-            lat,
-            lon,
-            category,
-            name,
-            opening_hours,
-            wikidata_id
-        };
-        result.2.push(osm_sight);
+        for category in categories {
+            let name = osm_name.clone();
+            let opening_hours = osm_opening_hours.clone();
+            let wikidata_id = osm_wikidata_id.clone();
+            let osm_sight = OSMSight {
+                osm_id,
+                node_id: 0,
+                lat,
+                lon,
+                category,
+                name,
+                opening_hours,
+                wikidata_id
+            };
+            result.2.push(osm_sight);
+        }
     }
 }
 

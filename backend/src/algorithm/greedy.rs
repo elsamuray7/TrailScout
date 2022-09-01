@@ -10,25 +10,39 @@ const USER_PREF_TO_SCORE: [usize; USER_PREF_MAX + 1] = [0, 1, 2, 4, 8, 16];
 
 /// Compute scores for tourist attractions based on user preferences for categories or specific
 /// tourist attractions, respectively
-fn compute_scores(sights: &HashMap<usize, &Sight>, user_prefs: UserPreferences) -> Result<ScoreMap, AlgorithmError> {
+fn compute_scores(sights: &Vec<&Sight>, user_prefs: UserPreferences) -> Result<ScoreMap, AlgorithmError> {
     let mut scores: ScoreMap = sights.iter()
-        .map(|(&sight_id, _)| (sight_id, 0_usize))
+        .map(|&sight| (sight.node_id, 0_usize))
         .collect();
 
     for category in &user_prefs.categories {
+        let category_score = USER_PREF_TO_SCORE[category.get_valid_pref()];
         let category_enum = category.name.parse::<Category>()
             .ok().ok_or_else(|| AlgorithmError::UnknownCategory { unknown_name: category.name.clone() })?;
         sights.iter()
-            .filter(|(_, sight)| sight.category == category_enum)
-            .for_each(|(&sight_id, _)| {
-                scores.insert(sight_id, USER_PREF_TO_SCORE[category.get_valid_pref()]);
+            .filter(|sight| sight.category == category_enum)
+            .for_each(|sight| {
+                scores
+                    .entry(sight.node_id)
+                    .and_modify(|old_score| {
+                        if (*old_score < category_score) {
+                            *old_score = category_score;
+                        }})
+                    .or_insert(category_score);
             });
     }
 
+    let sight_ids: HashSet<usize> = sights.iter().map(|&sight| sight.node_id).collect();
     for sight in &user_prefs.sights {
         // Ignore nodes and sights that are not in the fetched sights
-        if sights.contains_key(&sight.id) {
-            scores.insert(sight.id, USER_PREF_TO_SCORE[sight.get_valid_pref()]);
+        if sight_ids.contains(&sight.id) {
+            let sight_pref_score = USER_PREF_TO_SCORE[sight.get_valid_pref()];
+            scores.entry(sight.id)
+                .and_modify(|old_score| {
+                    if (*old_score < sight_pref_score) {
+                        *old_score = sight_pref_score;
+                    }})
+                .or_insert(sight_pref_score);
         }
     }
 
@@ -48,7 +62,7 @@ pub struct GreedyAlgorithm<'a> {
     /// Walking speed in meters per second
     walking_speed_mps: f64,
     area: Area,
-    sights: HashMap<usize, &'a Sight>,
+    sights: Vec<&'a Sight>,
     root_id: usize,
     scores: ScoreMap,
 }
@@ -104,9 +118,9 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
 
          let mut route: Route = vec![];
          // Get all sights that can potentially be visited
-         let mut unvisited_sights: HashSet<_> = self.sights.keys()
-             .filter(|&sight_id| self.scores[sight_id] > 0)
-             .map(usize::to_owned)
+         let mut unvisited_sights: HashSet<_> = self.sights.iter()
+             .filter(|&sight| self.scores[&sight.node_id] > 0)
+             .map(|&sight| sight.node_id)
              .collect();
          if unvisited_sights.is_empty() {
              return Err(AlgorithmError::NoPreferencesProvided);
@@ -160,7 +174,7 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
 
                              let sector = Sector::with_sight(
                                  secs_needed_to_sight as usize,
-                                 self.sights[&sight_node_id],
+                                 self.sights.iter().find(|&sight| sight.node_id == sight_node_id).unwrap(),
                                  sector_nodes);
                              route.push(if curr_node_id == self.root_id {
                                  RouteSector::Start(sector)
