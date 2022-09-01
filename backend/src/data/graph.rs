@@ -494,6 +494,7 @@ mod test {
     use rand::{Rng, thread_rng};
     use crate::data::graph::{Graph, Node};
     use crate::init_logging;
+    use crate::utils::test_setup;
 
     /// Baba Hotel, ich schwör!!
     const RADISSON_BLU_HOTEL: (f64, f64) = (53.074448, 8.805105);
@@ -502,8 +503,7 @@ mod test {
     fn test_offsets() {
         init_logging();
 
-        let graph = Graph::parse_from_file("./tests_data/output/bremen-latest.fmibin")
-            .expect("Failed to parse graph file");
+        let graph = &test_setup::GRAPH;
 
         let mut rng = thread_rng();
         let rand_id = rng.gen_range(0..graph.num_nodes);
@@ -545,8 +545,7 @@ mod test {
     fn test_nearest_node() {
         init_logging();
 
-        let graph = Graph::parse_from_file("./tests_data/output/bremen-latest.fmibin")
-            .expect("Failed to parse graph file");
+        let graph = &test_setup::GRAPH;
 
         let (lat, lon) = RADISSON_BLU_HOTEL;
         let location = Location::new(lat, lon);

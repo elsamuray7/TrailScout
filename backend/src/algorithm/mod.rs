@@ -252,6 +252,7 @@ mod test {
     use crate::algorithm::greedy::GreedyAlgorithm;
     use crate::data::graph::{Category, Graph};
     use crate::init_logging;
+    use crate::utils::test_setup;
 
     /// Baba Hotel, ich schwör!!
     const RADISSON_BLU_HOTEL: Area = Area {
@@ -264,8 +265,7 @@ mod test {
     fn test_greedy() {
         init_logging();
 
-        let graph = Graph::parse_from_file("./tests_data/output/bremen-latest.fmibin")
-            .expect("Failed to parse graph file");
+        let graph = &test_setup::GRAPH;
 
         let start_time = DateTime::parse_from_rfc3339("2022-07-01T10:00:00+01:00")
             .unwrap().with_timezone(&Utc);
