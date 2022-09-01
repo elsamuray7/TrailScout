@@ -32,7 +32,7 @@ pub enum Category {
     Other
 }
 
-#[derive(Deserialize_enum_str, Serialize_enum_str, PartialEq, Debug)]
+#[derive(strum_macros::Display, EnumString, Deserialize, Serialize, PartialEq, Debug, Copy, Clone)]
 #[serde(rename_all = "PascalCase")]
 pub enum EdgeType {
     Unclassified, // Öffentlich befahrbare Nebenstraßen
@@ -49,7 +49,8 @@ pub enum EdgeType {
     Path, // Wanderwege oder Trampelpfade
     Primary, // Straßen von nationaler Bedeutung
     Secondary, // Straßen von überregionaler Bedeutung
-    Tertiary // Straßen, die Dörfer verbinden
+    Tertiary, // Straßen, die Dörfer verbinden
+    SightEdge // Selbst erzeugte Kanten von einer Sight zum nächsten Straßenknoten
 }
 
 pub trait INode {
@@ -101,6 +102,8 @@ pub struct Edge {
     pub tgt: usize,
     /// The edge's weight, i.e., the distance between its source and target
     pub dist: usize,
+    /// The street type of the edge.
+    pub edge_type: EdgeType,
 }
 
 impl PartialEq<Self> for Edge {
