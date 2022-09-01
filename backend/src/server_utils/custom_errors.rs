@@ -1,5 +1,4 @@
-use std::fmt::{Display, Formatter};
-use actix_web::{error, get, http::{header::ContentType, StatusCode}, App, HttpResponse, ResponseError};
+use actix_web::{http::{header::ContentType, StatusCode}, HttpResponse, ResponseError};
 use derive_more::{Display, Error};
 
 ///Custom Error for TrailScout
