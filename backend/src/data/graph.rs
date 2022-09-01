@@ -18,7 +18,7 @@ use crate::data;
 use crate::data::SightsConfig;
 use crate::utils::dijkstra;
 
-#[derive(EnumString, Deserialize, Serialize, PartialEq, Eq, Debug)]
+#[derive(EnumString, Deserialize, Serialize, PartialEq, Eq, Debug, Copy, Clone)]
 #[serde(rename_all = "PascalCase")]
 pub enum Category {
     ThemePark,
