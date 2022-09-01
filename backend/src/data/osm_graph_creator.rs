@@ -1,16 +1,16 @@
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::fs::{create_dir_all, File};
-use std::{fs, io};
+use std::io;
 use std::hash::{Hash, Hasher};
-use std::io::{BufWriter, Write};
+use std::io::BufWriter;
 use std::path::Path;
 use crossbeam::thread;
 use serde::{Deserialize, Serialize};
 use std::time::Instant;
 use geoutils::Location;
 use itertools::Itertools;
-use log::{debug, error, info, trace};
+use log::{error, info, trace};
 use osmpbf::{BlobReader, BlobType, Element, Way};
 use crate::data;
 use crate::data::graph::{Category, get_nearest_node, INode};
@@ -141,7 +141,7 @@ pub fn parse_and_write_osm_data (osmpbf_file_path: &str, fmi_file_path: &str) ->
         } else if blob_type == BlobType::OsmData {
             let sight_config = &sight_config_orig;
             let edge_type_config = &edge_type_config_orig;
-            let thread_result = s.spawn(move |d| {
+            let thread_result = s.spawn(move |_| {
                 let data = blob.to_primitiveblock().unwrap();
                 let mut result = (Vec::<OSMNode>::new(), Vec::<OSMEdge>::new(), Vec::<OSMSight>::new());
                 //start iterating through the blob elements
@@ -156,8 +156,10 @@ pub fn parse_and_write_osm_data (osmpbf_file_path: &str, fmi_file_path: &str) ->
                         Element::Way(w) => {
                             create_osm_edges(w, &edge_type_config, &mut result);
                         },
-                        Element::Relation(r) => {},
-                        _ => error!("Relation element not implemented yet")
+                        Element::Relation(_) => {
+                            error!("Relation element not implemented yet")
+                        },
+
                     }
                 });
                 trace!("Finished processing one blob!");

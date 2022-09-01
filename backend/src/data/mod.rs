@@ -3,7 +3,7 @@ pub mod osm_graph_creator;
 
 
 use std::fs;
-use serde::{Serialize, Deserialize};
+use serde::Deserialize;
 
 
 
