@@ -159,7 +159,7 @@ pub fn parse_and_write_osm_data (osmpbf_file_path: &str, fmi_file_path: &str) ->
                             create_osm_edges(w, &edge_type_config, &mut result);
                         },
                         Element::Relation(_) => {
-                            error!("Relation element not implemented yet")
+                            trace!("Relation element not implemented yet")
                         },
 
                     }

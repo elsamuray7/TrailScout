@@ -471,17 +471,18 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
 #[cfg(test)]
 mod test {
     use chrono::{DateTime, Utc};
+    use once_cell::sync::Lazy;
     use crate::algorithm::{_Algorithm, Area, RouteSector, Sector, SightCategoryPref, UserPreferences};
     use crate::algorithm::sa_lin_yu::{SimAnnealingLinYu, USER_PREF_TO_SCORE};
     use crate::data::graph::{Category, Graph};
     use crate::init_logging;
+    use crate::utils::test_setup;
 
     #[test]
     fn test_sights_with_multiple_categories() {
         init_logging();
 
-        let graph = Graph::parse_from_file("./tests_data/output/bremen-latest.fmibin")
-            .expect("Failed to parse graph file");
+        let graph: &Lazy<Graph> = &test_setup::GRAPH;
 
         let start_time = DateTime::parse_from_rfc3339("2022-07-01T10:00:00+01:00")
             .unwrap().with_timezone(&Utc);
