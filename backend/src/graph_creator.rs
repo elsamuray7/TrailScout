@@ -1,8 +1,7 @@
 use std::io;
-use std::time::Instant;
 use env_logger::Env;
 use std::env;
-use trailscout_lib::data::graph::{Edge, Sight, Node, Graph};
+use trailscout_lib::data::graph::Graph;
 use trailscout_lib::data::osm_graph_creator::{parse_and_write_osm_data};
 #[macro_use]
 extern crate log;
@@ -21,7 +20,7 @@ pub fn main() -> Result<(), io::Error> {
     println!("Input file is {}.", &in_graph);
     println!("Output file is {}.", &out_graph);
 
-    parse_and_write_osm_data(&in_graph, &out_graph);
+    parse_and_write_osm_data(&in_graph, &out_graph); // TODO result never used
 
     let graph = Graph::parse_from_file(&out_graph).unwrap();
 

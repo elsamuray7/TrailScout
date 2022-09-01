@@ -46,7 +46,7 @@ impl SightCategoryPref {
 #[derive(Deserialize)]
 pub struct SightPref {
     id: usize,
-    category: String,
+    category: String, // TODO never used
     pref: usize,
 }
 
