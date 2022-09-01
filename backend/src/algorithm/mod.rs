@@ -3,7 +3,7 @@ pub mod sa_lin_yu;
 
 use std::collections::HashMap;
 use chrono::{DateTime, Utc};
-use crate::data::graph::{Graph, Node, Sight};
+use crate::data::graph::{Category, Graph, Node, Sight};
 use serde::{Serialize, Deserialize};
 use derive_more::{Display, Error};
 use crate::algorithm::greedy::GreedyAlgorithm;
@@ -11,7 +11,7 @@ use crate::algorithm::sa_lin_yu::SimAnnealingLinYu;
 
 /// Type alias for a mapping from node id's to scores, where the nodes represent sights / tourist
 /// attractions
-type ScoreMap = HashMap<usize, usize>;
+type ScoreMap = HashMap<usize, (usize, Category)>;
 
 /// Multiplier for the relevant (reachable) radius to get the radius in which outgoing edges for
 /// nodes should be retrieved
