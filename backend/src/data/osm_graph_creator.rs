@@ -13,7 +13,7 @@ use itertools::Itertools;
 use log::{debug, error, info, trace};
 use osmpbf::{BlobReader, BlobType, Element, Way};
 use crate::data;
-use crate::data::graph::{Category, get_nearest_node, INode};
+use crate::data::graph::{Category, EdgeType, get_nearest_node, INode};
 use crate::data::{EdgeTypeConfig, SightsConfig};
 
 /// An osm node located at a specific coordinate extraced from the osm data.
@@ -72,6 +72,8 @@ struct OSMEdge {
     tgt: usize,
     /// The edge's weight, i.e., the distance between its source and target
     dist: usize,
+    /// The street type of the edge.
+    edge_type: EdgeType,
 }
 
 impl PartialEq<Self> for OSMEdge {
@@ -320,6 +322,7 @@ fn create_osm_edges(w: Way, edge_type_config: &EdgeTypeConfig, result: &mut (Vec
     let way_tags = w.tags();
     for (key, value) in way_tags {
         for et_tag_map in &edge_type_config.edge_type_tag_map {
+            let edge_type = et_tag_map.edge_type.parse::<EdgeType>().unwrap();
             for tag in &et_tag_map.tags {
                 if key == tag.key && value == tag.value {
                     let mut way_ref_iter = w.refs();
@@ -328,11 +331,12 @@ fn create_osm_edges(w: Way, edge_type_config: &EdgeTypeConfig, result: &mut (Vec
                         // undirected graph, create in and out edges
                         let osm_tgt = node_id as usize;
                         let out_edge = OSMEdge {
-                            osm_src: osm_src,
-                            osm_tgt: osm_tgt,
+                            osm_src,
+                            osm_tgt,
                             src: 0,
                             tgt: 0,
-                            dist: 0
+                            dist: 0,
+                            edge_type
                         };
                         result.1.push(out_edge);
 
@@ -341,7 +345,8 @@ fn create_osm_edges(w: Way, edge_type_config: &EdgeTypeConfig, result: &mut (Vec
                             osm_tgt: osm_src,
                             src: 0,
                             tgt: 0,
-                            dist: 0
+                            dist: 0,
+                            edge_type
                         };
                         result.1.push(in_edge);
 
@@ -452,14 +457,16 @@ fn integrate_sights_into_graph(osm_nodes: &Vec<OSMNode>, osm_edges: &mut Vec<OSM
             osm_tgt: 0,
             src: sight.node_id,
             tgt: nearest_node.id,
-            dist: nearest_dist
+            dist: nearest_dist,
+            edge_type: EdgeType::SightEdge
         };
         let in_edge = OSMEdge {
             osm_src: 0,
             osm_tgt: 0,
             src: nearest_node.id,
             tgt: sight.node_id,
-            dist: nearest_dist
+            dist: nearest_dist,
+            edge_type: EdgeType::SightEdge
         };
         osm_edges.push(out_edge);
         osm_edges.push(in_edge);
