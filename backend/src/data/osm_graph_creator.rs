@@ -141,7 +141,7 @@ pub fn parse_and_write_osm_data (osmpbf_file_path: &str, fmi_file_path: &str) ->
         } else if blob_type == BlobType::OsmData {
             let sight_config = &sight_config_orig;
             let edge_type_config = &edge_type_config_orig;
-            let thread_result = s.spawn(move |d| {
+            let thread_result = s.spawn(move |_| {
                 let data = blob.to_primitiveblock().unwrap();
                 let mut result = (Vec::<OSMNode>::new(), Vec::<OSMEdge>::new(), Vec::<OSMSight>::new());
                 //start iterating through the blob elements

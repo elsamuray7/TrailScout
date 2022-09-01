@@ -12,7 +12,8 @@ pub fn parse_pbf_to_fmi_file() {
         info!("current working dir: {}",std::env::current_dir().unwrap().to_str().unwrap());
         let in_graph = PATH.0;
         let out_graph = PATH.1;
-        parse_and_write_osm_data(in_graph, out_graph);
+        parse_and_write_osm_data(in_graph, out_graph)
+            .expect("Parsing failed!");
 }
 
 pub fn check_if_fmi_file_exists_and_parse_if_not() { // TODO never used

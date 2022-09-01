@@ -20,7 +20,7 @@ pub fn main() -> Result<(), io::Error> {
     println!("Input file is {}.", &in_graph);
     println!("Output file is {}.", &out_graph);
 
-    parse_and_write_osm_data(&in_graph, &out_graph); // TODO result never used
+    parse_and_write_osm_data(&in_graph, &out_graph)?;
 
     let graph = Graph::parse_from_file(&out_graph).unwrap();
 

@@ -148,7 +148,7 @@ impl Sight{
                 Some(res)
             }
             //Get default value if could not parse
-            Err(err) => { // TODO entweder prefix einfügen _err falls intentional, da compile warning
+            _ => {
                 trace!("Parsing Default Opening Times");
                 let default_openings = self.get_default_opening_hour(&sights_config);
                 let parse = OpeningHours::parse(&default_openings)
@@ -167,7 +167,7 @@ impl Sight{
     fn get_default_opening_hour(&self, sights_config : &SightsConfig) -> String {
         for cat_tag_map in &sights_config.category_tag_map{
             let cat = cat_tag_map.category.parse::<Category>().unwrap();
-            if matches!(&self.category, cat) {
+            if self.category == cat {
                 let default_opening_hours = cat_tag_map.opening_hours.clone();
                 return default_opening_hours
             }
@@ -180,7 +180,7 @@ impl Sight{
         // viel Code duplication mit get_default_opening_hour - vielleicht irgendwie refactoren?
         for cat_tag_map in &sights_config.category_tag_map{
             let cat = cat_tag_map.category.parse::<Category>().unwrap();
-            if matches!(&self.category, cat){
+            if self.category == cat {
                 let default_opening_hours = cat_tag_map.duration_of_stay_minutes.clone();
                 self.duration_of_stay_minutes = default_opening_hours;
                 break
