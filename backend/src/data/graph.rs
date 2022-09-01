@@ -5,14 +5,12 @@ use std::hash::{Hash, Hasher};
 use std::io::{BufReader};
 use std::num::{ParseFloatError, ParseIntError};
 use std::time::Instant;
-use futures::future::err;
 use strum_macros::EnumString;
 use geoutils::{Distance, Location};
 use itertools::Itertools;
 use log::{debug, trace, info};
-use serde::{Serialize, Deserialize, Serializer, Deserializer};
+use serde::{Serialize, Deserialize};
 use serde_enum_str::{Deserialize_enum_str, Serialize_enum_str};
-use serde::ser::SerializeStruct;
 use opening_hours::OpeningHours;
 use crate::data;
 use crate::data::SightsConfig;
@@ -141,7 +139,7 @@ impl Sight{
     ///Tries to parse opening hours from osm and then sets opening_hours_parsed.
     ///If osm value cannot be parsed use default value from sights config
     ///Also overwrites opening_hours if default value is used
-    pub fn parse_opening_hours(&mut self, sights_config : &SightsConfig){
+    pub fn parse_opening_hours(&mut self, sights_config: &SightsConfig){
         //Try to parse OSM opening hours
         let opening_hours_parsed = match OpeningHours::parse(&self.opening_hours){
             Ok(res) => {
@@ -149,7 +147,7 @@ impl Sight{
                 Some(res)
             }
             //Get default value if could not parse
-            Err(err) => {
+            _ => {
                 trace!("Parsing Default Opening Times");
                 let default_openings = self.get_default_opening_hour(&sights_config);
                 let parse = OpeningHours::parse(&default_openings)
@@ -168,20 +166,20 @@ impl Sight{
     fn get_default_opening_hour(&self, sights_config : &SightsConfig) -> String {
         for cat_tag_map in &sights_config.category_tag_map{
             let cat = cat_tag_map.category.parse::<Category>().unwrap();
-            if matches!(&self.category, cat){
+            if self.category == cat {
                 let default_opening_hours = cat_tag_map.opening_hours.clone();
                 return default_opening_hours
             }
         }
-        panic!("Error while parsing default time from config") //If this happens sights_config.json is wrong
+        panic!("Error while parsing default time from config") // If this happens sights_config.json is wrong
     }
 
     ///Sets the duration_of_stay_minutes value according to value in sights config
-    pub fn set_config_duration_of_stay(&mut self, sights_config : &SightsConfig){
-        //viel Code duplication mit get_default_opening_hour - vielleicht irgendwie refactoren?
+    pub fn set_config_duration_of_stay(&mut self, sights_config : &SightsConfig) {
+        // viel Code duplication mit get_default_opening_hour - vielleicht irgendwie refactoren?
         for cat_tag_map in &sights_config.category_tag_map{
             let cat = cat_tag_map.category.parse::<Category>().unwrap();
-            if matches!(&self.category, cat){
+            if self.category == cat {
                 let default_opening_hours = cat_tag_map.duration_of_stay_minutes.clone();
                 self.duration_of_stay_minutes = default_opening_hours;
                 break
@@ -257,7 +255,7 @@ impl Graph {
         //Parse the opening hours to fill Opening_hours_parsed: Option<OpeningHours>
         //Also read duration_of_stay_minutes from sights config and set the value for the sight
         let sights_config = data::get_sights_config();
-        for mut sight in &mut sights{
+        for sight in &mut sights{
             sight.parse_opening_hours(&sights_config);
             sight.set_config_duration_of_stay(&sights_config);
         }
