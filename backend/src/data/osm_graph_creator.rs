@@ -13,7 +13,7 @@ use itertools::Itertools;
 use log::{error, info, trace};
 use osmpbf::{BlobReader, BlobType, Element, Way};
 use crate::data;
-use crate::data::graph::{Category, get_nearest_node, INode};
+use crate::data::graph::{Category, EdgeType, get_nearest_node, INode};
 use crate::data::{EdgeTypeConfig, SightsConfig};
 
 /// An osm node located at a specific coordinate extraced from the osm data.
@@ -72,6 +72,8 @@ struct OSMEdge {
     tgt: usize,
     /// The edge's weight, i.e., the distance between its source and target
     dist: usize,
+    /// The street type of the edge.
+    edge_type: EdgeType,
 }
 
 impl PartialEq<Self> for OSMEdge {
@@ -263,10 +265,10 @@ pub fn parse_and_write_osm_data (osmpbf_file_path: &str, fmi_file_path: &str) ->
 /// Only creates OSMSights with a specific tag defined in the `sight_config`.
 fn create_osm_node(osm_id: usize, lat: f64, lon: f64, tags: Vec<(&str, &str)>, sight_config: &SightsConfig, result: &mut (Vec<OSMNode>, Vec<OSMEdge>, Vec<OSMSight>)) {
     // if sight has no name, osm_id is shown
-    let mut name = osm_id.to_string(); // default
-    let mut opening_hours = "empty".to_string(); // default
-    let mut category: Category = Category::ThemePark;
-    let mut wikidata_id = "empty".to_string();
+    let mut osm_name = osm_id.to_string(); // default
+    let mut osm_opening_hours = "empty".to_string(); // default
+    let mut categories: Vec<Category> = Vec::new();
+    let mut osm_wikidata_id = "empty".to_string();
     let mut is_sight = false;
     for (key, value) in tags {
         for cat_tag_map in &sight_config.category_tag_map {
@@ -274,19 +276,19 @@ fn create_osm_node(osm_id: usize, lat: f64, lon: f64, tags: Vec<(&str, &str)>, s
                 if key.eq(&tag.key) {
                     if value.eq(&tag.value) {
                         is_sight = true;
-                        category = cat_tag_map.category.parse::<Category>().unwrap();
+                        categories.push(cat_tag_map.category.parse::<Category>().unwrap());
                     }
                 }
             }
         }
         if key.eq("name") {
-            name = value.parse().unwrap();
+            osm_name = value.parse().unwrap();
         }
         if key.eq("opening_hours") {
-            opening_hours = value.parse().unwrap();
+            osm_opening_hours = value.parse().unwrap();
         }
         if key.eq("wikidata"){
-            wikidata_id = value.parse().unwrap();
+            osm_wikidata_id = value.parse().unwrap();
         }
     }
     let osm_node = OSMNode {
@@ -299,17 +301,22 @@ fn create_osm_node(osm_id: usize, lat: f64, lon: f64, tags: Vec<(&str, &str)>, s
 
     if is_sight {
         //we are saving the osm id because it's needed in the post processing
-        let osm_sight = OSMSight {
-            osm_id,
-            node_id: 0,
-            lat,
-            lon,
-            category,
-            name,
-            opening_hours,
-            wikidata_id
-        };
-        result.2.push(osm_sight);
+        for category in categories {
+            let name = osm_name.clone();
+            let opening_hours = osm_opening_hours.clone();
+            let wikidata_id = osm_wikidata_id.clone();
+            let osm_sight = OSMSight {
+                osm_id,
+                node_id: 0,
+                lat,
+                lon,
+                category,
+                name,
+                opening_hours,
+                wikidata_id
+            };
+            result.2.push(osm_sight);
+        }
     }
 }
 
@@ -322,6 +329,7 @@ fn create_osm_edges(w: Way, edge_type_config: &EdgeTypeConfig, result: &mut (Vec
     let way_tags = w.tags();
     for (key, value) in way_tags {
         for et_tag_map in &edge_type_config.edge_type_tag_map {
+            let edge_type = et_tag_map.edge_type.parse::<EdgeType>().unwrap();
             for tag in &et_tag_map.tags {
                 if key == tag.key && value == tag.value {
                     let mut way_ref_iter = w.refs();
@@ -330,11 +338,12 @@ fn create_osm_edges(w: Way, edge_type_config: &EdgeTypeConfig, result: &mut (Vec
                         // undirected graph, create in and out edges
                         let osm_tgt = node_id as usize;
                         let out_edge = OSMEdge {
-                            osm_src: osm_src,
-                            osm_tgt: osm_tgt,
+                            osm_src,
+                            osm_tgt,
                             src: 0,
                             tgt: 0,
-                            dist: 0
+                            dist: 0,
+                            edge_type
                         };
                         result.1.push(out_edge);
 
@@ -343,7 +352,8 @@ fn create_osm_edges(w: Way, edge_type_config: &EdgeTypeConfig, result: &mut (Vec
                             osm_tgt: osm_src,
                             src: 0,
                             tgt: 0,
-                            dist: 0
+                            dist: 0,
+                            edge_type
                         };
                         result.1.push(in_edge);
 
@@ -454,14 +464,16 @@ fn integrate_sights_into_graph(osm_nodes: &Vec<OSMNode>, osm_edges: &mut Vec<OSM
             osm_tgt: 0,
             src: sight.node_id,
             tgt: nearest_node.id,
-            dist: nearest_dist
+            dist: nearest_dist,
+            edge_type: EdgeType::SightEdge
         };
         let in_edge = OSMEdge {
             osm_src: 0,
             osm_tgt: 0,
             src: nearest_node.id,
             tgt: sight.node_id,
-            dist: nearest_dist
+            dist: nearest_dist,
+            edge_type: EdgeType::SightEdge
         };
         osm_edges.push(out_edge);
         osm_edges.push(in_edge);

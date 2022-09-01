@@ -60,7 +60,7 @@ async fn post_sights(request:  web::Json<SightsRequest>, data: web::Data<AppStat
 
     //TODO does not yet produce any Result with error to handle
     let sights = data.graph.get_sights_in_area(
-        request.lat, request.lon, request.radius).values().cloned().collect::<Vec<&Sight>>();
+        request.lat, request.lon, request.radius);
 
 
     Ok(HttpResponse::Ok().json(sights))
