@@ -202,13 +202,13 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
     var g = 255;
     var colorStepsize = (g - r) / _route.route!.length;
     const _sections: L.LatLng[][] = [] = [];
-    _route.route!.map(section => {
+    _route.route!.forEach(section => {
       _sections.push(section.nodes.map(node => new L.LatLng(node.lat, node.lon)));
       var sectionNodes: L.LatLng[] = [];
-      section.nodes.map(node => {
+      section.nodes.forEach(node => {
         sectionNodes.push(new L.LatLng(node.lat, node.lon));
       });
-      this.routePoly.push(new L.Polyline(sectionNodes, { color: "rgb(" + r + " ," + g + ",0)", weight: 6, attribution: section.id?.toString() }).addTo(this.routeLayer));
+      this.routePoly.push(new L.Polyline(sectionNodes, { color: "rgb(" + r + " ," + g + ",0)", weight: 6, attribution: section.id!.toString() }).addTo(this.routeLayer));
         r += colorStepsize;
         g -= colorStepsize;
      
@@ -243,7 +243,7 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
   }
 
   highlightSection(id: number | null) {
-    if (!id) {
+    if (id === null) {
       this.routePoly.forEach(r => r.setStyle({weight: 6}));
       return;
     }
