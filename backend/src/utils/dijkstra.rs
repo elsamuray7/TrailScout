@@ -183,13 +183,13 @@ mod test {
     use crate::data::graph::Graph;
     use crate::init_logging;
     use crate::utils::dijkstra::{run_dijkstra, run_ota_dijkstra, run_ota_dijkstra_in_area};
+    use crate::utils::test_setup;
 
     #[test]
     fn test_dijkstra() {
         init_logging();
 
-        let graph = Graph::parse_from_file("./tests_data/output/bremen-latest.fmibin")
-            .expect("Failed to parse graph file");
+        let graph = &test_setup::GRAPH;
 
         let mut rng = thread_rng();
         let src_id = rng.gen_range(0..graph.num_nodes);
@@ -221,8 +221,7 @@ mod test {
     fn test_ota_dijkstra() {
         init_logging();
 
-        let graph = Graph::parse_from_file("./tests_data/output/bremen-latest.fmibin")
-            .expect("Failed to parse graph file");
+        let graph = &test_setup::GRAPH;
 
         let mut rng = thread_rng();
         let src_id = rng.gen_range(0..graph.num_nodes);
@@ -264,8 +263,7 @@ mod test {
     fn test_path_length() {
         init_logging();
 
-        let graph = Graph::parse_from_file("./tests_data/output/bremen-latest.fmibin")
-            .expect("Failed to parse graph file");
+        let graph = &test_setup::GRAPH;
 
         let mut rng = thread_rng();
         let src_id = rng.gen_range(0..graph.num_nodes);
@@ -324,8 +322,7 @@ mod test {
     fn test_ota_dijkstra_in_area() {
         init_logging();
 
-        let graph = Graph::parse_from_file("./tests_data/output/bremen-latest.fmibin")
-            .expect("Failed to parse graph file");
+        let graph = &test_setup::GRAPH;
 
         let mut rng = thread_rng();
         let src_id = rng.gen_range(0..graph.num_nodes);
