@@ -13,10 +13,6 @@ use crate::algorithm::sa_lin_yu::SimAnnealingLinYu;
 /// attractions
 type ScoreMap = HashMap<usize, (usize, Category)>;
 
-/// Multiplier for the relevant (reachable) radius to get the radius in which outgoing edges for
-/// nodes should be retrieved
-const EDGE_RADIUS_MULTIPLIER: f64 = 1.1;
-
 /// Circular area around a geographic coordinate
 #[derive(Deserialize)]
 pub struct Area {
