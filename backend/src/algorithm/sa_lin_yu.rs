@@ -29,6 +29,8 @@ const MAX_ITER_PER_TEMP: usize = 100 * B;
 /// Compute scores for tourist attractions based on user preferences for categories or specific
 /// tourist attractions, respectively
 fn compute_scores(sights: &Vec<&Sight>, user_prefs: UserPreferences) -> Result<ScoreMap, AlgorithmError> {
+    let start = Instant::now();
+
     let mut scores: ScoreMap = sights.iter()
         .map(|sight| (sight.node_id, (0_usize, sight.category))).collect();
 
@@ -61,7 +63,7 @@ fn compute_scores(sights: &Vec<&Sight>, user_prefs: UserPreferences) -> Result<S
         }
     }
 
-    log::trace!("Computed scores: {:?}", &scores);
+    log::debug!("Computed scores in {} ms", start.elapsed().as_millis());
 
     Ok(scores)
 }
@@ -80,6 +82,8 @@ fn build_distance_map<'a>(graph: &'a Graph,
             .map(|edge| (edge.tgt, edge.dist))
             .collect::<Vec<(usize, usize)>>();
 
+    let start = Instant::now();
+
     let mut distance_map = HashMap::with_capacity(sights.len());
     let mut sights_and_root = sights.iter().map(|&sight| sight.node_id)
         .filter(|sight_id| scores[sight_id].0 > 0).collect_vec();
@@ -95,7 +99,8 @@ fn build_distance_map<'a>(graph: &'a Graph,
             |&node_id| successors(node_id));
         distance_map.insert(node_id, dijkstra_result);
     }
-    log::debug!("Pre-computed distances from {} relevant nodes", count);
+    log::debug!("Pre-computed distances from {} relevant nodes in {} ms", count,
+        start.elapsed().as_millis());
 
     distance_map
 }
@@ -439,6 +444,8 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
     }
 
     fn compute_route(&self) -> Result<Route, AlgorithmError> {
+        let start = Instant::now();
+
         // Create a random initial route
         let mut rng = thread_rng();
         let mut randomized_sights = self.sights.iter()
@@ -457,7 +464,7 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
         log::debug!("Starting simulated annealing (T_0: {}, B: {}, ALPHA: {}, MAX_TIME: {}, N_NON_IMPROVING: {})",
             T_0, B, ALPHA, MAX_TIME, N_NON_IMPROVING);
 
-        let start_time = Instant::now();
+        let sa_start = Instant::now();
 
         let mut t = T_0;
         let i_iter = (randomized_sights.len() * B).min(MAX_ITER_PER_TEMP);
@@ -523,7 +530,7 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
                 f_best = self.get_total_score(&x_best)?;
                 log::trace!("Performed local search on best solution (score: {})", f_best);
 
-                let elapsed = start_time.elapsed().as_millis();
+                let elapsed = sa_start.elapsed().as_millis();
                 if elapsed > MAX_TIME {
                     log::debug!("Reached time limit (elapsed: {}, current temperature: {})",
                         elapsed, t);
@@ -542,10 +549,12 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
         log::debug!("Finished simulated annealing. Computed walking route from node: {} including {} sights with total score: {}.",
              self.root_id, route.len() - 1, f_best);
 
+        log::debug!("Finished route computation in {} ms", start.elapsed().as_millis());
+
         Ok(route)
     }
 
-    fn get_collected_score(&self, route: &Route) -> usize {
+    fn get_collected_score(&self, _: &Route) -> usize {
         unimplemented!()
     }
 }
