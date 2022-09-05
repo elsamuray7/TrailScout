@@ -500,17 +500,17 @@ mod test {
             },
             UserPreferences {
                 categories: vec![SightCategoryPref { name: "Nightlife".to_string(), pref: 3 },
-                                 SightCategoryPref { name: "Other".to_string(), pref: 5 }],
+                                 SightCategoryPref { name: "Activities".to_string(), pref: 5 }],
                 sights: vec![],
             }).unwrap();
 
         let last = algo.sights.first().unwrap();
         for sight in &algo.sights[1..algo.sights.len()] {
             if sight.node_id == last.node_id
-                && (sight.category == Category::Nightlife || sight.category == Category::Other) {
+                && (sight.category == Category::Nightlife || sight.category == Category::Activities) {
                 let (score, category) = algo.scores[&sight.node_id];
                 assert_eq!(score, USER_PREF_TO_SCORE[5], "Sight got smaller score");
-                assert_eq!(category, Category::Other,
+                assert_eq!(category, Category::Activities,
                            "Sight associated with category with smaller preference")
             }
         }
