@@ -8,7 +8,7 @@ export class ApplicationStateService {
   public routeModeChangedEvent = new EventEmitter<boolean>();
 
   constructor() {
-    this. isMobileResolution = window.innerWidth < 768;
+    this.isMobileResolution = window.innerWidth < 768;
   }
   public getIsMobileResolution(): boolean {
     return this.isMobileResolution;
