@@ -184,7 +184,7 @@ impl<'a> SimAnnealingLinYu<'a> {
     pub const ALGORITHM_NAME: &'static str = "DerAllerbesteste";
 
     /// Compute wait and service time for given sight based on the already used time budget
-    fn compute_wait_and_service_time(&self, sight: &Sight, used_time_budget: i64) -> Result<Option<(i64, i64)>, AlgorithmError> {
+    fn compute_wait_and_service_time(&self, sight: &Sight, used_time_budget: i64) -> Option<(i64, i64)> {
         let time_window = sight.opening_hours();
 
         // Determine current time (after given used time budget)
@@ -197,57 +197,60 @@ impl<'a> SimAnnealingLinYu<'a> {
             .expect("Failed to determine open state");
 
         // Initialize closure for computing the sights service time
-        let latest_time = Utc::now().date().and_hms(23, 59, 59)
-            .naive_utc();
-        let secs_to_latest_time = latest_time.signed_duration_since(curr_time)
-            .num_seconds();
-        // Service time cannot exceed tomorrow midnight
-        let max_service_time = sight.duration_of_stay_secs().min(secs_to_latest_time);
         let compute_service_time = |close_time: NaiveDateTime| {
             let possible_service_time = close_time.signed_duration_since(curr_time)
                 .num_seconds();
-            max_service_time.min(possible_service_time)
+            sight.duration_of_stay_secs().min(possible_service_time)
         };
 
         // Determine wait and service time based on the sights current open state
-        let result = match curr_state {
-            RuleKind::Open => {
+        match curr_state {
+            RuleKind::Open | RuleKind::Unknown => {
                 match time_window.next_change(curr_time) {
                     Ok(close_time) => {
-                        if !time_window.is_closed(close_time) {
-                            return Err(AlgorithmError::BadTimeWindow);
-                        }
-                        Some((0, compute_service_time(close_time)))
+                        let service_time = if !time_window.is_closed(close_time) {
+                            log::trace!("Unknown time window change at {close_time}: {}",
+                                &sight.opening_hours);
+                            sight.duration_of_stay_secs()
+                        } else {
+                            compute_service_time(close_time)
+                        };
+                        Some((0, service_time))
                     }
-                    _ => Some((0, max_service_time))
+                    _ => Some((0, sight.duration_of_stay_secs()))
                 }
             }
             RuleKind::Closed => {
                 match time_window.next_change(curr_time) {
                     Ok(open_time) => {
                         if !time_window.is_open(open_time) {
-                            return Err(AlgorithmError::BadTimeWindow);
+                            log::trace!("Unknown time window change at {open_time}: {}",
+                                &sight.opening_hours);
                         }
                         let wait_time = open_time.signed_duration_since(curr_time).num_seconds();
-                        match time_window.next_change(curr_time) {
+                        match time_window.next_change(open_time) {
                             Ok(close_time) => {
-                                if !time_window.is_closed(close_time) {
-                                    return Err(AlgorithmError::BadTimeWindow);
-                                }
-                                Some((wait_time, compute_service_time(close_time)))
+                                let service_time = if !time_window.is_closed(close_time) {
+                                    log::trace!("Unknown time window change at {close_time}: {}",
+                                        &sight.opening_hours);
+                                    sight.duration_of_stay_secs()
+                                } else {
+                                    compute_service_time(close_time)
+                                };
+                                Some((wait_time, service_time))
                             }
-                            _ => Some((wait_time, max_service_time))
+                            _ => Some((wait_time, sight.duration_of_stay_secs()))
                         }
                     }
-                    _ => None // The time window will not open again before midnight
+                    _ => {
+                        // Closed forever?
+                        log::trace!("Time window never opens after {curr_time}: {}",
+                            &sight.opening_hours);
+                        None
+                    }
                 }
             }
-            RuleKind::Unknown => {
-                return Err(AlgorithmError::BadTimeWindow);
-            }
-        };
-
-        Ok(result)
+        }
     }
 
     /// Get the total score of `current_solution`.
@@ -271,7 +274,7 @@ impl<'a> SimAnnealingLinYu<'a> {
             let root_travel_time = (root_travel_dist as f64 / self.walking_speed_mps) as i64 + 1;
 
             let (wait_time, service_time) = match self.compute_wait_and_service_time(
-                sight, total_time_budget - left_time_budget)? {
+                sight, total_time_budget - left_time_budget) {
                 Some(result) => result,
                 None => break
             };
@@ -365,40 +368,39 @@ impl<'a> SimAnnealingLinYu<'a> {
                 .ok_or_else(|| AlgorithmError::NoRouteFound { from: sight.node_id, to: self.root_id })?;
             let root_travel_time = (root_travel_dist as f64 / self.walking_speed_mps) as i64 + 1;
 
-            let (wait_time, service_time) = match self.compute_wait_and_service_time(
-                sight, total_time_budget - left_time_budget)? {
-                Some(result) => result,
+            match self.compute_wait_and_service_time(
+                sight, total_time_budget - left_time_budget) {
+                Some((wait_time, service_time)) => {
+                    let sight_total_time = sight_travel_time + wait_time + service_time;
+                    if left_time_budget >= (sight_total_time + root_travel_time) {
+                        let path = build_path(&sight.node_id, curr_distance_map)
+                            .into_iter().map(|node_id| self.graph.get_node(node_id)).collect_vec();
+                        let sector =
+                            Sector::with_sight(sight_travel_time, wait_time, service_time,
+                                               sight, path);
+                        if route.is_empty() {
+                            route.push(RouteSector::Start(sector));
+                        } else {
+                            route.push(RouteSector::Intermediate(sector));
+                        }
+                        left_time_budget -= sight_total_time;
+                        curr_node_id = sight.node_id;
+                    } else {
+                        break;
+                    }
+                }
                 None => break
             };
-
-            let sight_total_time = sight_travel_time + wait_time + service_time;
-            if left_time_budget >= (sight_total_time + root_travel_time) {
-                let path = build_path(&sight.node_id, curr_distance_map)
-                    .into_iter().map(|node_id| self.graph.get_node(node_id)).collect_vec();
-                let sector =
-                    Sector::with_sight(sight_travel_time, wait_time, service_time,
-                                       sight, path);
-                if route.is_empty() {
-                    route.push(RouteSector::Start(sector));
-                } else {
-                    route.push(RouteSector::Intermediate(sector));
-                }
-                left_time_budget -= sight_total_time;
-                curr_node_id = sight.node_id;
-            } else {
-                let curr_distance_map = &self.distance_map[&curr_node_id];
-                let &(_, root_travel_dist) = curr_distance_map.get(&self.root_id)
-                    .ok_or_else(|| AlgorithmError::NoRouteFound { from: curr_node_id, to: self.root_id })?;
-                let root_travel_time = (root_travel_dist as f64 / self.walking_speed_mps) as i64 + 1;
-
-                let path = build_path(&self.root_id, curr_distance_map)
-                    .into_iter().map(|node_id| self.graph.get_node(node_id)).collect_vec();
-                let sector = Sector::new(root_travel_time, path);
-                route.push(RouteSector::End(sector));
-
-                break;
-            }
         }
+        let curr_distance_map = &self.distance_map[&curr_node_id];
+        let &(_, root_travel_dist) = curr_distance_map.get(&self.root_id)
+            .ok_or_else(|| AlgorithmError::NoRouteFound { from: curr_node_id, to: self.root_id })?;
+        let root_travel_time = (root_travel_dist as f64 / self.walking_speed_mps) as i64 + 1;
+        let path = build_path(&self.root_id, curr_distance_map)
+            .into_iter().map(|node_id| self.graph.get_node(node_id)).collect_vec();
+        let sector = Sector::new(root_travel_time, path);
+        route.push(RouteSector::End(sector));
+
         log::debug!("Computed walking route");
 
         Ok(route)

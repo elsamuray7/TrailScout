@@ -247,9 +247,6 @@ pub enum AlgorithmError {
     /// Error indicating that an algorithm has been requested without category or sight preferences
     #[display(fmt = "No preferences for categories or sights provided")]
     NoPreferencesProvided,
-    /// Error indicating that a sight has a bad time window
-    #[display(fmt = "Bad time window")]
-    BadTimeWindow,
 }
 
 #[cfg(test)]
