@@ -8,4 +8,8 @@ export class Category {
   public constructor(name: string) {
     this.name = name;
   }
+
+  public getAllSightsWithSpecialPref(): Sight[] {
+    return this.sights.filter((sight) => sight.pref > -1);
+  }
 }

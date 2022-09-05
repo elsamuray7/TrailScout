@@ -2,12 +2,15 @@ import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { NgbOffcanvas } from '@ng-bootstrap/ng-bootstrap';
 import * as L from 'leaflet';
 import { BlockUI, NgBlockUI } from 'ng-block-ui';
-import { Subscription } from 'rxjs';
+import {Subscription} from 'rxjs';
 import { ApplicationStateService } from 'src/app/services/application-state.service';
 import { RouteResponse, RouteService } from 'src/app/services/route.service';
 import { ToastService } from 'src/app/services/toast.service';
 import { MapContainerComponent } from '../../components/map-container/map-container.component';
 import {MapService} from "../../services/map.service";
+import {Sight} from "../../data/Sight";
+import {SightsServiceService} from "../../services/sights-service.service";
+
 
 @Component({
   selector: 'app-main-page',
@@ -24,8 +27,8 @@ export class MainPageComponent implements OnInit, OnDestroy {
 
   mobile = false;
 
-  defaultStartPointLong = 8.806422;
-  defaultStartPointLat = 53.073635;
+  defaultStartPointLong = 9.183333;
+  defaultStartPointLat = 48.783333;
 
   sub?: Subscription;
   blockSub?: Subscription;
@@ -33,6 +36,7 @@ export class MainPageComponent implements OnInit, OnDestroy {
   radius?: number;
   constructor(
     private mapService: MapService,
+    private sightService: SightsServiceService,
     private offcanvasService: NgbOffcanvas,
     private applicationStateService: ApplicationStateService,
     private routeService: RouteService,
@@ -110,5 +114,9 @@ export class MainPageComponent implements OnInit, OnDestroy {
     }
     this.mapContainer.drawRoute(route);
     this.mapContainer.drawSightsOnRoute(route);
+  }
+
+  showSight(sight: Sight) {
+    this.mapContainer.showSight(sight);
   }
 }

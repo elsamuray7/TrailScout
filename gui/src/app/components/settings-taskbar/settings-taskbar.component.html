@@ -1,7 +1,14 @@
 <div class="card text-white border-primary mb-3">
     <div class="row">
         <div class="inputs">
-            <ngb-accordion #acc="ngbAccordion" [closeOthers]="true" activeIds="radius" [destroyOnHide]="false">
+            <div class="row justify-content-around">
+                <button class="btn-primary btn btn-lg col" type="button"
+                    id="setting-btn" (click)="calculate()" [disabled]="!calculationAllowed()">
+                    <span ngbTooltip="Type in radius or walking time to allow routing"
+                        [disableTooltip]="calculationAllowed()">Calculate</span></button>
+                <button type="button" class="btn btn-secondary btn-lg close col" (click)="close()">Close</button>
+            </div>
+            <ngb-accordion #acc="ngbAccordion" [closeOthers]="true" activeIds="radius">
                 <ngb-panel id="radius" [title]="radius > 0 ? 'Radius: ' + radius + 'km' : 'Radius'" [disabled]="!startPointSet"
                     [class.disabled]="!startPointSet">
                     <ng-template ngbPanelContent >
@@ -34,22 +41,30 @@
                         </div>
                     </ng-template>
                 </ngb-panel>
-                <ngb-panel [title]="'Tags'" [disabled]="!startPointSet" >
+                <ngb-panel [title]="'Tags'" [disabled]="!startPointSet" (hidden)="hideAllSights()">
                     <ng-template class="row" ngbPanelContent>
+                        <small *ngIf="!foundAnySights()"> No Sights were found. Please check your Settings and hit "Refresh"! </small>
                         <div *ngFor="let category of this.getCategories()">
-                            <app-settings-taskbar-tag-item [category]="category"
+                            <app-settings-taskbar-tag-item *ngIf="category.sights.length > 0" [category]="category"
+                                                           (showSightEvent)="this.showSightEvent.emit($event)"
                                 (checked)="drawSights($event, category)"></app-settings-taskbar-tag-item>
                         </div>
 
                     </ng-template>
                 </ngb-panel>
             </ngb-accordion>
-            <div class="row justify-content-around">
-                <button class="btn-primary btn btn-lg col" type="button"
-                    id="setting-btn" (click)="calculate()" [disabled]="!calculationAllowed()">
-                    <span ngbTooltip="Type in radius or walking time to allow routing"
-                        [disableTooltip]="calculationAllowed()">Calculate</span></button>
-                <button type="button" class="btn btn-secondary btn-lg close col" (click)="close()">Close</button>
+
+            <div class="card" style="background-color: black; height: 24vh; margin-top: 3vh; ">
+                "start": {{startTime.hour}}:{{startTime.minute}}
+                "end": {{endTime.hour}}:{{startTime.minute}}
+                <br>
+                "radius": {{mapService.getRadius()}}km
+                <br>
+                "categories":
+                <br>
+                <div *ngFor="let category of categories" style="text-align: center;">
+                    {{category.name}}: {{category.pref}}
+                </div>
             </div>
         </div>
 
