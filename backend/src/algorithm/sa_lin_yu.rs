@@ -89,17 +89,13 @@ fn build_distance_map<'a>(graph: &'a Graph,
         .filter(|sight_id| scores[sight_id].0 > 0).collect_vec();
     sights_and_root.push(root_id);
 
-    let mut count = 0;
-    let total = sights_and_root.len();
-    for node_id in sights_and_root {
-        count += 1;
-        log::trace!("Pre-computing distances from node {} ({} / {})", node_id, count, total);
+    for node_id in &sights_and_root {
         let dijkstra_result = dijkstra_all(
-            &node_id,
+            node_id,
             |&node_id| successors(node_id));
-        distance_map.insert(node_id, dijkstra_result);
+        distance_map.insert(*node_id, dijkstra_result);
     }
-    log::debug!("Pre-computed distances from {} relevant nodes in {} ms", count,
+    log::debug!("Pre-computed distances from {} relevant nodes in {} ms", sights_and_root.len(),
         start.elapsed().as_millis());
 
     distance_map
@@ -209,8 +205,8 @@ impl<'a> SimAnnealingLinYu<'a> {
                 match time_window.next_change(curr_time) {
                     Ok(close_time) => {
                         let service_time = if !time_window.is_closed(close_time) {
-                            log::trace!("Unknown time window change at {close_time}: {}",
-                                &sight.opening_hours);
+                            // log::trace!("Unknown time window change at {close_time}: {}",
+                            //     &sight.opening_hours);
                             sight.duration_of_stay_secs()
                         } else {
                             compute_service_time(close_time)
@@ -223,16 +219,16 @@ impl<'a> SimAnnealingLinYu<'a> {
             RuleKind::Closed => {
                 match time_window.next_change(curr_time) {
                     Ok(open_time) => {
-                        if !time_window.is_open(open_time) {
-                            log::trace!("Unknown time window change at {open_time}: {}",
-                                &sight.opening_hours);
-                        }
+                        // if !time_window.is_open(open_time) {
+                        //     log::trace!("Unknown time window change at {open_time}: {}",
+                        //         &sight.opening_hours);
+                        // }
                         let wait_time = open_time.signed_duration_since(curr_time).num_seconds();
                         match time_window.next_change(open_time) {
                             Ok(close_time) => {
                                 let service_time = if !time_window.is_closed(close_time) {
-                                    log::trace!("Unknown time window change at {close_time}: {}",
-                                        &sight.opening_hours);
+                                    // log::trace!("Unknown time window change at {close_time}: {}",
+                                    //     &sight.opening_hours);
                                     sight.duration_of_stay_secs()
                                 } else {
                                     compute_service_time(close_time)
@@ -244,8 +240,8 @@ impl<'a> SimAnnealingLinYu<'a> {
                     }
                     _ => {
                         // Closed forever?
-                        log::trace!("Time window never opens after {curr_time}: {}",
-                            &sight.opening_hours);
+                        // log::trace!("Time window never opens after {curr_time}: {}",
+                        //     &sight.opening_hours);
                         None
                     }
                 }
@@ -401,7 +397,7 @@ impl<'a> SimAnnealingLinYu<'a> {
         let sector = Sector::new(root_travel_time, path);
         route.push(RouteSector::End(sector));
 
-        log::debug!("Computed walking route");
+        log::debug!("Built walking route from best found solution");
 
         Ok(route)
     }
@@ -481,7 +477,6 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
 
         loop {
             let p = rng.gen::<f64>();
-            log::trace!("Computed p-value: {}", p);
 
             let y;
             if p <= 1./3. {
@@ -492,11 +487,8 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
                 y = reverse(&x);
             }
             let new_score = self.get_total_score(&y)?;
-            log::trace!("Computed new solution from current solution (old score: {}, new score: {})",
-                old_score, new_score);
 
             i += 1;
-            log::trace!("Iteration {} / {}", i, i_iter);
 
             let mut replace_solution = true;
             if old_score > new_score {
@@ -504,8 +496,6 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
                 let r = rng.gen::<f64>();
                 let heur = std::f64::consts::E.powf(-(score_dif as f64) / t);
                 if r >= heur {
-                    log::trace!("Continue with next iteration (r-value: {} >= heuristic: {})",
-                        r, heur);
                     replace_solution = false;
                 }
             }
@@ -515,7 +505,7 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
                 x = y;
 
                 if new_score > f_best {
-                    log::trace!("Updating best score (new score: {} > best score so far: {})",
+                    log::trace!("Updating best score (new score: {} > old score: {})",
                         new_score, f_best);
                     f_best = new_score;
                     x_best = x.clone();
