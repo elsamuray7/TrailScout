@@ -1,24 +1,22 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::fmt::{Debug, Formatter};
 use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io::{BufReader};
 use std::num::{ParseFloatError, ParseIntError};
 use std::time::Instant;
-use futures::future::err;
 use strum_macros::EnumString;
 use geoutils::{Distance, Location};
 use itertools::Itertools;
 use log::{debug, trace, info};
-use serde::{Serialize, Deserialize, Serializer, Deserializer};
+use serde::{Serialize, Deserialize};
 use serde_enum_str::{Deserialize_enum_str, Serialize_enum_str};
-use serde::ser::SerializeStruct;
 use opening_hours::OpeningHours;
 use crate::data;
 use crate::data::SightsConfig;
 use crate::utils::dijkstra;
 
-#[derive(EnumString, Deserialize, Serialize, PartialEq, Eq, Debug)]
+#[derive(EnumString, Deserialize, Serialize, PartialEq, Eq, Debug, Copy, Clone)]
 #[serde(rename_all = "PascalCase")]
 pub enum Category {
     ThemePark,
@@ -34,7 +32,7 @@ pub enum Category {
     Other
 }
 
-#[derive(Deserialize_enum_str, Serialize_enum_str, PartialEq, Debug)]
+#[derive(strum_macros::Display, EnumString, Deserialize, Serialize, PartialEq, Debug, Copy, Clone)]
 #[serde(rename_all = "PascalCase")]
 pub enum EdgeType {
     Unclassified, // Öffentlich befahrbare Nebenstraßen
@@ -51,7 +49,8 @@ pub enum EdgeType {
     Path, // Wanderwege oder Trampelpfade
     Primary, // Straßen von nationaler Bedeutung
     Secondary, // Straßen von überregionaler Bedeutung
-    Tertiary // Straßen, die Dörfer verbinden
+    Tertiary, // Straßen, die Dörfer verbinden
+    SightEdge // Selbst erzeugte Kanten von einer Sight zum nächsten Straßenknoten
 }
 
 pub trait INode {
@@ -103,6 +102,8 @@ pub struct Edge {
     pub tgt: usize,
     /// The edge's weight, i.e., the distance between its source and target
     pub dist: usize,
+    /// The street type of the edge.
+    pub edge_type: EdgeType,
 }
 
 impl PartialEq<Self> for Edge {
@@ -141,8 +142,7 @@ impl Sight{
     ///Tries to parse opening hours from osm and then sets opening_hours_parsed.
     ///If osm value cannot be parsed use default value from sights config
     ///Also overwrites opening_hours if default value is used
-    pub fn parse_opening_hours(&mut self, sights_config : &SightsConfig){
-
+    pub fn parse_opening_hours(&mut self, sights_config: &SightsConfig){
         //Try to parse OSM opening hours
         let opening_hours_parsed = match OpeningHours::parse(&self.opening_hours){
             Ok(res) => {
@@ -150,7 +150,7 @@ impl Sight{
                 Some(res)
             }
             //Get default value if could not parse
-            Err(err) => {
+            _ => {
                 trace!("Parsing Default Opening Times");
                 let default_openings = self.get_default_opening_hour(&sights_config);
                 let parse = OpeningHours::parse(&default_openings)
@@ -163,32 +163,31 @@ impl Sight{
             }
         };
         self.opening_hours_parsed = opening_hours_parsed;
-
     }
+
     /// Get default opening hours from sights_config
     fn get_default_opening_hour(&self, sights_config : &SightsConfig) -> String {
         for cat_tag_map in &sights_config.category_tag_map{
             let cat = cat_tag_map.category.parse::<Category>().unwrap();
-            if matches!(&self.category, cat){
+            if self.category == cat {
                 let default_opening_hours = cat_tag_map.opening_hours.clone();
                 return default_opening_hours
             }
         }
-        panic!("Error while parsing default time from config") //If this happens sights_config.json is wrong
+        panic!("Error while parsing default time from config") // If this happens sights_config.json is wrong
     }
 
     ///Sets the duration_of_stay_minutes value according to value in sights config
-    pub fn set_config_duration_of_stay(&mut self, sights_config : &SightsConfig){
-        //viel Code duplication mit get_default_opening_hour - vielleicht irgendwie refactoren?
+    pub fn set_config_duration_of_stay(&mut self, sights_config : &SightsConfig) {
+        // viel Code duplication mit get_default_opening_hour - vielleicht irgendwie refactoren?
         for cat_tag_map in &sights_config.category_tag_map{
             let cat = cat_tag_map.category.parse::<Category>().unwrap();
-            if matches!(&self.category, cat){
+            if self.category == cat {
                 let default_opening_hours = cat_tag_map.duration_of_stay_minutes.clone();
                 self.duration_of_stay_minutes = default_opening_hours;
                 break
             }
         }
-
     }
 }
 
@@ -259,7 +258,7 @@ impl Graph {
         //Parse the opening hours to fill Opening_hours_parsed: Option<OpeningHours>
         //Also read duration_of_stay_minutes from sights config and set the value for the sight
         let sights_config = data::get_sights_config();
-        for mut sight in &mut sights{
+        for sight in &mut sights{
             sight.parse_opening_hours(&sights_config);
             sight.set_config_duration_of_stay(&sights_config);
         }
@@ -327,7 +326,7 @@ impl Graph {
 
     /// Get all sights within a circular area, specified by `radius` (in meters), around a given coordinate
     /// (latitude / longitude)
-    pub fn get_sights_in_area(&self, lat: f64, lon: f64, radius: f64) -> HashMap<usize, &Sight> {
+    pub fn get_sights_in_area(&self, lat: f64, lon: f64, radius: f64) -> Vec<&Sight> {
         debug!("Computing sights in area: lat: {}, lon: {}, radius: {}", lat, lon, radius);
 
         //estimate bounding box with 111111 meters = 1 longitude degree
@@ -340,13 +339,12 @@ impl Graph {
         let center = Location::new(lat, lon);
         let radius = Distance::from_meters(radius);
         //iterate through the slice and check every sight whether it's in the target circle
-        let sights_in_area: HashMap<usize, &Sight> = slice.iter()
+        let sights_in_area: Vec<&Sight> = slice.iter()
             .filter(|sight| {
                 let location = Location::new(sight.lat, sight.lon);
                 location.is_in_circle(&center, radius)
                     .expect("Could not determine whether sight lies in given area")
             })
-            .map(|sight| (sight.node_id, sight))
             .collect();
         debug!("Found {} sights within the given area (of a total of {} sights)",
             sights_in_area.len(), self.sights.len());
@@ -357,14 +355,14 @@ impl Graph {
     /// Get all reachable sights within a circular area, specified by `radius` (in meters), around a given coordinate
     /// (latitude / longitude).
     /// `reachable_with` specifies within which radius reachability must be tested.
-    pub fn get_reachable_sights_in_area(&self, lat: f64, lon: f64, radius: f64, reachable_within: f64) -> HashMap<usize, &Sight> {
+    pub fn get_reachable_sights_in_area(&self, lat: f64, lon: f64, radius: f64, reachable_within: f64) -> Vec<&Sight> {
         // Get all nodes that are reachable from the node with the lowest distance to the center
         let center_id = self.get_nearest_node(lat, lon);
         let reachable_nodes = dijkstra::run_ota_dijkstra_in_area(
             &self, center_id, lat, lon, reachable_within);
 
-        let reachable_sights: HashMap<usize, &Sight> = self.get_sights_in_area(lat, lon, radius).into_iter()
-            .filter(|&(sight_id, _)| reachable_nodes.dist_to(sight_id).is_some())
+        let reachable_sights: Vec<&Sight> = self.get_sights_in_area(lat, lon, radius).into_iter()
+            .filter(|sight | reachable_nodes.dist_to(sight.node_id).is_some())
             .collect();
         debug!("Found {} reachable sights within the given area (of a total of {} sights)",
             reachable_sights.len(), self.sights.len());
@@ -494,6 +492,7 @@ mod test {
     use rand::{Rng, thread_rng};
     use crate::data::graph::{Graph, Node};
     use crate::init_logging;
+    use crate::utils::test_setup;
 
     /// Baba Hotel, ich schwör!!
     const RADISSON_BLU_HOTEL: (f64, f64) = (53.074448, 8.805105);
@@ -502,8 +501,7 @@ mod test {
     fn test_offsets() {
         init_logging();
 
-        let graph = Graph::parse_from_file("./tests_data/output/bremen-latest.fmibin")
-            .expect("Failed to parse graph file");
+        let graph = &test_setup::GRAPH;
 
         let mut rng = thread_rng();
         let rand_id = rng.gen_range(0..graph.num_nodes);
@@ -545,8 +543,7 @@ mod test {
     fn test_nearest_node() {
         init_logging();
 
-        let graph = Graph::parse_from_file("./tests_data/output/bremen-latest.fmibin")
-            .expect("Failed to parse graph file");
+        let graph = &test_setup::GRAPH;
 
         let (lat, lon) = RADISSON_BLU_HOTEL;
         let location = Location::new(lat, lon);

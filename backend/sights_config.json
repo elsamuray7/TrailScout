@@ -121,7 +121,7 @@
         },
         {
             "category": "Restaurants",
-            "opening_hours": "Mo-Su 11:30-14:00 ,17:00-22:00 ",
+            "opening_hours": "Mo-Su 11:30-14:00, 17:00-22:00 ",
             "duration_of_stay_minutes": 60,
             "tags": [
                 {

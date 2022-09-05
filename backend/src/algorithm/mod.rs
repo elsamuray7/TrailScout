@@ -3,7 +3,7 @@ pub mod sa_lin_yu;
 
 use std::collections::HashMap;
 use chrono::{DateTime, Utc};
-use crate::data::graph::{Graph, Node, Sight};
+use crate::data::graph::{Category, Graph, Node, Sight};
 use serde::{Serialize, Deserialize};
 use derive_more::{Display, Error};
 use crate::algorithm::greedy::GreedyAlgorithm;
@@ -11,7 +11,7 @@ use crate::algorithm::sa_lin_yu::SimAnnealingLinYu;
 
 /// Type alias for a mapping from node id's to scores, where the nodes represent sights / tourist
 /// attractions
-type ScoreMap = HashMap<usize, usize>;
+type ScoreMap = HashMap<usize, (usize, Category)>;
 
 /// Multiplier for the relevant (reachable) radius to get the radius in which outgoing edges for
 /// nodes should be retrieved
@@ -46,7 +46,7 @@ impl SightCategoryPref {
 #[derive(Deserialize)]
 pub struct SightPref {
     id: usize,
-    category: String,
+    category: String, // TODO never used
     pref: usize,
 }
 
@@ -252,6 +252,7 @@ mod test {
     use crate::algorithm::greedy::GreedyAlgorithm;
     use crate::data::graph::{Category, Graph};
     use crate::init_logging;
+    use crate::utils::test_setup;
 
     /// Baba Hotel, ich schwör!!
     const RADISSON_BLU_HOTEL: Area = Area {
@@ -264,8 +265,7 @@ mod test {
     fn test_greedy() {
         init_logging();
 
-        let graph = Graph::parse_from_file("./tests_data/output/bremen-latest.fmibin")
-            .expect("Failed to parse graph file");
+        let graph = &test_setup::GRAPH;
 
         let start_time = DateTime::parse_from_rfc3339("2022-07-01T10:00:00+01:00")
             .unwrap().with_timezone(&Utc);
