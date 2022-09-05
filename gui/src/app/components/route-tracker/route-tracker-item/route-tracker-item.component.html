@@ -1,5 +1,15 @@
 <div class="item" (mouseover)="hover()" (mouseout)="unhover()" [class.currentSection]="currentSection" [class.hover]="_hover" (click)="onClick()">
-    <i ></i>
+    
+    <div class="row">
+        <img class="col-2"[src]="image()">
+        <div class="sight col">
+            Ziel: {{section?.sight?.name}}
+        </div>
+    </div>
+    <div class="sight" *ngIf="lastSection()">
+        Zurück zum Start
+    </div>
+    
     <div *ngIf="currentSection">
         Auf diesem Abschnitt befinden sie sich gerade
     </div>

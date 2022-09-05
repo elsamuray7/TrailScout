@@ -1,5 +1,6 @@
 import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { RouteTrackerSection } from 'src/app/types.utils';
+import { getIcon } from '../../icons';
 
 @Component({
   selector: 'app-route-tracker-item',
@@ -21,6 +22,11 @@ export class RouteTrackerItemComponent implements OnInit {
     if (this.currentSection) {
       this.hoverEvent.emit(this.section?.routeId);
     }
+    console.log(this.section)
+  }
+
+  lastSection() {
+    return this.section?.sight === null;
   }
 
   hover() {
@@ -35,5 +41,12 @@ export class RouteTrackerItemComponent implements OnInit {
 
   onClick() {
     this.clickEvent.emit(this.section?.routeId)
+  }
+
+  image() {
+    if (!this.section || !this.section.sight) {
+      return 'assets/icons/start.png';
+    }
+    return getIcon(this.section.sight).options.iconUrl;
   }
 }

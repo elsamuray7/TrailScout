@@ -3,26 +3,14 @@ import * as L from 'leaflet';
 import { GeoSearchControl, OpenStreetMapProvider } from 'leaflet-geosearch';
 import { LatLngExpression } from 'leaflet';
 import { Category } from "../../data/Category";
-import * as Icons from './icons';
+import * as Icons from '../icons';
 import { Sight } from 'src/app/data/Sight';
 import { RouteResponse, RouteService } from 'src/app/services/route.service';
 import { GPSService } from 'src/app/services/gps.service';
 import { Subscription } from 'rxjs';
 
-const iconRetinaUrl = 'assets/marker-icon-2x.png';
-const iconUrl = 'assets/marker-icon.png';
-const shadowUrl = 'assets/marker-shadow.png';
-const iconDefault = L.icon({
-  iconRetinaUrl,
-  iconUrl,
-  shadowUrl,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  tooltipAnchor: [16, -28],
-  shadowSize: [41, 41]
-});
-L.Marker.prototype.options.icon = iconDefault;
+
+L.Marker.prototype.options.icon = Icons.iconDefault;
 
 @Component({
   selector: 'app-map-container',
@@ -44,18 +32,22 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
   private circle?: L.Circle;
   private activeLayers = new Map<string, any>();
 
+  currentLocation: L.Marker | undefined;
+
   routeSightLayer: L.LayerGroup;
   routeLayer: L.LayerGroup;
   routePoly: L.Polyline[] = [];
 
   sub1?: Subscription;
   sub2?: Subscription;
+  sub3?: Subscription;
 
   constructor(private gpsService: GPSService, private routeService: RouteService) {
   }
   ngOnDestroy() {
     this.sub1?.unsubscribe();
     this.sub2?.unsubscribe();
+    this.sub3?.unsubscribe();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -88,7 +80,7 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
     this.map.addControl(searchControl);
 
     if (this.startPoint) {
-      this.marker = new L.Marker(this.startPoint);
+      this.marker = new L.Marker(this.startPoint, {icon: Icons.startIcon});
       this.marker.addTo(this.map);
       this.addCircle(this.startPoint);
       this.markerLocation.emit(this.startPoint)
@@ -124,6 +116,11 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
     });
     this.sub2 = this.routeService.id_clicked$.subscribe(id => {
       this.showSection(id);
+    });
+    this.sub3 = this.gpsService.getLocation().subscribe((location: any) => {
+      this.currentLocation?.removeFrom(this.map);
+      this.currentLocation = new L.Marker(location);
+      this.currentLocation.addTo(this.map);
     })
   }
 
@@ -132,7 +129,7 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
     if (this.marker) {
       this.marker.removeFrom(map);
     }
-    this.marker = new L.Marker(latlng);
+    this.marker = new L.Marker(latlng, {icon: Icons.startIcon});
     this.marker.addTo(map);
     this.addCircle(latlng);
     this.markerLocation.emit(latlng)
@@ -156,7 +153,7 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
         lat: sight.lat,
         lng: sight.lon
       }
-      const icon = this.getIcon(sight);
+      const icon = Icons.getIcon(sight);
 
       let newMarker = new L.Marker(latlng, {icon: icon,}).addTo(newLayer);
       newMarker.bindPopup(sight.name,{closeButton: false});
@@ -171,29 +168,7 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
     }
   }
 
-  getIcon(sight: Sight) {
-    const cat = sight.category;
-    switch (cat) {
-      case "Sightseeing":
-        return Icons.sightsIcon;
-      case "Nightlife":
-        return Icons.nightIcon;
-      case "Restaurants":
-        return Icons.restaurantIcon;
-      case "Shopping":
-        return Icons.shoppingIcon;
-      case "PicnicBarbequeSpot":
-        return Icons.grillIcon;
-      case "MuseumExhibition":
-        return Icons.museumIcon;
-      case "Nature":
-        return Icons.natureIcon;
-      case "Swimming":
-        return Icons.seaIcon;
-      default:
-        return iconDefault;
-    }
-  }
+  
   drawRoute(_route: RouteResponse) {
     this.hideRoute()
     this.routeLayer = new L.LayerGroup<any>();
@@ -234,7 +209,7 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
           lat: section.sight.lat,
           lng: section.sight.lon
         }
-        const icon = this.getIcon(section.sight);
+        const icon = Icons.getIcon(section.sight);
         var newMarker = new L.Marker(latlng, {icon: icon}).addTo(this.routeSightLayer);
         newMarker.bindPopup(section.sight.name,{closeButton: false});
         this.routeSightLayer.addTo(this.map);
