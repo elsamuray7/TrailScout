@@ -2,10 +2,11 @@ pub mod greedy;
 pub mod sa_lin_yu;
 
 use std::collections::HashMap;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use crate::data::graph::{Category, Graph, Node, Sight};
 use serde::{Serialize, Deserialize};
 use derive_more::{Display, Error};
+use opening_hours_syntax::rules::RuleKind;
 use crate::algorithm::greedy::GreedyAlgorithm;
 use crate::algorithm::sa_lin_yu::SimAnnealingLinYu;
 
@@ -217,6 +218,75 @@ impl<'a> Algorithm<'a> {
     }
 }
 
+/// Compute wait and service time for given sight based on the already used time budget
+fn compute_wait_and_service_time(start_time: &DateTime<Utc>, sight: &Sight, used_time_budget: i64) -> Option<(i64, i64)> {
+    let time_window = sight.opening_hours();
+
+    // Determine current time (after given used time budget)
+    let curr_time: NaiveDateTime = (*start_time + Duration::seconds(used_time_budget)).naive_utc();
+
+    // Determine the sights current open state
+    // TODO handle DateLimitExceeded error properly
+    let curr_state = time_window.state(curr_time)
+        .expect("Failed to determine open state");
+
+    // Initialize closure for computing the sights service time
+    let compute_service_time = |close_time: NaiveDateTime| {
+        let possible_service_time = close_time.signed_duration_since(curr_time)
+            .num_seconds();
+        sight.duration_of_stay_secs().min(possible_service_time)
+    };
+
+    // Determine wait and service time based on the sights current open state
+    match curr_state {
+        RuleKind::Open | RuleKind::Unknown => {
+            match time_window.next_change(curr_time) {
+                Ok(close_time) => {
+                    let service_time = if !time_window.is_closed(close_time) {
+                        // log::trace!("Unknown time window change at {close_time}: {}",
+                        //     &sight.opening_hours);
+                        sight.duration_of_stay_secs()
+                    } else {
+                        compute_service_time(close_time)
+                    };
+                    Some((0, service_time))
+                }
+                _ => Some((0, sight.duration_of_stay_secs()))
+            }
+        }
+        RuleKind::Closed => {
+            match time_window.next_change(curr_time) {
+                Ok(open_time) => {
+                    // if !time_window.is_open(open_time) {
+                    //     log::trace!("Unknown time window change at {open_time}: {}",
+                    //         &sight.opening_hours);
+                    // }
+                    let wait_time = open_time.signed_duration_since(curr_time).num_seconds();
+                    match time_window.next_change(open_time) {
+                        Ok(close_time) => {
+                            let service_time = if !time_window.is_closed(close_time) {
+                                // log::trace!("Unknown time window change at {close_time}: {}",
+                                //     &sight.opening_hours);
+                                sight.duration_of_stay_secs()
+                            } else {
+                                compute_service_time(close_time)
+                            };
+                            Some((wait_time, service_time))
+                        }
+                        _ => Some((wait_time, sight.duration_of_stay_secs()))
+                    }
+                }
+                _ => {
+                    // Closed forever?
+                    // log::trace!("Time window never opens after {curr_time}: {}",
+                    //     &sight.opening_hours);
+                    None
+                }
+            }
+        }
+    }
+}
+
 /// Error type of `algorithm` module
 #[derive(Debug, Display, Error)]
 pub enum AlgorithmError {
@@ -254,7 +324,7 @@ mod test {
     use chrono::{DateTime, Utc};
     use crate::algorithm::{_Algorithm, Area, RouteSector, SightCategoryPref, UserPreferences};
     use crate::algorithm::greedy::GreedyAlgorithm;
-    use crate::data::graph::{Category, Graph};
+    use crate::data::graph::Category;
     use crate::init_logging;
     use crate::utils::test_setup;
 
@@ -304,7 +374,7 @@ mod test {
         assert!(sector.is_none());
 
         // The used time budget should be smaller than or equal to the maximum available time budget
-        let total_time_budget: usize = route.iter()
+        let total_time_budget: i64 = route.iter()
             .map(|route_sector| {
                 let sector = match route_sector {
                     RouteSector::Start(sector) => sector,

@@ -1,10 +1,9 @@
 use std::collections::HashMap;
-use chrono::{DateTime, Duration, NaiveDateTime, Utc};
+use chrono::{DateTime, Utc};
 use itertools::Itertools;
-use opening_hours_syntax::rules::RuleKind;
 use pathfinding::prelude::*;
 use rand::prelude::*;
-use crate::algorithm::{_Algorithm, AlgorithmError, Area, Route, RouteSector, ScoreMap, Sector, USER_PREF_MAX, UserPreferences};
+use crate::algorithm::{_Algorithm, AlgorithmError, Area, compute_wait_and_service_time, Route, RouteSector, ScoreMap, Sector, USER_PREF_MAX, UserPreferences};
 use crate::data::graph::{Category, Graph, Sight};
 use std::time::Instant;
 
@@ -179,76 +178,6 @@ impl<'a> SimAnnealingLinYu<'a> {
     /// Unique string identifier of this algorithm implementation
     pub const ALGORITHM_NAME: &'static str = "DerAllerbesteste";
 
-    /// Compute wait and service time for given sight based on the already used time budget
-    fn compute_wait_and_service_time(&self, sight: &Sight, used_time_budget: i64) -> Option<(i64, i64)> {
-        let time_window = sight.opening_hours();
-
-        // Determine current time (after given used time budget)
-        let curr_time: NaiveDateTime = (self.start_time + Duration::seconds(used_time_budget))
-            .naive_utc();
-
-        // Determine the sights current open state
-        // TODO handle DateLimitExceeded error properly
-        let curr_state = time_window.state(curr_time)
-            .expect("Failed to determine open state");
-
-        // Initialize closure for computing the sights service time
-        let compute_service_time = |close_time: NaiveDateTime| {
-            let possible_service_time = close_time.signed_duration_since(curr_time)
-                .num_seconds();
-            sight.duration_of_stay_secs().min(possible_service_time)
-        };
-
-        // Determine wait and service time based on the sights current open state
-        match curr_state {
-            RuleKind::Open | RuleKind::Unknown => {
-                match time_window.next_change(curr_time) {
-                    Ok(close_time) => {
-                        let service_time = if !time_window.is_closed(close_time) {
-                            // log::trace!("Unknown time window change at {close_time}: {}",
-                            //     &sight.opening_hours);
-                            sight.duration_of_stay_secs()
-                        } else {
-                            compute_service_time(close_time)
-                        };
-                        Some((0, service_time))
-                    }
-                    _ => Some((0, sight.duration_of_stay_secs()))
-                }
-            }
-            RuleKind::Closed => {
-                match time_window.next_change(curr_time) {
-                    Ok(open_time) => {
-                        // if !time_window.is_open(open_time) {
-                        //     log::trace!("Unknown time window change at {open_time}: {}",
-                        //         &sight.opening_hours);
-                        // }
-                        let wait_time = open_time.signed_duration_since(curr_time).num_seconds();
-                        match time_window.next_change(open_time) {
-                            Ok(close_time) => {
-                                let service_time = if !time_window.is_closed(close_time) {
-                                    // log::trace!("Unknown time window change at {close_time}: {}",
-                                    //     &sight.opening_hours);
-                                    sight.duration_of_stay_secs()
-                                } else {
-                                    compute_service_time(close_time)
-                                };
-                                Some((wait_time, service_time))
-                            }
-                            _ => Some((wait_time, sight.duration_of_stay_secs()))
-                        }
-                    }
-                    _ => {
-                        // Closed forever?
-                        // log::trace!("Time window never opens after {curr_time}: {}",
-                        //     &sight.opening_hours);
-                        None
-                    }
-                }
-            }
-        }
-    }
-
     /// Get the total score of `current_solution`.
     /// The total score is computed as the sum of the individual scores of all sights that can be
     /// included in the route without violating the time budget.
@@ -269,8 +198,8 @@ impl<'a> SimAnnealingLinYu<'a> {
                 .ok_or_else(|| AlgorithmError::NoRouteFound { from: sight.node_id, to: self.root_id })?;
             let root_travel_time = (root_travel_dist as f64 / self.walking_speed_mps) as i64 + 1;
 
-            let (wait_time, service_time) = match self.compute_wait_and_service_time(
-                sight, total_time_budget - left_time_budget) {
+            let (wait_time, service_time) = match compute_wait_and_service_time(
+                &self.start_time, sight, total_time_budget - left_time_budget) {
                 Some(result) => result,
                 None => break
             };
@@ -364,8 +293,8 @@ impl<'a> SimAnnealingLinYu<'a> {
                 .ok_or_else(|| AlgorithmError::NoRouteFound { from: sight.node_id, to: self.root_id })?;
             let root_travel_time = (root_travel_dist as f64 / self.walking_speed_mps) as i64 + 1;
 
-            match self.compute_wait_and_service_time(
-                sight, total_time_budget - left_time_budget) {
+            match compute_wait_and_service_time(
+                &self.start_time, sight, total_time_budget - left_time_budget) {
                 Some((wait_time, service_time)) => {
                     let sight_total_time = sight_travel_time + wait_time + service_time;
                     if left_time_budget >= (sight_total_time + root_travel_time) {

@@ -180,7 +180,6 @@ pub fn run_ota_dijkstra_in_area(graph: &Graph, src_id: usize,
 mod test {
     use pathfinding::prelude::{dijkstra, dijkstra_all};
     use rand::{Rng, thread_rng};
-    use crate::data::graph::Graph;
     use crate::init_logging;
     use crate::utils::dijkstra::{run_dijkstra, run_ota_dijkstra, run_ota_dijkstra_in_area};
     use crate::utils::test_setup;
