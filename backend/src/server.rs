@@ -10,7 +10,7 @@ use log::{debug, error};
 use serde_json;
 
 use trailscout_lib::algorithm::Algorithm;
-use trailscout_lib::data::graph::{Graph, Sight};
+use trailscout_lib::data::graph::Graph;
 use trailscout_lib::data::osm_graph_creator;
 use trailscout_lib;
 use crate::server_utils::custom_errors::TrailScoutError;

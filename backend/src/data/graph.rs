@@ -10,7 +10,6 @@ use geoutils::{Distance, Location};
 use itertools::Itertools;
 use log::{debug, trace, info};
 use serde::{Serialize, Deserialize};
-use serde_enum_str::{Deserialize_enum_str, Serialize_enum_str};
 use opening_hours::OpeningHours;
 use crate::data;
 use crate::data::SightsConfig;
@@ -19,7 +18,7 @@ use crate::utils::dijkstra;
 #[derive(EnumString, Deserialize, Serialize, PartialEq, Eq, Debug, Copy, Clone)]
 #[serde(rename_all = "PascalCase")]
 pub enum Category {
-    ThemePark,
+    Activities,
     Swimming,
     PicnicBarbequeSpot,
     MuseumExhibition,
@@ -28,8 +27,7 @@ pub enum Category {
     Restaurants,
     Sightseeing,
     Shopping,
-    Animals,
-    Other
+    Animals
 }
 
 #[derive(strum_macros::Display, EnumString, Deserialize, Serialize, PartialEq, Debug, Copy, Clone)]
