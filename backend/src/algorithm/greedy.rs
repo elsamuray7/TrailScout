@@ -1,8 +1,9 @@
 use std::collections::{HashMap, HashSet};
+use std::rc::Rc;
 use chrono::{DateTime, Utc};
 use crate::data::graph::{Category, Graph, Sight};
 use itertools::Itertools;
-use crate::algorithm::{_Algorithm, AlgorithmError, Area, Route, RouteSector, ScoreMap, Sector, UserPreferences, USER_PREF_MAX, EDGE_RADIUS_MULTIPLIER};
+use crate::algorithm::{_Algorithm, AlgorithmError, Area, Route, RouteSector, ScoreMap, Sector, UserPreferences, USER_PREF_MAX};
 use crate::utils::dijkstra;
 
 /// Greedy internal user preference to score mapping
@@ -81,9 +82,8 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
         }
 
         let time_budget = end_time.signed_duration_since(start_time).num_seconds() as f64;
-        let relevant_radius = walking_speed_mps * time_budget;
-        let sights_radius = relevant_radius.min(area.radius);
-        let edge_radius = relevant_radius * EDGE_RADIUS_MULTIPLIER;
+        let edge_radius = walking_speed_mps * time_budget / std::f64::consts::PI / 2.0;
+        let sights_radius = edge_radius.min(area.radius);
         let sights = graph.get_reachable_sights_in_area(area.lat, area.lon,
                                                         sights_radius, edge_radius);
         if sights.is_empty() {
@@ -109,7 +109,7 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
          let mut time_budget_left = self.end_time.signed_duration_since(self.start_time)
              .num_seconds();
 
-         let edge_radius = (self.walking_speed_mps * time_budget_left as f64) * EDGE_RADIUS_MULTIPLIER;
+         let edge_radius = self.walking_speed_mps * time_budget_left as f64 / std::f64::consts::PI / 2.0;
 
          log::debug!("Starting greedy search");
 
@@ -123,10 +123,17 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
              return Err(AlgorithmError::NoPreferencesProvided);
          }
          let mut curr_node_id = self.root_id;
+         let result_from_root = Rc::new(dijkstra::run_ota_dijkstra_in_area(
+             self.graph, curr_node_id, self.area.lat, self.area.lon, edge_radius));
+         let mut result_to_sights;
          loop {
              // calculate distances from curr_node to all sight nodes
-             let result_to_sights = dijkstra::run_ota_dijkstra_in_area(
-                 self.graph, curr_node_id, self.area.lat, self.area.lon, edge_radius);
+             if curr_node_id == self.root_id {
+                 result_to_sights = result_from_root.clone();
+             } else {
+                 result_to_sights = Rc::new(dijkstra::run_ota_dijkstra_in_area(
+                     self.graph, curr_node_id, self.area.lat, self.area.lon, edge_radius));
+             }
 
              // sort sight nodes by a metric derived from the sights score and its distance to
              // the current node
@@ -151,11 +158,10 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
              let len_route_before = route.len();
              for (sight_node_id, dist) in sorted_dist_vec {
                  let secs_needed_to_sight = dist as f64 / self.walking_speed_mps;
-                 let result_sight_to_root = dijkstra::run_dijkstra_in_area(
-                     self.graph, sight_node_id, self.root_id, self.area.lat, self.area.lon, edge_radius);
-                 match result_sight_to_root {
-                     Some(result) => {
-                         let secs_needed_sight_to_root = result.dist() as f64 / self.walking_speed_mps;
+                 // Works because graph is undirected
+                 match result_from_root.dist_to(sight_node_id) {
+                     Some(dist_to_root) => {
+                         let secs_needed_sight_to_root = dist_to_root as f64 / self.walking_speed_mps;
                          let secs_total = (secs_needed_to_sight + secs_needed_sight_to_root) as i64 + 1;
 
                          log::trace!("Checking sight {}: secs to include sight: {}, left time budget: {}",
@@ -187,36 +193,37 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
                              unvisited_sights.remove(&sight_node_id);
                              curr_node_id = sight_node_id;
                              break;
-                        }
-                    }
-                    None => continue // No path from sight to root found. Continue.
-                };
-            }
+                         }
+                     }
+                     None => continue // No path from sight to root found. Continue.
+                 };
+             }
 
-            // check whether any sight has been included in route and if not, go back to root
+             // check whether any sight has been included in route and if not, go back to root
              let len_route_after = route.len();
-            if len_route_after == len_route_before && len_route_after > 0 {
-                log::trace!("Traveling back to root");
+             if len_route_after == len_route_before && len_route_after > 0 {
+                 log::trace!("Traveling back to root");
 
-                let result_to_root = dijkstra::run_dijkstra_in_area(
-                    self.graph, curr_node_id, self.root_id, self.area.lat, self.area.lon, edge_radius)
-                    .expect("No path from last visited sight to root");
+                 // Path from sight to root must exist because otherwise, we would have skipped sight
+                 // Works because graph is undirected
+                 let result_to_root = result_from_root.result_of(
+                     self.graph, curr_node_id).unwrap();
 
-                let secs_to_root = (result_to_root.dist() as f64 / self.walking_speed_mps) as i64;
-
-                log::trace!("Appending sector to route:\n{:?}", result_to_root.path());
-
-                route.push(RouteSector::End(Sector::new(secs_to_root,
-                                                        result_to_root.consume_path())));
-                break;
-            }
-        }
+                 let secs_to_root = (result_to_root.dist() as f64 / self.walking_speed_mps) as i64;
+                 let mut sector_nodes = result_to_root.consume_path();
+                 // Reverse because path is in reverse direction
+                 sector_nodes.reverse();
+                 log::trace!("Appending sector to route:\n{:?}", &sector_nodes);
+                 route.push(RouteSector::End(Sector::new(secs_to_root, sector_nodes)));
+                 break;
+             }
+         }
 
          let collected_score = self.get_collected_score(&route);
          log::debug!("Finished greedy search. Computed walking route from node: {} including {} sights with total score: {}.",
              self.root_id, route.len() - 1, collected_score);
 
-        Ok(route)
+         Ok(route)
     }
 
     fn get_collected_score(&self, route: &Route) -> usize {
