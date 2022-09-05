@@ -2,259 +2,14 @@
     "category_tag_map":
     [
         {
-            "category": "ThemePark",
+            "category": "Activities",
             "opening_hours": "Mo-Su 10:00-20:00",
             "duration_of_stay_minutes": 60,
             "tags": [
                 {
                     "key": "tourism", 
                     "value": "theme_park"
-                }
-            ]
-        },
-        {
-            "category": "Swimming",
-            "opening_hours": "Mo-Su 10:00-20:00",
-            "duration_of_stay_minutes": 60,
-            "tags": [
-                {
-                    "key": "leisure", 
-                    "value": "swimming_area"
                 },
-                {
-                    "key": "leisure", 
-                    "value": "swimming_pool"
-                },
-                {
-                    "key": "leisure", 
-                    "value": "water_park"
-                },
-                {
-                    "key": "sport", 
-                    "value": "swimming"
-                }
-            ]
-        },
-        {
-            "category": "PicnicBarbequeSpot",
-            "opening_hours": "24/7",
-            "duration_of_stay_minutes": 60,
-            "tags": [
-                {
-                    "key": "amenity", 
-                    "value": "bbq"
-                },
-                {
-                    "key": "leisure", 
-                    "value": "park"
-                },
-                {
-                    "key": "leisure", 
-                    "value": "picnic_table"
-                },
-                {
-                    "key": "tourism", 
-                    "value": "picnic_site"
-                }
-            ]
-        },
-        {
-            "category": "MuseumExhibition",
-            "opening_hours": "Tu-Su 10:00-18:00",
-            "duration_of_stay_minutes": 60,
-            "tags": [
-                {
-                    "key": "tourism", 
-                    "value": "gallery"
-                },
-                {
-                    "key": "tourism", 
-                    "value": "museum"
-                }
-            ]
-        },
-        {
-            "category": "Nature",
-            "opening_hours": "24/7",
-            "duration_of_stay_minutes": 60,
-            "tags": [
-                {
-                    "key": "water", 
-                    "value": "river"
-                },
-                {
-                    "key": "water", 
-                    "value": "lake"
-                },
-                {
-                    "key": "water", 
-                    "value": "lagoon"
-                },
-                {
-                    "key": "tourism", 
-                    "value": "viewpoint"
-                }
-            ]
-        },
-        {
-            "category": "Nightlife",
-            "opening_hours": "Mo-Sa 18:00-24:00",
-            "duration_of_stay_minutes": 60,
-            "tags": [
-                {
-                    "key": "amenity", 
-                    "value": "pub"
-                },
-                {
-                    "key": "amenity", 
-                    "value": "bar"
-                },
-                {
-                    "key": "amenity", 
-                    "value": "nightclub"
-                },
-                {
-                    "key": "amenity", 
-                    "value": "planetarium"
-                }
-            ]
-        },
-        {
-            "category": "Restaurants",
-            "opening_hours": "Mo-Su 11:30-14:00, 17:00-22:00 ",
-            "duration_of_stay_minutes": 60,
-            "tags": [
-                {
-                    "key": "shop", 
-                    "value": "coffee"
-                },
-                {
-                    "key": "shop", 
-                    "value": "ice_cream"
-                },
-                {
-                    "key": "amenity", 
-                    "value": "restaurant"
-                },
-                {
-                    "key": "amenity", 
-                    "value": "biergarten"
-                },
-                {
-                    "key": "amenity", 
-                    "value": "cafe"
-                },
-                {
-                    "key": "amenity", 
-                    "value": "fast_food"
-                },
-                {
-                    "key": "amenity", 
-                    "value": "food_court"
-                }
-            ]
-        },
-        {
-            "category": "Sightseeing",
-            "opening_hours": "Mo-Su 10:00-20:00",
-            "duration_of_stay_minutes": 60,
-            "tags": [
-                {
-                    "key": "building", 
-                    "value": "castle"
-                },
-                {
-                    "key": "historic", 
-                    "value": "theme_park"
-                },
-                {
-                    "key": "waterway", 
-                    "value": "waterfall"
-                },
-                {
-                    "key": "man_made", 
-                    "value": "communications_towerl"
-                },
-                {
-                    "key": "man_made", 
-                    "value": "cross"
-                },
-                {
-                    "key": "man_made", 
-                    "value": "obelisk"
-                },
-                {
-                    "key": "man_made", 
-                    "value": "watermill"
-                },
-                {
-                    "key": "man_made", 
-                    "value": "windmill"
-                },
-                {
-                    "key": "tourism", 
-                    "value": "attraction"
-                },
-                {
-                    "key": "tourism", 
-                    "value": "artwork"
-                },
-                {
-                    "key": "tourism", 
-                    "value": "yes"
-                }
-            ]
-        },
-        {
-            "category": "Shopping",
-            "opening_hours": "Mo-Su 10:00-20:00",
-            "duration_of_stay_minutes": 60,
-            "tags": [
-                {
-                    "key": "shop", 
-                    "value": "department_store"
-                },
-                {
-                    "key": "shop", 
-                    "value": "general"
-                },
-                {
-                    "key": "shop", 
-                    "value": "alcohol"
-                },{
-                    "key": "shop", 
-                    "value": "bakery"
-                },
-                {
-                    "key": "shop", 
-                    "value": "beverages"
-                },
-                {
-                    "key": "shop", 
-                    "value": "brewing_supplies"
-                }
-            ]
-        },
-        {
-            "category": "Animals",
-            "opening_hours": "Mo-Su 10:00-20:00",
-            "duration_of_stay_minutes": 60,
-            "tags": [
-                {
-                    "key": "tourism", 
-                    "value": "zoo"
-                },
-                {
-                    "key": "tourism", 
-                    "value": "aquarium"
-                }
-            ]
-        },
-        {
-            "category": "Other",
-            "opening_hours": "Mo-Su 10:00-20:00",
-            "duration_of_stay_minutes": 60,
-            "tags": [
                 {
                     "key": "sport", 
                     "value": "* ?"
@@ -402,6 +157,253 @@
                 {
                     "key": "leisure", 
                     "value": "sports_centre"
+                }
+            ]
+        },
+        {
+            "category": "Swimming",
+            "opening_hours": "Mo-Su 10:00-20:00",
+            "duration_of_stay_minutes": 60,
+            "tags": [
+                {
+                    "key": "leisure", 
+                    "value": "swimming_area"
+                },
+                {
+                    "key": "leisure", 
+                    "value": "swimming_pool"
+                },
+                {
+                    "key": "leisure", 
+                    "value": "water_park"
+                },
+                {
+                    "key": "sport", 
+                    "value": "swimming"
+                }
+            ]
+        },
+        {
+            "category": "PicnicBarbequeSpot",
+            "opening_hours": "24/7",
+            "duration_of_stay_minutes": 60,
+            "tags": [
+                {
+                    "key": "amenity", 
+                    "value": "bbq"
+                },
+                {
+                    "key": "leisure", 
+                    "value": "park"
+                },
+                {
+                    "key": "leisure", 
+                    "value": "picnic_table"
+                },
+                {
+                    "key": "tourism", 
+                    "value": "picnic_site"
+                }
+            ]
+        },
+        {
+            "category": "MuseumExhibition",
+            "opening_hours": "Tu-Su 10:00-18:00",
+            "duration_of_stay_minutes": 60,
+            "tags": [
+                {
+                    "key": "tourism", 
+                    "value": "gallery"
+                },
+                {
+                    "key": "tourism", 
+                    "value": "museum"
+                },
+                {
+                    "key": "amenity ", 
+                    "value": "planetarium"
+                }
+            ]
+        },
+        {
+            "category": "Nature",
+            "opening_hours": "24/7",
+            "duration_of_stay_minutes": 60,
+            "tags": [
+                {
+                    "key": "water", 
+                    "value": "river"
+                },
+                {
+                    "key": "water", 
+                    "value": "lake"
+                },
+                {
+                    "key": "water", 
+                    "value": "lagoon"
+                },
+                {
+                    "key": "tourism", 
+                    "value": "viewpoint"
+                }
+            ]
+        },
+        {
+            "category": "Nightlife",
+            "opening_hours": "Mo-Sa 18:00-24:00",
+            "duration_of_stay_minutes": 60,
+            "tags": [
+                {
+                    "key": "amenity", 
+                    "value": "pub"
+                },
+                {
+                    "key": "amenity", 
+                    "value": "bar"
+                },
+                {
+                    "key": "amenity", 
+                    "value": "nightclub"
+                }
+            ]
+        },
+        {
+            "category": "Restaurants",
+            "opening_hours": "Mo-Su 11:30-14:00, 17:00-22:00 ",
+            "duration_of_stay_minutes": 60,
+            "tags": [
+                {
+                    "key": "shop", 
+                    "value": "coffee"
+                },
+                {
+                    "key": "shop", 
+                    "value": "ice_cream"
+                },
+                {
+                    "key": "shop", 
+                    "value": "tea"
+                },
+                {
+                    "key": "shop", 
+                    "value": "bakery"
+                },
+                {
+                    "key": "amenity", 
+                    "value": "restaurant"
+                },
+                {
+                    "key": "amenity", 
+                    "value": "biergarten"
+                },
+                {
+                    "key": "amenity", 
+                    "value": "cafe"
+                },
+                {
+                    "key": "amenity", 
+                    "value": "fast_food"
+                },
+                {
+                    "key": "amenity", 
+                    "value": "food_court"
+                }
+            ]
+        },
+        {
+            "category": "Sightseeing",
+            "opening_hours": "Mo-Su 10:00-20:00",
+            "duration_of_stay_minutes": 60,
+            "tags": [
+                {
+                    "key": "historic", 
+                    "value": "building"
+                },
+                {
+                    "key": "historic", 
+                    "value": "castle"
+                },
+                {
+                    "key": "historic", 
+                    "value": "church"
+                },
+                {
+                    "key": "historic", 
+                    "value": "city_gate "
+                },
+                {
+                    "key": "historic", 
+                    "value": "monument"
+                },
+                {
+                    "key": "historic", 
+                    "value": "ruins"
+                },
+                {
+                    "key": "waterway", 
+                    "value": "waterfall"
+                },
+                {
+                    "key": "man_made", 
+                    "value": "communications_towerl"
+                },
+                {
+                    "key": "man_made", 
+                    "value": "cross"
+                },
+                {
+                    "key": "man_made", 
+                    "value": "obelisk"
+                },
+                {
+                    "key": "man_made", 
+                    "value": "watermill"
+                },
+                {
+                    "key": "man_made", 
+                    "value": "windmill"
+                },
+                {
+                    "key": "tourism", 
+                    "value": "attraction"
+                },
+                {
+                    "key": "tourism", 
+                    "value": "artwork"
+                }
+            ]
+        },
+        {
+            "category": "Shopping",
+            "opening_hours": "Mo-Su 10:00-20:00",
+            "duration_of_stay_minutes": 60,
+            "tags": [
+                {
+                    "key": "shop", 
+                    "value": "department_store"
+                },
+                {
+                    "key": "shop", 
+                    "value": "general"
+                },
+                {
+                    "key": "shop", 
+                    "value": "mall"
+                }
+            ]
+        },
+        {
+            "category": "Animals",
+            "opening_hours": "Mo-Su 10:00-20:00",
+            "duration_of_stay_minutes": 60,
+            "tags": [
+                {
+                    "key": "tourism", 
+                    "value": "zoo"
+                },
+                {
+                    "key": "tourism", 
+                    "value": "aquarium"
                 }
             ]
         }
