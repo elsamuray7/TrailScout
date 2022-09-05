@@ -30,6 +30,10 @@
             ngbTooltip="Click on Map to select startpoint first"
             [disableTooltip]="!!markerCoords"
             ></i>
-        </div>
+        <button class='btn btn-primary' id='modeToggle' (click)='this.toggleViewMode()'>
+          <div *ngIf='!this.isRouteModeActive()'><i class='bi-signpost'></i> Show Route</div>
+          <div *ngIf='this.isRouteModeActive()'><i class='bi-sliders'></i> Show Settings</div>
+        </button>
+    </div>
   <app-toast></app-toast>
 </div>

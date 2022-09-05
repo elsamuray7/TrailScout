@@ -6,6 +6,7 @@ import {Category} from "../../data/Category";
 import * as Icons from './icons';
 import { Sight } from 'src/app/data/Sight';
 import { RouteResponse } from 'src/app/services/route.service';
+import { ApplicationStateService } from '../../services/application-state.service';
 
 const iconRetinaUrl = 'assets/marker-icon-2x.png';
 const iconUrl = 'assets/marker-icon.png';
@@ -45,7 +46,18 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
   routeLayer: L.LayerGroup;
   routePoly?: L.Polyline;
 
-  constructor() {
+  constructor(private applicationStateService: ApplicationStateService) {
+    this.applicationStateService.routeModeChangedEvent.subscribe(isActive => {
+      if (isActive) {
+        //hide Start point, Radius and Settings
+        this.hideMarker();
+        this.hideCircle();
+        this.hideAllSights();
+      } else {
+        this.showStartPoint();
+        this.showAllActiveSights();
+      }
+    })
   }
   ngOnChanges(changes: SimpleChanges): void {
     this.addCircle(this.marker?.getLatLng()!);
@@ -76,12 +88,8 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
     });
     this.map.addControl(searchControl);
 
-    if (this.startPoint) {
-      this.marker = new L.Marker(this.startPoint);
-      this.marker.addTo(this.map);
-      this.addCircle(this.startPoint);
-      this.markerLocation.emit(this.startPoint)
-    }
+    this.showStartPoint();
+    this.markerLocation.emit(this.startPoint);
   }
 
   loadMap() {
@@ -101,23 +109,39 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
 
   async onClick(event: any, map: L.Map) {
     const latlng = event.latlng as L.LatLng;
-    if (this.marker) {
-      this.marker.removeFrom(map);
-    }
+    this.hideMarker();
     this.marker = new L.Marker(latlng);
     this.marker.addTo(map);
     this.addCircle(latlng);
     this.markerLocation.emit(latlng)
   }
 
+  showStartPoint() {
+    if (this.startPoint) {
+      this.marker = new L.Marker(this.startPoint);
+      this.marker.addTo(this.map);
+      this.addCircle(this.startPoint);
+    }
+  }
+
   addCircle(latlng: L.LatLng) {
     if (this.circleRadius || this.circleRadius === 0) {
-      if (this.circle) {
-        this.circle.removeFrom(this.map);
-      }
+      this.hideCircle();
       if (latlng && this.circleRadius > 0) {
         this.circle = L.circle(latlng, this.circleRadius * 1000).addTo(this.map);
       }
+    }
+  }
+
+  hideCircle() {
+    if (this.circle) {
+      this.circle.removeFrom(this.map);
+    }
+  }
+
+  hideMarker() {
+    if (this.marker) {
+      this.marker.removeFrom(this.map);
     }
   }
 
@@ -140,6 +164,19 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
   hideSights(category: Category) {
     if (this.activeLayers.has(category.name)) {
       this.map.removeLayer(this.activeLayers.get(category.name));
+      this.activeLayers.delete(category.name);
+    }
+  }
+
+  hideAllSights() {
+    for (let category of this.activeLayers.values()) {
+      this.map.removeLayer(category);
+    }
+  }
+
+  showAllActiveSights() {
+    for (let category of this.activeLayers.values()) {
+      this.map.addLayer(category);
     }
   }
 

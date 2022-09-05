@@ -24,6 +24,7 @@ export class MainPageComponent implements OnInit, OnDestroy {
   marker = false;
   markerCoords?: L.LatLng;
   isCollapsed = true;
+  routeModeActive = false;
 
   mobile = false;
 
@@ -118,5 +119,13 @@ export class MainPageComponent implements OnInit, OnDestroy {
 
   showSight(sight: Sight) {
     this.mapContainer.showSight(sight);
+  }
+
+  toggleViewMode() {
+    this.applicationStateService.toggleRouteMode();
+  }
+
+  isRouteModeActive(): boolean {
+    return this.applicationStateService.isRouteModeActive();
   }
 }
