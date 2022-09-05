@@ -4,8 +4,7 @@ import * as L from 'leaflet';
 import { BlockUI, NgBlockUI } from 'ng-block-ui';
 import {Subscription} from 'rxjs';
 import { ApplicationStateService } from 'src/app/services/application-state.service';
-import { RouteResponse, RouteService } from 'src/app/services/route.service';
-import { ToastService } from 'src/app/services/toast.service';
+import { RouteService } from 'src/app/services/route.service';
 import { MapContainerComponent } from '../../components/map-container/map-container.component';
 import {MapService} from "../../services/map.service";
 import {Sight} from "../../data/Sight";
@@ -40,14 +39,13 @@ export class MainPageComponent implements OnInit, OnDestroy {
     private sightService: SightsServiceService,
     private offcanvasService: NgbOffcanvas,
     private applicationStateService: ApplicationStateService,
-    private routeService: RouteService,
-    private toastService: ToastService) {
+    private routeService: RouteService) {
 
     this.mobile =  applicationStateService.getIsMobileResolution();
 
-    this.sub = this.routeService.routeUpdated.subscribe(route => {
-      this.showRoute(route);
+    this.sub = this.routeService.routeUpdated.subscribe(_ => {
       this.blockUIMap.stop();
+      this.toggleViewMode();
     });
     this.blockSub = this.routeService.startRouteCall.subscribe(() => {
       this.blockUIMap.start('Loading route...');
@@ -108,15 +106,6 @@ export class MainPageComponent implements OnInit, OnDestroy {
     })
   }
 
-  async showRoute(route: RouteResponse) {
-    if (route.error && !route.route) {
-      this.toastService.showDanger(route.error.message ?? 'Something went wrong!');
-      return;
-    }
-    this.mapContainer.drawRoute(route);
-    this.mapContainer.drawSightsOnRoute(route);
-  }
-
   showSight(sight: Sight) {
     this.mapContainer.showSight(sight);
   }
@@ -127,5 +116,9 @@ export class MainPageComponent implements OnInit, OnDestroy {
 
   isRouteModeActive(): boolean {
     return this.applicationStateService.isRouteModeActive();
+  }
+
+  routeAvailable(): boolean {
+    return !!this.routeService.getRoute();
   }
 }

@@ -5,7 +5,7 @@ import { LatLngExpression } from 'leaflet';
 import {Category} from "../../data/Category";
 import * as Icons from './icons';
 import { Sight } from 'src/app/data/Sight';
-import { RouteResponse } from 'src/app/services/route.service';
+import { RouteResponse, RouteService } from 'src/app/services/route.service';
 import { ApplicationStateService } from '../../services/application-state.service';
 
 const iconRetinaUrl = 'assets/marker-icon-2x.png';
@@ -46,16 +46,27 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
   routeLayer: L.LayerGroup;
   routePoly?: L.Polyline;
 
-  constructor(private applicationStateService: ApplicationStateService) {
+  constructor(private applicationStateService: ApplicationStateService,
+              private routeService: RouteService) {
     this.applicationStateService.routeModeChangedEvent.subscribe(isActive => {
       if (isActive) {
         //hide Start point, Radius and Settings
-        this.hideMarker();
+        //this.hideMarker();
         this.hideCircle();
         this.hideAllSights();
+        const route = this.routeService.getRoute();
+        if (route != null) {
+          this.drawRoute(route);
+          this.drawSightsOnRoute(route);
+        }
       } else {
-        this.showStartPoint();
+        //this.showStartPoint();
+        if(this.startPoint) {
+          this.addCircle(this.startPoint);
+        }
         this.showAllActiveSights();
+        this.hideRoute();
+        this.hideSightsOnRoute();
       }
     })
   }
@@ -203,8 +214,9 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
         return iconDefault;
     }
   }
+
   drawRoute(_route: RouteResponse) {
-    this.hideRoute()
+    this.hideRoute();
     this.routeLayer = new L.LayerGroup<any>();
     var r = 55;
     var g = 255;

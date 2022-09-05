@@ -54,7 +54,7 @@ export class RouteService {
     });
   }
 
-  public getRoute() {
-    return this.route;
+  public getRoute(): RouteResponse | null{
+    return this.route ? this.route : null;
   }
 }
