@@ -19,7 +19,7 @@ use crate::utils::dijkstra;
 #[derive(EnumString, Deserialize, Serialize, PartialEq, Eq, Debug, Copy, Clone)]
 #[serde(rename_all = "PascalCase")]
 pub enum Category {
-    ThemePark,
+    Activities,
     Swimming,
     PicnicBarbequeSpot,
     MuseumExhibition,
@@ -28,8 +28,7 @@ pub enum Category {
     Restaurants,
     Sightseeing,
     Shopping,
-    Animals,
-    Other
+    Animals
 }
 
 #[derive(strum_macros::Display, EnumString, Deserialize, Serialize, PartialEq, Debug, Copy, Clone)]
