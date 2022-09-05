@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::time::Instant;
 use geoutils::Location;
 use itertools::Itertools;
-use log::{error, info, trace};
+use log::{info, trace};
 use osmpbf::{BlobReader, BlobType, Element, Way};
 use crate::data;
 use crate::data::graph::{Category, EdgeType, get_nearest_node, INode};

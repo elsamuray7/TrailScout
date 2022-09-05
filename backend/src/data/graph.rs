@@ -10,7 +10,6 @@ use geoutils::{Distance, Location};
 use itertools::Itertools;
 use log::{debug, trace, info};
 use serde::{Serialize, Deserialize};
-use serde_enum_str::{Deserialize_enum_str, Serialize_enum_str};
 use opening_hours::OpeningHours;
 use crate::data;
 use crate::data::SightsConfig;
