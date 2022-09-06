@@ -3,7 +3,7 @@ use std::rc::Rc;
 use chrono::{DateTime, Utc};
 use crate::data::graph::{Category, Graph, Sight};
 use itertools::Itertools;
-use crate::algorithm::{_Algorithm, AlgorithmError, Area, Route, RouteSector, ScoreMap, Sector, UserPreferences, USER_PREF_MAX, compute_wait_and_service_time};
+use crate::algorithm::{_Algorithm, AlgorithmError, Area, Route, RouteSector, ScoreMap, Sector, UserPreferences, USER_PREF_MAX, compute_wait_and_service_time, EndSector};
 use crate::utils::dijkstra;
 
 /// Greedy internal user preference to score mapping
@@ -152,7 +152,7 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
                      metric2.total_cmp(&metric1)
                  })
                  .collect_vec();
-             log::trace!("Sorted sights by greedy metric");
+             log::trace!("Sorted {} sights by greedy metric", sorted_dist_vec.len());
 
              // for each sight node, check whether sight can be included in route without violating time budget
              let len_route_before = route.len();
@@ -177,10 +177,9 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
                              // add sector containing sight and all intermediate nodes to route
                              let path = result_to_sights.build_path(self.graph,
                                                                     sight.node_id);
-                             let sector = Sector::with_sight(
-                                 sight_travel_time as i64,
-                                 wait_time, service_time,
-                                 sight, path);
+                             let sector = Sector::new(
+                                 &self.start_time, total_time_budget - time_budget_left,
+                                 sight_travel_time, wait_time, service_time, sight, path);
                              route.push(if curr_node_id == self.root_id {
                                  RouteSector::Start(sector)
                              } else {
@@ -211,7 +210,9 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
                  let mut path = result_to_root.consume_path();
                  // Reverse because path is in reverse direction
                  path.reverse();
-                 route.push(RouteSector::End(Sector::new(secs_to_root, path)));
+                 route.push(RouteSector::End(EndSector::new(
+                     &self.start_time, total_time_budget - time_budget_left,
+                     secs_to_root, path)));
                  break;
              }
          }
@@ -228,8 +229,8 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
             .map(|route_sec| {
                 match route_sec {
                     // Start and intermediate sectors contain a sight per definition
-                    RouteSector::Start(sector) => self.scores[&sector.sight.unwrap().node_id].0,
-                    RouteSector::Intermediate(sector) => self.scores[&sector.sight.unwrap().node_id].0,
+                    RouteSector::Start(sector) => self.scores[&sector.sight.node_id].0,
+                    RouteSector::Intermediate(sector) => self.scores[&sector.sight.node_id].0,
                     _ => 0,
                 }
             })
