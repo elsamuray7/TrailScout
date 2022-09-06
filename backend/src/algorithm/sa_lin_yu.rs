@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 use itertools::Itertools;
 use pathfinding::prelude::*;
 use rand::prelude::*;
-use crate::algorithm::{_Algorithm, AlgorithmError, Area, compute_wait_and_service_time, Route, RouteSector, ScoreMap, Sector, USER_PREF_MAX, UserPreferences};
+use crate::algorithm::{_Algorithm, AlgorithmError, Area, compute_wait_and_service_time, EndSector, Route, RouteSector, ScoreMap, Sector, USER_PREF_MAX, UserPreferences};
 use crate::data::graph::{Category, Graph, Sight};
 use std::time::Instant;
 
@@ -300,9 +300,9 @@ impl<'a> SimAnnealingLinYu<'a> {
                     if left_time_budget >= (sight_total_time + root_travel_time) {
                         let path = build_path(&sight.node_id, curr_distance_map)
                             .into_iter().map(|node_id| self.graph.get_node(node_id)).collect_vec();
-                        let sector =
-                            Sector::with_sight(sight_travel_time, wait_time, service_time,
-                                               sight, path);
+                        let sector = Sector::new(
+                            &self.start_time, total_time_budget - left_time_budget,
+                            sight_travel_time, wait_time, service_time, sight, path);
                         if route.is_empty() {
                             route.push(RouteSector::Start(sector));
                         } else {
@@ -323,7 +323,9 @@ impl<'a> SimAnnealingLinYu<'a> {
         let root_travel_time = (root_travel_dist as f64 / self.walking_speed_mps) as i64 + 1;
         let path = build_path(&self.root_id, curr_distance_map)
             .into_iter().map(|node_id| self.graph.get_node(node_id)).collect_vec();
-        let sector = Sector::new(root_travel_time, path);
+        let sector = EndSector::new(
+            &self.start_time, total_time_budget - left_time_budget,
+            root_travel_time, path);
         route.push(RouteSector::End(sector));
 
         log::debug!("Built walking route from best found solution");
@@ -530,7 +532,7 @@ mod test {
         let route = algo.compute_route()
             .expect("Error during route computation");
         let check_sector = |sector: Sector| {
-            let sight = sector.sight.unwrap();
+            let sight = sector.sight;
             let (_, category) = algo.scores[&sight.node_id];
             assert_eq!(category, sight.category,
                        "Sight in route associated with category with smaller preference");
