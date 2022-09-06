@@ -485,6 +485,7 @@ mod test {
     use once_cell::sync::Lazy;
     use crate::algorithm::{_Algorithm, Area, RouteSector, Sector, SightCategoryPref, UserPreferences};
     use crate::algorithm::sa_lin_yu::{SimAnnealingLinYu, USER_PREF_TO_SCORE};
+    use crate::algorithm::test::{END_TIME, START_TIME, WALKING_SPEED_MPS};
     use crate::data::graph::{Category, Graph};
     use crate::init_logging;
     use crate::utils::test_setup;
@@ -495,15 +496,15 @@ mod test {
 
         let graph: &Lazy<Graph> = &test_setup::GRAPH;
 
-        let start_time = DateTime::parse_from_rfc3339("2022-07-01T10:00:00+01:00")
-            .unwrap().with_timezone(&Utc);
-        let end_time = DateTime::parse_from_rfc3339("2022-07-01T13:00:00+01:00")
-            .unwrap().with_timezone(&Utc);
+        let start_time = DateTime::parse_from_rfc3339(START_TIME).unwrap()
+            .with_timezone(&Utc);
+        let end_time = DateTime::parse_from_rfc3339(END_TIME).unwrap()
+            .with_timezone(&Utc);
         let algo = SimAnnealingLinYu::new(
             &graph,
             start_time,
             end_time,
-            7.0 / 3.6,
+            WALKING_SPEED_MPS,
             Area {
                 lat: 53.064232700000005,
                 lon: 8.793089,
@@ -515,26 +516,27 @@ mod test {
                 sights: vec![],
             }).unwrap();
 
-        let last = algo.sights.first().unwrap();
+        let mut last = algo.sights.first().unwrap();
         for sight in &algo.sights[1..algo.sights.len()] {
             if sight.node_id == last.node_id
                 && (sight.category == Category::Nightlife || sight.category == Category::Activities) {
                 let (score, category) = algo.scores[&sight.node_id];
-                assert_eq!(score, USER_PREF_TO_SCORE[5], "Sight got smaller score");
+                assert_eq!(score, USER_PREF_TO_SCORE[5], "Sight {} got smaller score", sight.node_id);
                 assert_eq!(category, Category::Activities,
-                           "Sight associated with category with smaller preference")
+                           "Sight {} associated with category with smaller preference", sight.node_id);
+                last = sight;
             }
         }
 
         let route = algo.compute_route()
             .expect("Error during route computation");
-        let check_sector = |sector: Sector| {
+        let check_sector = |sector: &Sector| {
             let sight = sector.sight;
             let (_, category) = algo.scores[&sight.node_id];
             assert_eq!(category, sight.category,
-                       "Sight in route associated with category with smaller preference");
+                       "Sight {} in route associated with category with smaller preference", sight.node_id);
         };
-        for route_sector in route {
+        for route_sector in &route {
             match route_sector {
                 RouteSector::Start(sector) => check_sector(sector),
                 RouteSector::Intermediate(sector) => check_sector(sector),

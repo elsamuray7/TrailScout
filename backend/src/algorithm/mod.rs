@@ -436,12 +436,12 @@ mod test {
     use crate::utils::test_setup;
 
     /// Start time of trip or hike used for testing
-    const START_TIME: &str = "2022-07-01T10:00:00+01:00";
+    pub const START_TIME: &str = "2022-07-01T10:00:00+01:00";
     /// End time of trip or hike used for testing
-    const END_TIME: &str = "2022-07-01T16:00:00+01:00";
+    pub const END_TIME: &str = "2022-07-01T16:00:00+01:00";
 
     /// https://www.youtube.com/watch?v=ExElCQwN3T8
-    const WALKING_SPEED_MPS: f64 = 5.0 / 3.6;
+    pub const WALKING_SPEED_MPS: f64 = 5.0 / 3.6;
 
     /// Baba Hotel, ich schwör!!
     const RADISSON_BLU_HOTEL: Area = Area {
