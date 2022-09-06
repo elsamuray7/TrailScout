@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 use chrono::{DateTime, Utc};
-use crate::data::graph::{Category, Graph, Sight};
+use crate::data::graph::{Graph, Sight};
 use itertools::Itertools;
 use crate::algorithm::{_Algorithm, AlgorithmError, Area, Route, RouteSector, ScoreMap, Sector, UserPreferences, USER_PREF_MAX, compute_wait_and_service_time, EndSector};
 use crate::utils::dijkstra;
@@ -11,22 +11,20 @@ const USER_PREF_TO_SCORE: [usize; USER_PREF_MAX + 1] = [0, 1, 2, 4, 8, 16];
 
 /// Compute scores for tourist attractions based on user preferences for categories or specific
 /// tourist attractions, respectively
-fn compute_scores(sights: &Vec<&Sight>, user_prefs: UserPreferences) -> Result<ScoreMap, AlgorithmError> {
+fn compute_scores(sights: &Vec<&Sight>, user_prefs: UserPreferences) -> ScoreMap {
     let mut scores: ScoreMap = sights.iter()
         .map(|sight| (sight.node_id, (0_usize, sight.category))).collect();
 
-    for category in &user_prefs.categories {
-        let category_score = USER_PREF_TO_SCORE[category.get_valid_pref()];
-        let category_enum = category.name.parse::<Category>().ok()
-            .ok_or_else(|| AlgorithmError::UnknownCategory { unknown_name: category.name.clone() })?;
+    for category_pref in &user_prefs.categories {
+        let category_score = USER_PREF_TO_SCORE[category_pref.get_valid_pref()];
         sights.iter()
-            .filter(|sight| sight.category == category_enum)
+            .filter(|sight| sight.category == category_pref.category)
             .for_each(|sight| {
                 let (prev_score, prev_category) = scores.get_mut(
                     &sight.node_id).unwrap();
                 if category_score > *prev_score {
                     *prev_score = category_score;
-                    *prev_category = category_enum;
+                    *prev_category = category_pref.category;
                 }
             });
     }
@@ -46,7 +44,7 @@ fn compute_scores(sights: &Vec<&Sight>, user_prefs: UserPreferences) -> Result<S
 
     log::trace!("Computed scores: {:?}", &scores);
 
-    Ok(scores)
+    scores
 }
 
 /// Greedy implementation of the `Algorithm` trait.
@@ -91,7 +89,7 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
         }
 
         let root_id = graph.get_nearest_node(area.lat, area.lon);
-        let scores = compute_scores(&sights, user_prefs)?;
+        let scores = compute_scores(&sights, user_prefs);
 
         Ok(Self {
             graph,
@@ -157,8 +155,11 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
              // for each sight node, check whether sight can be included in route without violating time budget
              let len_route_before = route.len();
              for (sight, dist) in sorted_dist_vec {
+                 let sight_travel_time = (dist as f64 / self.walking_speed_mps) as i64 + 1;
+
+                 let used_time_budget = total_time_budget - time_budget_left + sight_travel_time;
                  let (wait_time, service_time) = match compute_wait_and_service_time(
-                     &self.start_time, sight, total_time_budget - time_budget_left) {
+                     &self.start_time, sight, used_time_budget) {
                      Some(result) => result,
                      None => continue
                  };
@@ -166,7 +167,6 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
                  // Works because graph is undirected
                  match result_from_root.dist_to(sight.node_id) {
                      Some(dist_to_root) => {
-                         let sight_travel_time = (dist as f64 / self.walking_speed_mps) as i64 + 1;
                          let sight_total_time = sight_travel_time + wait_time + service_time;
                          let root_travel_time = (dist_to_root as f64 / self.walking_speed_mps) as i64 + 1;
 
