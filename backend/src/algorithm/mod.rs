@@ -2,7 +2,7 @@ pub mod greedy;
 pub mod sa_lin_yu;
 
 use std::collections::HashMap;
-use chrono::{DateTime, Duration, NaiveDateTime, SecondsFormat, Utc};
+use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use crate::data::graph::{Category, Graph, Node, Sight};
 use serde::{Serialize, Deserialize, Serializer};
 use derive_more::{Display, Error};
@@ -22,17 +22,46 @@ pub struct Area {
     radius: f64,
 }
 
+impl Area {
+    /// Creates a new area instance from given coordinates and radius
+    ///
+    /// # Arguments
+    /// * `lat` - The latitude coordinate
+    /// * `lon` - The longitude coordinate
+    /// * `radius` - The radius in meters
+    pub fn from_coords_and_radius(lat: f64, lon: f64, radius: f64) -> Self {
+        Self {
+            lat,
+            lon,
+            radius,
+        }
+    }
+}
+
 /// Maximum value for user sight preferences
 const USER_PREF_MAX: usize = 5;
 
 /// User preference for a sight category
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct SightCategoryPref {
-    name: String,
+    category: Category,
     pref: usize,
 }
 
 impl SightCategoryPref {
+    /// Creates a new sight category preference
+    ///
+    /// # Arguments
+    /// * `category` - The sight category
+    /// * `pref` - The preference value between 1 (very low) and 5 (very high). 0 means
+    /// that the category should be ignored.
+    pub fn new(category: Category, pref: usize) -> Self {
+        Self {
+            category,
+            pref,
+        }
+    }
+
     /// Returns a valid preference value for this sight category
     fn get_valid_pref(&self) -> usize {
         self.pref.min(USER_PREF_MAX)
@@ -40,14 +69,26 @@ impl SightCategoryPref {
 }
 
 /// User preference for a specific sight
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct SightPref {
     id: usize,
-    category: String, // TODO never used
     pref: usize,
 }
 
 impl SightPref {
+    /// Creates a new sight preference
+    ///
+    /// # Arguments
+    /// * `id` - The sight node id
+    /// * `pref` - The preference value between 1 (very low) and 5 (very high). 0 means
+    /// that this particular sight should be ignored.
+    pub fn new(id: usize, pref: usize) -> Self {
+        Self {
+            id,
+            pref,
+        }
+    }
+
     /// Returns a valid preference value for this sight
     fn get_valid_pref(&self) -> usize {
         self.pref.min(USER_PREF_MAX)
@@ -59,6 +100,20 @@ impl SightPref {
 pub struct UserPreferences {
     categories: Vec<SightCategoryPref>,
     sights: Vec<SightPref>,
+}
+
+impl UserPreferences {
+    /// Creates new user preferences from given category and sight preferences
+    ///
+    /// # Arguments
+    /// * `category_prefs` - The sight category preferences
+    /// * `sight_prefs` - The sight preferences
+    pub fn from_category_and_sight_prefs(category_prefs: Vec<SightCategoryPref>, sight_prefs: Vec<SightPref>) -> Self {
+        Self {
+            categories: category_prefs,
+            sights: sight_prefs,
+        }
+    }
 }
 
 /// A sector within a route
@@ -208,6 +263,17 @@ pub enum Algorithm<'a> {
 }
 
 impl<'a> Algorithm<'a> {
+    /// List of available algorithms
+    const AVAILABLE_ALGORITHMS: [&'static str; 2] = [
+        GreedyAlgorithm::ALGORITHM_NAME,
+        SimAnnealingLinYu::ALGORITHM_NAME
+    ];
+
+    /// Returns a list of available algorithms specified by their respective names
+    pub fn available_algorithms() -> &'static [&'static str] {
+        &Self::AVAILABLE_ALGORITHMS
+    }
+
     /// Create a new algorithm instance with the provided `algorithm_name`
     ///
     /// # Arguments
@@ -260,7 +326,7 @@ fn compute_wait_and_service_time(start_time: &DateTime<Utc>, sight: &Sight, used
     let time_window = sight.opening_hours();
 
     // Determine current time (after given used time budget)
-    let curr_time: NaiveDateTime = (*start_time + Duration::seconds(used_time_budget)).naive_utc();
+    let curr_time = start_time.naive_utc() + Duration::seconds(used_time_budget);
 
     // Determine the sights current open state
     // TODO handle DateLimitExceeded error properly
@@ -277,40 +343,42 @@ fn compute_wait_and_service_time(start_time: &DateTime<Utc>, sight: &Sight, used
     // Determine wait and service time based on the sights current open state
     match curr_state {
         RuleKind::Open | RuleKind::Unknown => {
-            match time_window.next_change(curr_time) {
-                Ok(close_time) => {
-                    let service_time = if !time_window.is_closed(close_time) {
-                        // log::trace!("Unknown time window change at {close_time}: {}",
-                        //     &sight.opening_hours);
-                        sight.duration_of_stay_secs()
-                    } else {
-                        compute_service_time(close_time)
-                    };
-                    Some((0, service_time))
+            let mut next_time = curr_time;
+            loop {
+                match time_window.next_change(next_time) {
+                    Ok(close_time) => {
+                        if time_window.is_closed(close_time) {
+                            break Some((0, compute_service_time(close_time)));
+                        }
+                        next_time = close_time;
+                    }
+                    _ => break Some((0, sight.duration_of_stay_secs()))
+                };
+                let diff = next_time.signed_duration_since(curr_time).num_seconds();
+                if diff >= sight.duration_of_stay_secs() {
+                    break Some((0, sight.duration_of_stay_secs()));
                 }
-                _ => Some((0, sight.duration_of_stay_secs()))
             }
         }
         RuleKind::Closed => {
             match time_window.next_change(curr_time) {
                 Ok(open_time) => {
-                    // if !time_window.is_open(open_time) {
-                    //     log::trace!("Unknown time window change at {open_time}: {}",
-                    //         &sight.opening_hours);
-                    // }
                     let wait_time = open_time.signed_duration_since(curr_time).num_seconds();
-                    match time_window.next_change(open_time) {
-                        Ok(close_time) => {
-                            let service_time = if !time_window.is_closed(close_time) {
-                                // log::trace!("Unknown time window change at {close_time}: {}",
-                                //     &sight.opening_hours);
-                                sight.duration_of_stay_secs()
-                            } else {
-                                compute_service_time(close_time)
-                            };
-                            Some((wait_time, service_time))
+                    let mut next_time = open_time;
+                    loop {
+                        match time_window.next_change(next_time) {
+                            Ok(close_time) => {
+                                if time_window.is_closed(close_time) {
+                                    break Some((wait_time, compute_service_time(close_time)));
+                                }
+                                next_time = close_time;
+                            }
+                            _ => break Some((wait_time, sight.duration_of_stay_secs()))
+                        };
+                        let diff = next_time.signed_duration_since(curr_time).num_seconds();
+                        if diff >= sight.duration_of_stay_secs() {
+                            break Some((wait_time, sight.duration_of_stay_secs()));
                         }
-                        _ => Some((wait_time, sight.duration_of_stay_secs()))
                     }
                 }
                 _ => {
@@ -358,70 +426,136 @@ pub enum AlgorithmError {
 
 #[cfg(test)]
 mod test {
-    use chrono::{DateTime, Utc};
-    use crate::algorithm::{_Algorithm, Area, RouteSector, SightCategoryPref, UserPreferences};
-    use crate::algorithm::greedy::GreedyAlgorithm;
+    use chrono::{DateTime, Duration, Utc};
+    use itertools::Itertools;
+    use once_cell::sync::Lazy;
+    use opening_hours_syntax::rules::RuleKind;
+    use crate::algorithm::{Algorithm, Area, Route, RouteSector, Sector, SightCategoryPref, UserPreferences};
     use crate::data::graph::Category;
     use crate::init_logging;
     use crate::utils::test_setup;
+
+    /// Start time of trip or hike used for testing
+    const START_TIME: &str = "2022-07-01T10:00:00+01:00";
+    /// End time of trip or hike used for testing
+    const END_TIME: &str = "2022-07-01T16:00:00+01:00";
+
+    /// https://www.youtube.com/watch?v=ExElCQwN3T8
+    const WALKING_SPEED_MPS: f64 = 5.0 / 3.6;
 
     /// Baba Hotel, ich schwör!!
     const RADISSON_BLU_HOTEL: Area = Area {
         lat: 53.074448,
         lon: 8.805105,
-        radius: 1000.0,
+        radius: 300.0,
     };
 
-    #[test]
-    fn test_greedy() {
-        init_logging();
+    /// User category preferences used for testing
+    const CATEGORY_PREFS: [SightCategoryPref; 3] = [
+        SightCategoryPref { category: Category::Restaurants, pref: 2 },
+        SightCategoryPref { category: Category::Sightseeing, pref: 5 },
+        SightCategoryPref { category: Category::Nightlife, pref: 4 }
+    ];
 
-        let graph = &test_setup::GRAPH;
-
-        let start_time = DateTime::parse_from_rfc3339("2022-07-01T10:00:00+01:00")
-            .unwrap().with_timezone(&Utc);
-        let end_time = DateTime::parse_from_rfc3339("2022-07-01T13:00:00+01:00")
-            .unwrap().with_timezone(&Utc);
-        let algo = GreedyAlgorithm::new(
-            &graph,
-            start_time,
-            end_time,
-            7.0 / 3.6,
-            RADISSON_BLU_HOTEL,
-            UserPreferences {
-                categories: vec![SightCategoryPref { name: "Restaurants".to_string(), pref: 3 },
-                                 SightCategoryPref { name: "Sightseeing".to_string(), pref: 5 },
-                                 SightCategoryPref { name: "Nightlife".to_string(), pref: 4 }],
+    /// Lazily initialized vector with algorithm instances used for testing
+    static ALGORITHMS: Lazy<Vec<Algorithm>> = Lazy::new(|| {
+        Algorithm::available_algorithms().iter().map(|&algo_name| {
+            let start_time = DateTime::parse_from_rfc3339(START_TIME).unwrap()
+                .with_timezone(&Utc);
+            let end_time = DateTime::parse_from_rfc3339(END_TIME).unwrap()
+                .with_timezone(&Utc);
+            let user_prefs = UserPreferences {
+                categories: CATEGORY_PREFS.to_vec(),
                 sights: vec![],
-            }).unwrap();
-        let route = algo.compute_route()
-            .expect("Error during route computation");
+            };
+            Algorithm::from_name(
+                algo_name, &test_setup::GRAPH, start_time, end_time,
+                WALKING_SPEED_MPS, RADISSON_BLU_HOTEL, user_prefs
+            ).unwrap()
+        }).collect_vec()
+    });
 
-        // Route should not be empty
-        assert!(route.len() > 0, "Route is empty");
+    /// Run given test with each algorithm instance in `ALGORITHMS`
+    fn run_test_with_each_algorithm<T>(test: T) where T: Fn(&Algorithm) {
+        init_logging();
+        ALGORITHMS.iter().for_each(|algo| test(algo));
+    }
 
-        // Route should only contain sectors that include sights with categories restaurant,
-        // sightseeing or nightlife
-        let invalid_category = |category: &Category| {
-            *category != Category::Restaurants && *category != Category::Sightseeing &&
-                *category != Category::Nightlife
+    /// Compute a walking route with given algorithm and `panic` if the computed route is empty
+    fn compute_route_with_empty_check<'a>(algo: &'a Algorithm) -> Route<'a> {
+        let route = algo.compute_route().expect("Error during route computation");
+        if route.is_empty() {
+            panic!("Route empty");
+        }
+        route
+    }
+
+    #[test]
+    fn test_route_contains_only_sights_with_category_pref() {
+        let categories_with_prefs = CATEGORY_PREFS.iter()
+            .map(|category_pref| &category_pref.category).collect_vec();
+        let sector_ok = |sector: &Sector| {
+            assert!(categories_with_prefs.contains(&&sector.sight.category),
+                    "Route contains sight {} with category {:?}, which is not in user preferences",
+                    sector.sight.node_id, sector.sight.category.to_string());
         };
-        let sector = route.iter().find(|&sector| match sector {
-            RouteSector::Start(sector) => invalid_category(&sector.sight.category),
-            RouteSector::Intermediate(sector) => invalid_category(&sector.sight.category),
-            _ => false,
+        run_test_with_each_algorithm(|algo| {
+            let route = compute_route_with_empty_check(algo);
+            route.iter().for_each(|route_sector| match route_sector {
+                RouteSector::Start(sector) => sector_ok(sector),
+                RouteSector::Intermediate(sector) => sector_ok(sector),
+                _ => (), // End sector has no target sight
+            });
         });
-        assert!(sector.is_none(), "Route includes sight with category not in user preferences");
+    }
 
-        // The number of seconds between the time of arrival at the start sector and end sector
-        // should not exceed the available time budget
-        let route_end_time = match &route.last().unwrap() {
-            RouteSector::End(end_sector) => end_sector.time_of_arrival,
-            _ => panic!("Last sector must be end sector")
+    #[test]
+    fn test_route_travel_time_within_time_budget() {
+        run_test_with_each_algorithm(|algo| {
+            let start_time = DateTime::parse_from_rfc3339(START_TIME).unwrap()
+                .with_timezone(&Utc);
+            let end_time = DateTime::parse_from_rfc3339(END_TIME).unwrap()
+                .with_timezone(&Utc);
+
+            let route = compute_route_with_empty_check(algo);
+            let route_end_time = match &route.last().unwrap() {
+                RouteSector::End(end_sector) => end_sector.time_of_arrival,
+                _ => panic!("Last sector must be end sector")
+            };
+            let route_travel_time = route_end_time.signed_duration_since(start_time)
+                .num_seconds();
+
+            let avail_time_budget = end_time.signed_duration_since(start_time).num_seconds();
+            assert!(route_travel_time <= avail_time_budget, "Route travel time exceeds available budget");
+        });
+    }
+
+    #[test]
+    fn test_sights_on_route_within_opening_time() {
+        let sector_ok = |sector: &Sector| {
+            let service_start_time = sector.service_start_time.naive_utc();
+            let service_end_time = sector.service_end_time.naive_utc();
+            let sight_opening_hours = sector.sight.opening_hours();
+            let state_at_start = sight_opening_hours.state(
+                service_start_time).unwrap();
+            let state_at_end = sight_opening_hours.state(
+                service_end_time - Duration::seconds(1)).unwrap();
+            assert!(matches!(state_at_start, RuleKind::Open | RuleKind::Unknown),
+                    "Sight is not open at service start time {}: current state: {:?}, opening hours: {}",
+                    sector.service_start_time.to_rfc3339(), state_at_start, &sector.sight.opening_hours);
+            assert!(matches!(state_at_end, RuleKind::Open | RuleKind::Unknown),
+                    "Sight is not open before service end time {}: current state: {:?}, opening hours: {}",
+                    sector.service_end_time.to_rfc3339(), state_at_end, &sector.sight.opening_hours);
         };
-        let route_time_budget = route_end_time.signed_duration_since(start_time)
-            .num_seconds();
-        let avail_time_budget = end_time.signed_duration_since(start_time).num_seconds();
-        assert!(route_time_budget <= avail_time_budget, "Route time budget exceeds available budget");
+        run_test_with_each_algorithm(|algo| {
+            let route = compute_route_with_empty_check(algo);
+            for route_sector in &route {
+                match route_sector {
+                    RouteSector::Start(sector) => sector_ok(sector),
+                    RouteSector::Intermediate(sector) => sector_ok(sector),
+                    _ => () // End sector has no target sight
+                }
+            }
+        });
     }
 }
