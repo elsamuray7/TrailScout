@@ -2,10 +2,11 @@ pub mod greedy;
 pub mod sa_lin_yu;
 
 use std::collections::HashMap;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, NaiveDateTime, SecondsFormat, Utc};
 use crate::data::graph::{Category, Graph, Node, Sight};
-use serde::{Serialize, Deserialize};
+use serde::{Serialize, Deserialize, Serializer};
 use derive_more::{Display, Error};
+use opening_hours_syntax::rules::RuleKind;
 use crate::algorithm::greedy::GreedyAlgorithm;
 use crate::algorithm::sa_lin_yu::SimAnnealingLinYu;
 
@@ -69,45 +70,90 @@ pub enum RouteSector<'a> {
     /// An intermediate sector that has a predecessor and a successor
     Intermediate(Sector<'a>),
     /// The last sector in a route
-    End(Sector<'a>),
+    End(EndSector<'a>),
+}
+
+/// Helper function to serialize date times as RFC 3339 (ISO 8601) date time strings
+fn serialize_date_time<S>(date_time: &DateTime<Utc>, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+    serializer.serialize_str(date_time.to_rfc3339().as_str())
 }
 
 /// Concrete representation of a route sector
+///
+/// # Fields
+/// * `time_of_arrival` - The time of arrival at the sight
+/// * `service_start_time` - The time at which the service at the sight can start, i.e. the
+/// first time when the sight is open after the arrival
+/// * `service_end_time` - The time at which the service at the sight ends, either because the
+/// estimated duration of stay has been reached or because the sight closes
+/// * `sight` - The target sight of this sector
+/// * `nodes` - A vector containing a sequence of nodes from the sectors source to its
+/// target sight (both inclusive)
 #[derive(Serialize, Debug)]
 pub struct Sector<'a> {
-    time_budget: usize,
-    sight: Option<&'a Sight>,
+    #[serde(serialize_with = "serialize_date_time")]
+    time_of_arrival: DateTime<Utc>,
+    #[serde(serialize_with = "serialize_date_time")]
+    service_start_time: DateTime<Utc>,
+    #[serde(serialize_with = "serialize_date_time")]
+    service_end_time: DateTime<Utc>,
+    sight: &'a Sight,
     nodes: Vec<&'a Node>,
 }
 
 impl<'a> Sector<'a> {
-    /// Creates a new route sector
-    ///
-    /// # Arguments
-    /// * `time_budget` - The required time budget in seconds to travel from the sectors source
-    /// to its target node
-    /// * `nodes` - A vector containing a sequence of nodes from the sectors source to its
-    /// target node (both inclusive)
-    fn new(time_budget: usize, nodes: Vec<&'a Node>) -> Self {
-        Self {
-            time_budget,
-            sight: None,
-            nodes,
-        }
-    }
-
     /// Creates a new route sector with a target sight
     ///
     /// # Arguments
-    /// * `time_budget` - The required time budget in seconds to travel from the sectors source
-    /// to its target node
-    /// * `sight` - The target sight of this sector
-    /// * `nodes` - A vector containing a sequence of nodes from the sectors source to its
-    /// target node (both inclusive)
-    fn with_sight(time_budget: usize, sight: &'a Sight, nodes: Vec<&'a Node>) -> Self {
+    /// * `start_time` - The start time of the trip or hike
+    /// * `used_time_budget` - The number of seconds passed since the start of the trip
+    /// * `sight_travel_time` - The number of seconds to travel from the sectors source node to its
+    /// target sight
+    /// * `wait_time` - The number of seconds to wait until the service at the sight can start
+    /// * `service_time` - The number of seconds to spend at the sectors target sight
+    fn new(start_time: &DateTime<Utc>, used_time_budget: i64, sight_travel_time: i64, wait_time: i64,
+           service_time: i64, sight: &'a Sight, nodes: Vec<&'a Node>) -> Self {
+        let curr_time = *start_time + Duration::seconds(used_time_budget);
+        let time_of_arrival = curr_time + Duration::seconds(sight_travel_time);
+        let service_start_time = time_of_arrival + Duration::seconds(wait_time);
+        let service_end_time = service_start_time + Duration::seconds(service_time);
         Self {
-            time_budget,
-            sight: Some(sight),
+            time_of_arrival,
+            service_start_time,
+            service_end_time,
+            sight,
+            nodes,
+        }
+    }
+}
+
+/// Concrete representation of a route end sector
+///
+/// # Fields
+/// * `time_of_arrival` - The time of arrival at the target node
+/// * `nodes` - A vector containing a sequence of nodes from the sectors source to its
+/// target node (both inclusive)
+#[derive(Serialize, Debug)]
+pub struct EndSector<'a> {
+    #[serde(serialize_with = "serialize_date_time")]
+    time_of_arrival: DateTime<Utc>,
+    nodes: Vec<&'a Node>,
+}
+
+impl<'a> EndSector<'a> {
+    /// Creates a new route end sector
+    ///
+    /// # Arguments
+    /// * `start_time` - The start time of the trip or hike
+    /// * `used_time_budget` - The number of seconds passed since the start of the trip
+    /// * `tgt_travel_time` - The number of seconds to travel from the sectors source node to its
+    /// target node
+    fn new(start_time: &DateTime<Utc>, used_time_budget: i64, tgt_travel_time: i64,
+           nodes: Vec<&'a Node>) -> Self {
+        let curr_time = *start_time + Duration::seconds(used_time_budget);
+        let time_of_arrival = curr_time + Duration::seconds(tgt_travel_time);
+        Self {
+            time_of_arrival,
             nodes,
         }
     }
@@ -209,6 +255,75 @@ impl<'a> Algorithm<'a> {
     }
 }
 
+/// Compute wait and service time for given sight based on the already used time budget
+fn compute_wait_and_service_time(start_time: &DateTime<Utc>, sight: &Sight, used_time_budget: i64) -> Option<(i64, i64)> {
+    let time_window = sight.opening_hours();
+
+    // Determine current time (after given used time budget)
+    let curr_time: NaiveDateTime = (*start_time + Duration::seconds(used_time_budget)).naive_utc();
+
+    // Determine the sights current open state
+    // TODO handle DateLimitExceeded error properly
+    let curr_state = time_window.state(curr_time)
+        .expect("Failed to determine open state");
+
+    // Initialize closure for computing the sights service time
+    let compute_service_time = |close_time: NaiveDateTime| {
+        let possible_service_time = close_time.signed_duration_since(curr_time)
+            .num_seconds();
+        sight.duration_of_stay_secs().min(possible_service_time)
+    };
+
+    // Determine wait and service time based on the sights current open state
+    match curr_state {
+        RuleKind::Open | RuleKind::Unknown => {
+            match time_window.next_change(curr_time) {
+                Ok(close_time) => {
+                    let service_time = if !time_window.is_closed(close_time) {
+                        // log::trace!("Unknown time window change at {close_time}: {}",
+                        //     &sight.opening_hours);
+                        sight.duration_of_stay_secs()
+                    } else {
+                        compute_service_time(close_time)
+                    };
+                    Some((0, service_time))
+                }
+                _ => Some((0, sight.duration_of_stay_secs()))
+            }
+        }
+        RuleKind::Closed => {
+            match time_window.next_change(curr_time) {
+                Ok(open_time) => {
+                    // if !time_window.is_open(open_time) {
+                    //     log::trace!("Unknown time window change at {open_time}: {}",
+                    //         &sight.opening_hours);
+                    // }
+                    let wait_time = open_time.signed_duration_since(curr_time).num_seconds();
+                    match time_window.next_change(open_time) {
+                        Ok(close_time) => {
+                            let service_time = if !time_window.is_closed(close_time) {
+                                // log::trace!("Unknown time window change at {close_time}: {}",
+                                //     &sight.opening_hours);
+                                sight.duration_of_stay_secs()
+                            } else {
+                                compute_service_time(close_time)
+                            };
+                            Some((wait_time, service_time))
+                        }
+                        _ => Some((wait_time, sight.duration_of_stay_secs()))
+                    }
+                }
+                _ => {
+                    // Closed forever?
+                    // log::trace!("Time window never opens after {curr_time}: {}",
+                    //     &sight.opening_hours);
+                    None
+                }
+            }
+        }
+    }
+}
+
 /// Error type of `algorithm` module
 #[derive(Debug, Display, Error)]
 pub enum AlgorithmError {
@@ -246,7 +361,7 @@ mod test {
     use chrono::{DateTime, Utc};
     use crate::algorithm::{_Algorithm, Area, RouteSector, SightCategoryPref, UserPreferences};
     use crate::algorithm::greedy::GreedyAlgorithm;
-    use crate::data::graph::{Category, Graph};
+    use crate::data::graph::Category;
     use crate::init_logging;
     use crate::utils::test_setup;
 
@@ -282,6 +397,9 @@ mod test {
         let route = algo.compute_route()
             .expect("Error during route computation");
 
+        // Route should not be empty
+        assert!(route.len() > 0, "Route is empty");
+
         // Route should only contain sectors that include sights with categories restaurant,
         // sightseeing or nightlife
         let invalid_category = |category: &Category| {
@@ -289,25 +407,21 @@ mod test {
                 *category != Category::Nightlife
         };
         let sector = route.iter().find(|&sector| match sector {
-            RouteSector::Start(sector) => invalid_category(&sector.sight.unwrap().category),
-            RouteSector::Intermediate(sector) => invalid_category(&sector.sight.unwrap().category),
+            RouteSector::Start(sector) => invalid_category(&sector.sight.category),
+            RouteSector::Intermediate(sector) => invalid_category(&sector.sight.category),
             _ => false,
         });
-        assert!(sector.is_none());
+        assert!(sector.is_none(), "Route includes sight with category not in user preferences");
 
-        // The used time budget should be smaller than or equal to the maximum available time budget
-        let total_time_budget: usize = route.iter()
-            .map(|sector|
-                match sector {
-                    RouteSector::Start(sector) => sector,
-                    RouteSector::Intermediate(sector) => sector,
-                    RouteSector::End(sector) => sector,
-                }.time_budget
-            )
-            .sum();
-        let max_avail_time_budget = end_time.signed_duration_since(start_time).num_seconds();
-        assert!((total_time_budget as i64) <= max_avail_time_budget,
-                "Used time budget: {}. Actual time budget: {}.",
-                total_time_budget, max_avail_time_budget);
+        // The number of seconds between the time of arrival at the start sector and end sector
+        // should not exceed the available time budget
+        let route_end_time = match &route.last().unwrap() {
+            RouteSector::End(end_sector) => end_sector.time_of_arrival,
+            _ => panic!("Last sector must be end sector")
+        };
+        let route_time_budget = route_end_time.signed_duration_since(start_time)
+            .num_seconds();
+        let avail_time_budget = end_time.signed_duration_since(start_time).num_seconds();
+        assert!(route_time_budget <= avail_time_budget, "Route time budget exceeds available budget");
     }
 }

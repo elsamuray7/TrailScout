@@ -1,9 +1,9 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::rc::Rc;
 use chrono::{DateTime, Utc};
 use crate::data::graph::{Category, Graph, Sight};
 use itertools::Itertools;
-use crate::algorithm::{_Algorithm, AlgorithmError, Area, Route, RouteSector, ScoreMap, Sector, UserPreferences, USER_PREF_MAX};
+use crate::algorithm::{_Algorithm, AlgorithmError, Area, Route, RouteSector, ScoreMap, Sector, UserPreferences, USER_PREF_MAX, compute_wait_and_service_time, EndSector};
 use crate::utils::dijkstra;
 
 /// Greedy internal user preference to score mapping
@@ -106,8 +106,9 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
     }
 
      fn compute_route(&self) -> Result<Route, AlgorithmError> {
-         let mut time_budget_left: usize = self.end_time.signed_duration_since(self.start_time).num_seconds()
-             .try_into().unwrap();
+         let total_time_budget = self.end_time.signed_duration_since(self.start_time)
+             .num_seconds();
+         let mut time_budget_left = total_time_budget;
 
          let edge_radius = self.walking_speed_mps * time_budget_left as f64 / std::f64::consts::PI / 2.0;
 
@@ -115,9 +116,12 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
 
          let mut route: Route = vec![];
          // Get all sights that can potentially be visited
-         let mut unvisited_sights: HashSet<_> = self.sights.iter()
-             .filter(|&sight| self.scores[&sight.node_id].0 > 0)
-             .map(|&sight| sight.node_id)
+         let mut unvisited_sights: HashMap<_, _> = self.sights.iter()
+             .filter(|&sight| {
+                 let (score, category) = self.scores[&sight.node_id];
+                 score > 0 && sight.category == category
+             })
+             .map(|&sight| (sight.node_id, sight))
              .collect();
          if unvisited_sights.is_empty() {
              return Err(AlgorithmError::NoPreferencesProvided);
@@ -138,58 +142,53 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
              // sort sight nodes by a metric derived from the sights score and its distance to
              // the current node
              let sorted_dist_vec = unvisited_sights.iter()
-                 .filter_map(|&sight_id| result_to_sights.dist_to(sight_id)
-                     .and_then(|dist| Some((sight_id, dist))))
-                 .sorted_unstable_by(|&(sight1_id, dist1), &(sight2_id, dist2)| {
-                     let (score1, _) = self.scores[&sight1_id];
-                     let (score2, _) = self.scores[&sight2_id];
-
-                     log::trace!("Comparing sights {} and {}", sight1_id, sight2_id);
-                     log::trace!("Sight1: score: {}, distance to current position: {}", score1, dist1);
-                     log::trace!("Sight2: score: {}, distance to current position: {}", score2, dist2);
-
+                 .filter_map(|(&sight_id, &sight)| result_to_sights.dist_to(sight_id)
+                     .and_then(|dist| Some((sight, dist))))
+                 .sorted_unstable_by(|&(sight1, dist1), &(sight2, dist2)| {
+                     let (score1, _) = self.scores[&sight1.node_id];
+                     let (score2, _) = self.scores[&sight2.node_id];
                      let metric1 = score1 as f64 / dist1 as f64;
                      let metric2 = score2 as f64 / dist2 as f64;
                      metric2.total_cmp(&metric1)
                  })
                  .collect_vec();
+             log::trace!("Sorted {} sights by greedy metric", sorted_dist_vec.len());
 
              // for each sight node, check whether sight can be included in route without violating time budget
              let len_route_before = route.len();
-             for (sight_node_id, dist) in sorted_dist_vec {
-                 let secs_needed_to_sight = dist as f64 / self.walking_speed_mps;
+             for (sight, dist) in sorted_dist_vec {
+                 let (wait_time, service_time) = match compute_wait_and_service_time(
+                     &self.start_time, sight, total_time_budget - time_budget_left) {
+                     Some(result) => result,
+                     None => continue
+                 };
+
                  // Works because graph is undirected
-                 match result_from_root.dist_to(sight_node_id) {
+                 match result_from_root.dist_to(sight.node_id) {
                      Some(dist_to_root) => {
-                         let secs_needed_sight_to_root = dist_to_root as f64 / self.walking_speed_mps;
-                         let secs_total = (secs_needed_to_sight + secs_needed_sight_to_root) as usize + 1;
+                         let sight_travel_time = (dist as f64 / self.walking_speed_mps) as i64 + 1;
+                         let sight_total_time = sight_travel_time + wait_time + service_time;
+                         let root_travel_time = (dist_to_root as f64 / self.walking_speed_mps) as i64 + 1;
 
-                         log::trace!("Checking sight {}: secs to include sight: {}, left time budget: {}",
-                             sight_node_id, secs_total, time_budget_left);
-
-                         if secs_total <= time_budget_left {
-                             log::trace!("Adding sight to route");
+                         if sight_total_time + root_travel_time <= time_budget_left {
+                             log::trace!("Appending sight {} (secs to include sight: {} <= left time budget: {}) with score: {}",
+                                 sight.node_id, sight_total_time + root_travel_time, time_budget_left, self.scores[&sight.node_id].0);
 
                              // add sector containing sight and all intermediate nodes to route
-                             let sector_nodes = result_to_sights.build_path(self.graph,
-                                                                            sight_node_id);
-                             log::trace!("Appending sector to route:\n{:?}", &sector_nodes);
-
-                             let sector = Sector::with_sight(
-                                 secs_needed_to_sight as usize,
-                                 self.sights.iter().find(|&sight|
-                                     sight.node_id == sight_node_id
-                                         && sight.category == self.scores[&sight_node_id].1).unwrap(),
-                                 sector_nodes);
+                             let path = result_to_sights.build_path(self.graph,
+                                                                    sight.node_id);
+                             let sector = Sector::new(
+                                 &self.start_time, total_time_budget - time_budget_left,
+                                 sight_travel_time, wait_time, service_time, sight, path);
                              route.push(if curr_node_id == self.root_id {
                                  RouteSector::Start(sector)
                              } else {
                                  RouteSector::Intermediate(sector)
                              });
 
-                             time_budget_left -= secs_total;
-                             unvisited_sights.remove(&sight_node_id);
-                             curr_node_id = sight_node_id;
+                             time_budget_left -= sight_total_time;
+                             unvisited_sights.remove(&sight.node_id);
+                             curr_node_id = sight.node_id;
                              break;
                          }
                      }
@@ -207,12 +206,13 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
                  let result_to_root = result_from_root.result_of(
                      self.graph, curr_node_id).unwrap();
 
-                 let secs_to_root = (result_to_root.dist() as f64 / self.walking_speed_mps) as usize;
-                 let mut sector_nodes = result_to_root.consume_path();
+                 let secs_to_root = (result_to_root.dist() as f64 / self.walking_speed_mps) as i64;
+                 let mut path = result_to_root.consume_path();
                  // Reverse because path is in reverse direction
-                 sector_nodes.reverse();
-                 log::trace!("Appending sector to route:\n{:?}", &sector_nodes);
-                 route.push(RouteSector::End(Sector::new(secs_to_root, sector_nodes)));
+                 path.reverse();
+                 route.push(RouteSector::End(EndSector::new(
+                     &self.start_time, total_time_budget - time_budget_left,
+                     secs_to_root, path)));
                  break;
              }
          }
@@ -229,8 +229,8 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
             .map(|route_sec| {
                 match route_sec {
                     // Start and intermediate sectors contain a sight per definition
-                    RouteSector::Start(sector) => self.scores[&sector.sight.unwrap().node_id].0,
-                    RouteSector::Intermediate(sector) => self.scores[&sector.sight.unwrap().node_id].0,
+                    RouteSector::Start(sector) => self.scores[&sector.sight.node_id].0,
+                    RouteSector::Intermediate(sector) => self.scores[&sector.sight.node_id].0,
                     _ => 0,
                 }
             })
