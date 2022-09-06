@@ -1,16 +1,19 @@
 <div class="item" (mouseover)="hover()" (mouseout)="unhover()" [class.currentSection]="currentSection" [class.hover]="_hover" (click)="onClick()">
     
     <div class="row">
-        <img class="col-2"[src]="image()">
-        <div class="sight col">
-            Ziel: {{section?.sight?.name}}
+        <div class="sight col" [class.mobile-text]="mobile">
+            Ziel: 
         </div>
+        <img class="col-2"[src]="icon()" [class.mobile-img]="mobile">
     </div>
-    <div class="sight" *ngIf="lastSection()">
+    <div class="sight" [class.mobile-text]="mobile">
+        {{section?.sight?.name}}
+    </div>
+    <div class="sight" [class.mobile-text]="mobile" *ngIf="lastSection() ">
         Zurück zum Start
     </div>
     
-    <div *ngIf="currentSection">
+    <div *ngIf="currentSection && ! mobile">
         Auf diesem Abschnitt befinden sie sich gerade
     </div>
 </div>

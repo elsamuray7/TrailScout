@@ -90,7 +90,6 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
 
   async loadMap() {
     if (!this.initLat && !this.initLng) {
-      console.log('?')
       this.initLat = (await this.gpsService.getCurrentLocation())?.lat;
       this.initLng = (await this.gpsService.getCurrentLocation())?.lng;
       if (!this.initLat && !this.initLng) {
@@ -183,7 +182,7 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
       section.nodes.forEach(node => {
         sectionNodes.push(new L.LatLng(node.lat, node.lon));
       });
-      this.routePoly.push(new L.Polyline(sectionNodes, { color: "rgb(" + r + " ," + g + ",0)", weight: 6, attribution: section.id!.toString() }).addTo(this.routeLayer));
+      this.routePoly.push(new L.Polyline(sectionNodes, { color: "rgb(" + r + " ," + g + ",0)", weight: 6 }).addTo(this.routeLayer));
         r += colorStepsize;
         g -= colorStepsize;
      
@@ -222,15 +221,15 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
       this.routePoly.forEach(r => r.setStyle({weight: 6}));
       return;
     }
-    const poly = this.routePoly.find((r: any) => r.getAttribution() === id.toString());
+    const poly = this.routePoly.find((r,index) =>  index === id);
     poly?.setStyle({weight: 14});
   }
 
   showSection(id: number) {
-    const poly = this.routePoly.find((r: any) => r.getAttribution() === id.toString());
-    const latlngs = poly?.getLatLngs()[0] as L.LatLng;
-    if (latlngs) {
-      this.map.flyTo(new L.LatLng(latlngs?.lat, latlngs?.lng), 19);
+    const poly = this.routePoly.find((r, index) => index === id);
+    const bounds = poly?.getBounds();
+    if (bounds) {
+      this.map.fitBounds(bounds);
     }
     
   }

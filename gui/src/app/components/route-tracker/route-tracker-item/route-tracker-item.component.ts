@@ -1,4 +1,5 @@
 import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import { ApplicationStateService } from 'src/app/services/application-state.service';
 import { RouteTrackerSection } from 'src/app/types.utils';
 import { getIcon } from '../../icons';
 
@@ -15,14 +16,16 @@ export class RouteTrackerItemComponent implements OnInit {
   @Output() clickEvent = new EventEmitter;
 
   _hover = false;
+  mobile = false;
 
-  constructor() { }
+  constructor(public mobileService: ApplicationStateService) {
+    this.mobile = mobileService.getIsMobileResolution();
+   }
 
   ngOnInit(): void {
     if (this.currentSection) {
       this.hoverEvent.emit(this.section?.routeId);
     }
-    console.log(this.section)
   }
 
   lastSection() {
@@ -43,10 +46,14 @@ export class RouteTrackerItemComponent implements OnInit {
     this.clickEvent.emit(this.section?.routeId)
   }
 
-  image() {
+  icon() {
     if (!this.section || !this.section.sight) {
       return 'assets/icons/start.png';
     }
     return getIcon(this.section.sight).options.iconUrl;
+  }
+
+  getImage() {
+    return {'background-image' : `url(${this.icon()})` };
   }
 }

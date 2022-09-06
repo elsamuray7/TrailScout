@@ -1,8 +1,8 @@
 .item {
     border: 1px solid green;
     padding: 1px;
-    height: 11vh;
-    width: 10vw;
+    height: 13vh;
+    width: 14vh;
     flex-shrink: 0;
     color: black;
     font-size: 1vw;
@@ -11,6 +11,7 @@
 .currentSection {
     color: red !important;
     border: 2px solid red !important;
+    font-size: 1vh;
 }
 
 .hover {
@@ -19,11 +20,22 @@
 }
 
 img {
-    width: 3vw;
+    width: 7vh;
+    height: 4.5vh;
 }
 
+.mobile-img {
+    width: 7vh;
+    height: 4vh;
+}
+
+.mobile-text {
+    font-size: 2vh !important;
+}
+
+
 .sight{
-    font-size: 1vw;
+    font-size: 1.5vh;
     font-style: italic;
     color: darkslategrey;
 }
