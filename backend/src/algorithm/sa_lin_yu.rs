@@ -4,7 +4,7 @@ use itertools::Itertools;
 use pathfinding::prelude::*;
 use rand::prelude::*;
 use crate::algorithm::{_Algorithm, AlgorithmError, Area, compute_wait_and_service_time, EndSector, Route, RouteSector, ScoreMap, Sector, USER_PREF_MAX, UserPreferences};
-use crate::data::graph::{Category, Graph, Sight};
+use crate::data::graph::{Graph, Sight};
 use std::time::Instant;
 
 /// Simulated Annealing internal user preference to score mapping
@@ -27,24 +27,22 @@ const MAX_ITER_PER_TEMP: usize = 100 * B;
 
 /// Compute scores for tourist attractions based on user preferences for categories or specific
 /// tourist attractions, respectively
-fn compute_scores(sights: &Vec<&Sight>, user_prefs: UserPreferences) -> Result<ScoreMap, AlgorithmError> {
+fn compute_scores(sights: &Vec<&Sight>, user_prefs: UserPreferences) -> ScoreMap {
     let start = Instant::now();
 
     let mut scores: ScoreMap = sights.iter()
         .map(|sight| (sight.node_id, (0_usize, sight.category))).collect();
 
-    for category in &user_prefs.categories {
-        let category_score = USER_PREF_TO_SCORE[category.get_valid_pref()];
-        let category_enum = category.name.parse::<Category>().ok()
-            .ok_or_else(|| AlgorithmError::UnknownCategory { unknown_name: category.name.clone() })?;
+    for category_pref in &user_prefs.categories {
+        let category_score = USER_PREF_TO_SCORE[category_pref.get_valid_pref()];
         sights.iter()
-            .filter(|sight| sight.category == category_enum)
+            .filter(|sight| sight.category == category_pref.category)
             .for_each(|sight| {
                 let (prev_score, prev_category) = scores.get_mut(
                     &sight.node_id).unwrap();
                 if category_score > *prev_score {
                     *prev_score = category_score;
-                    *prev_category = category_enum;
+                    *prev_category = category_pref.category;
                 }
             });
     }
@@ -64,7 +62,7 @@ fn compute_scores(sights: &Vec<&Sight>, user_prefs: UserPreferences) -> Result<S
 
     log::debug!("Computed scores in {} ms", start.elapsed().as_millis());
 
-    Ok(scores)
+    scores
 }
 
 /// Build a distance map with distances from relevant nodes, i.e. the root node and all sight nodes
@@ -167,7 +165,6 @@ pub struct SimAnnealingLinYu<'a> {
     end_time: DateTime<Utc>,
     /// Walking speed in meters per second
     walking_speed_mps: f64,
-    area: Area,
     sights: Vec<&'a Sight>,
     root_id: usize,
     scores: ScoreMap,
@@ -198,8 +195,9 @@ impl<'a> SimAnnealingLinYu<'a> {
                 .ok_or_else(|| AlgorithmError::NoRouteFound { from: sight.node_id, to: self.root_id })?;
             let root_travel_time = (root_travel_dist as f64 / self.walking_speed_mps) as i64 + 1;
 
+            let used_time_budget = total_time_budget - left_time_budget + sight_travel_time;
             let (wait_time, service_time) = match compute_wait_and_service_time(
-                &self.start_time, sight, total_time_budget - left_time_budget) {
+                &self.start_time, sight, used_time_budget) {
                 Some(result) => result,
                 None => break
             };
@@ -293,8 +291,8 @@ impl<'a> SimAnnealingLinYu<'a> {
                 .ok_or_else(|| AlgorithmError::NoRouteFound { from: sight.node_id, to: self.root_id })?;
             let root_travel_time = (root_travel_dist as f64 / self.walking_speed_mps) as i64 + 1;
 
-            match compute_wait_and_service_time(
-                &self.start_time, sight, total_time_budget - left_time_budget) {
+            let used_time_budget = total_time_budget - left_time_budget + sight_travel_time;
+            match compute_wait_and_service_time(&self.start_time, sight, used_time_budget) {
                 Some((wait_time, service_time)) => {
                     let sight_total_time = sight_travel_time + wait_time + service_time;
                     if left_time_budget >= (sight_total_time + root_travel_time) {
@@ -355,7 +353,7 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
         }
 
         let root_id = graph.get_nearest_node(area.lat, area.lon);
-        let scores = compute_scores(&sights, user_prefs)?;
+        let scores = compute_scores(&sights, user_prefs);
         let distance_map = build_distance_map(
             graph, &area, edge_radius, &sights, root_id, &scores);
 
@@ -364,7 +362,6 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
             start_time,
             end_time,
             walking_speed_mps,
-            area,
             sights,
             root_id,
             scores,
@@ -488,6 +485,7 @@ mod test {
     use once_cell::sync::Lazy;
     use crate::algorithm::{_Algorithm, Area, RouteSector, Sector, SightCategoryPref, UserPreferences};
     use crate::algorithm::sa_lin_yu::{SimAnnealingLinYu, USER_PREF_TO_SCORE};
+    use crate::algorithm::test::{END_TIME, START_TIME, WALKING_SPEED_MPS};
     use crate::data::graph::{Category, Graph};
     use crate::init_logging;
     use crate::utils::test_setup;
@@ -498,46 +496,47 @@ mod test {
 
         let graph: &Lazy<Graph> = &test_setup::GRAPH;
 
-        let start_time = DateTime::parse_from_rfc3339("2022-07-01T10:00:00+01:00")
-            .unwrap().with_timezone(&Utc);
-        let end_time = DateTime::parse_from_rfc3339("2022-07-01T13:00:00+01:00")
-            .unwrap().with_timezone(&Utc);
+        let start_time = DateTime::parse_from_rfc3339(START_TIME).unwrap()
+            .with_timezone(&Utc);
+        let end_time = DateTime::parse_from_rfc3339(END_TIME).unwrap()
+            .with_timezone(&Utc);
         let algo = SimAnnealingLinYu::new(
             &graph,
             start_time,
             end_time,
-            7.0 / 3.6,
+            WALKING_SPEED_MPS,
             Area {
                 lat: 53.064232700000005,
                 lon: 8.793089,
                 radius: 500.0,
             },
             UserPreferences {
-                categories: vec![SightCategoryPref { name: "Nightlife".to_string(), pref: 3 },
-                                 SightCategoryPref { name: "Activities".to_string(), pref: 5 }],
+                categories: vec![SightCategoryPref { category: Category::Nightlife, pref: 3 },
+                                 SightCategoryPref { category: Category::Activities, pref: 5 }],
                 sights: vec![],
             }).unwrap();
 
-        let last = algo.sights.first().unwrap();
+        let mut last = algo.sights.first().unwrap();
         for sight in &algo.sights[1..algo.sights.len()] {
             if sight.node_id == last.node_id
                 && (sight.category == Category::Nightlife || sight.category == Category::Activities) {
                 let (score, category) = algo.scores[&sight.node_id];
-                assert_eq!(score, USER_PREF_TO_SCORE[5], "Sight got smaller score");
+                assert_eq!(score, USER_PREF_TO_SCORE[5], "Sight {} got smaller score", sight.node_id);
                 assert_eq!(category, Category::Activities,
-                           "Sight associated with category with smaller preference")
+                           "Sight {} associated with category with smaller preference", sight.node_id);
+                last = sight;
             }
         }
 
         let route = algo.compute_route()
             .expect("Error during route computation");
-        let check_sector = |sector: Sector| {
+        let check_sector = |sector: &Sector| {
             let sight = sector.sight;
             let (_, category) = algo.scores[&sight.node_id];
             assert_eq!(category, sight.category,
-                       "Sight in route associated with category with smaller preference");
+                       "Sight {} in route associated with category with smaller preference", sight.node_id);
         };
-        for route_sector in route {
+        for route_sector in &route {
             match route_sector {
                 RouteSector::Start(sector) => check_sector(sector),
                 RouteSector::Intermediate(sector) => check_sector(sector),

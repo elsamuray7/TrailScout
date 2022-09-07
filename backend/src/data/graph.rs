@@ -15,7 +15,7 @@ use crate::data;
 use crate::data::SightsConfig;
 use crate::utils::dijkstra;
 
-#[derive(EnumString, Deserialize, Serialize, PartialEq, Eq, Debug, Copy, Clone)]
+#[derive(strum_macros::Display, EnumString, Deserialize, Serialize, PartialEq, Eq, Debug, Copy, Clone)]
 #[serde(rename_all = "PascalCase")]
 pub enum Category {
     Activities,
@@ -497,7 +497,7 @@ mod test {
     use geoutils::{Distance, Location};
     use log::{debug, trace};
     use rand::{Rng, thread_rng};
-    use crate::data::graph::{Graph, Node};
+    use crate::data::graph::Node;
     use crate::init_logging;
     use crate::utils::test_setup;
 
