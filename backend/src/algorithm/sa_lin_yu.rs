@@ -425,6 +425,8 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
                 let heur = std::f64::consts::E.powf(-(score_dif as f64) / t);
                 if r >= heur {
                     replace_solution = false;
+                } else {
+                    log::trace!("Escaping from local optimum (new score: {new_score} <= old score: {old_score})");
                 }
             }
 
