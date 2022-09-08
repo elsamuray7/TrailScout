@@ -99,6 +99,7 @@ export class SettingsTaskbarComponent implements OnInit {
   }
 
   async calculate(){
+    this.closeButton.emit();
     var categories: any[] = [];
     var sights: any[] = [];
     this.sightsService.getCategories().forEach((category) => {

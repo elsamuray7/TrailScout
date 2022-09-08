@@ -2,7 +2,7 @@
 /Cargo.lock
 
 # Ignore OSM data too large for GitHub
-germany-latest.osm.pbf
+germany-*.osm.pbf
 baden-wuerttemberg-latest.osm.pbf
 # Ignore graph files generated from OSM data
 osm_graphs/**.fmi

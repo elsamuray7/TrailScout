@@ -39,7 +39,7 @@
 }
 
 #collapse {
-    width: 300px;
+    width: 350px;
     float: left;
 }
 
@@ -49,4 +49,15 @@
 
 .hidden {
     display: none;
+}
+
+#route-tracker {
+    position:absolute;
+    top: 70vh; 
+    width: 90vw;
+    margin-left: auto;
+    margin-right: auto;
+    left: 0;
+    right: 0;
+    text-align: center;
 }

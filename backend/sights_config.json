@@ -11,151 +11,151 @@
                     "value": "theme_park"
                 },
                 {
-                    "key": "sport", 
+                    "key": "sport",
                     "value": "* ?"
                 },
                 {
-                    "key": "sport", 
+                    "key": "sport",
                     "value": "9pin"
                 },
                 {
-                    "key": "sport", 
+                    "key": "sport",
                     "value": "10pin"
                 },
                 {
-                    "key": "sport", 
+                    "key": "sport",
                     "value": "american_football"
                 },
                 {
-                    "key": "sport", 
+                    "key": "sport",
                     "value": "baseball"
                 },
                 {
-                    "key": "sport", 
+                    "key": "sport",
                     "value": "basketball"
                 },
                 {
-                    "key": "sport", 
+                    "key": "sport",
                     "value": "beachvolleyball"
                 },
                 {
-                    "key": "sport", 
+                    "key": "sport",
                     "value": "billiards"
                 },
                 {
-                    "key": "sport", 
+                    "key": "sport",
                     "value": "boules"
                 },
                 {
-                    "key": "sport", 
+                    "key": "sport",
                     "value": "bowls"
                 },
                 {
-                    "key": "sport", 
+                    "key": "sport",
                     "value": "climbing"
                 },
                 {
-                    "key": "sport", 
+                    "key": "sport",
                     "value": "climbing_adventure"
                 },
                 {
-                    "key": "sport", 
+                    "key": "sport",
                     "value": "crossfit"
                 },
                 {
-                    "key": "sport", 
+                    "key": "sport",
                     "value": "darts"
                 },
                 {
-                    "key": "sport", 
+                    "key": "sport",
                     "value": "fitness"
                 },
                 {
-                    "key": "sport", 
+                    "key": "sport",
                     "value": "golf"
                 },
                 {
-                    "key": "sport", 
+                    "key": "sport",
                     "value": "ice_skating"
                 },
                 {
-                    "key": "sport", 
+                    "key": "sport",
                     "value": "ice_stock"
                 },
                 {
-                    "key": "sport", 
+                    "key": "sport",
                     "value": "karting"
                 },
                 {
-                    "key": "sport", 
+                    "key": "sport",
                     "value": "kitesurfing"
                 },
                 {
-                    "key": "sport", 
+                    "key": "sport",
                     "value": "miniature_golf"
                 },
                 {
-                    "key": "sport", 
+                    "key": "sport",
                     "value": "motocross"
                 },
                 {
-                    "key": "sport", 
+                    "key": "sport",
                     "value": "parkour"
                 },
                 {
-                    "key": "sport", 
+                    "key": "sport",
                     "value": "roller_skating"
                 },
                 {
-                    "key": "sport", 
+                    "key": "sport",
                     "value": "running"
                 },
                 {
-                    "key": "sport", 
+                    "key": "sport",
                     "value": "sailing"
                 },
                 {
-                    "key": "sport", 
+                    "key": "sport",
                     "value": "skateboard"
                 },
                 {
-                    "key": "sport", 
+                    "key": "sport",
                     "value": "soccer"
                 },
                 {
-                    "key": "sport", 
+                    "key": "sport",
                     "value": "surfing"
                 },
                 {
-                    "key": "sport", 
+                    "key": "sport",
                     "value": "table_tennis"
                 },
                 {
-                    "key": "sport", 
+                    "key": "sport",
                     "value": "table_soccer"
                 },
                 {
-                    "key": "sport", 
+                    "key": "sport",
                     "value": "ultimate"
                 },
                 {
-                    "key": "sport", 
+                    "key": "sport",
                     "value": "wakeboarding"
                 },
                 {
-                    "key": "sport", 
+                    "key": "sport",
                     "value": "water_ski"
                 },
                 {
-                    "key": "leisure", 
+                    "key": "leisure",
                     "value": "fitness_centre"
                 },
                 {
-                    "key": "leisure", 
+                    "key": "leisure",
                     "value": "fitnes_station"
                 },
                 {
-                    "key": "leisure", 
+                    "key": "leisure",
                     "value": "sports_centre"
                 }
             ]
@@ -220,7 +220,7 @@
                     "value": "museum"
                 },
                 {
-                    "key": "amenity ", 
+                    "key": "amenity ",
                     "value": "planetarium"
                 }
             ]
@@ -281,15 +281,15 @@
                     "value": "ice_cream"
                 },
                 {
-                    "key": "shop", 
+                    "key": "shop",
                     "value": "tea"
                 },
                 {
-                    "key": "shop", 
+                    "key": "shop",
                     "value": "bakery"
                 },
                 {
-                    "key": "amenity", 
+                    "key": "amenity",
                     "value": "restaurant"
                 },
                 {
@@ -316,11 +316,11 @@
             "duration_of_stay_minutes": 60,
             "tags": [
                 {
-                    "key": "historic", 
+                    "key": "historic",
                     "value": "building"
                 },
                 {
-                    "key": "historic", 
+                    "key": "historic",
                     "value": "castle"
                 },
                 {
@@ -328,15 +328,15 @@
                     "value": "church"
                 },
                 {
-                    "key": "historic", 
+                    "key": "historic",
                     "value": "city_gate"
                 },
                 {
-                    "key": "historic", 
+                    "key": "historic",
                     "value": "monument"
                 },
                 {
-                    "key": "historic", 
+                    "key": "historic",
                     "value": "ruins"
                 },
                 {

@@ -6,6 +6,7 @@ import { ComponentsModule } from 'src/app/components/components.module';
 import { NgbCollapseModule, NgbModule, NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { ApplicationStateService } from 'src/app/services/application-state.service';
 import { BlockUIModule } from 'ng-block-ui';
+import { GPSService } from 'src/app/services/gps.service';
 
 
 
@@ -20,6 +21,6 @@ import { BlockUIModule } from 'ng-block-ui';
     NgbModule,
     BlockUIModule
   ],
-  providers: [ApplicationStateService]
+  providers: [ApplicationStateService, GPSService]
 })
 export class MainPageModule { }
