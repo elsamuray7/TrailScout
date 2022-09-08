@@ -307,6 +307,32 @@ impl Graph {
         get_nearest_node(&nodes_sorted_by_lat, &id_filter, lat, lon)
     }
 
+    /// Get the nearest non-sight reachable graph node to a given coordinate (latitude / longitude)
+    /// Also checks if the nearest node is in a given area. Returns None if not in given area.
+    pub fn get_nearest_node_in_area(&self, lat: f64, lon: f64, radius: f64) -> Option<usize> {
+        let nodes_sorted_by_lat = self.nodes.iter()
+            .sorted_unstable_by(|node1, node2| node1.lat.total_cmp(&node2.lat))
+            .collect_vec();
+        let id_filter = self.sights.iter().map(|sight| sight.node_id)
+            //.merge(self.nodes.iter().filter(|node| self.get_degree(node.id) > 0)
+            //    .map(|node| node.id))
+            .collect();
+        let nearest_node_id = get_nearest_node(&nodes_sorted_by_lat, &id_filter, lat, lon);
+        let nearest_node = self.get_node(nearest_node_id);
+        let nearest_node_location = Location::new(nearest_node.lat(), nearest_node.lon());
+
+        let center = Location::new(lat, lon);
+        let radius = Distance::from_meters(radius);
+
+        let mut min_id: Option<usize> = None;
+        if nearest_node_location.is_in_circle(&center, radius).unwrap() {
+            min_id = Some(nearest_node_id);
+            min_id
+        } else {
+            min_id
+        }
+    }
+
     /// Get the number of outgoing edges of the node with id `node_id`
     pub fn get_degree(&self, node_id: usize) -> usize {
         self.offsets[node_id + 1] - self.offsets[node_id]
@@ -397,7 +423,7 @@ pub fn get_nearest_node(nodes_sorted_by_lat: &Vec<&impl INode>, id_filter: &Hash
     trace!("Starting to search for nearest node at index: {} for latitude: {}", found_index, lat);
 
     let mut min_dist = Distance::from_meters(f64::MAX);
-    let mut min_id = 0;
+    let mut min_id = usize::MAX;
 
     // Iterate over the left and right neighbour indices to determine the nearest node
     let mut left_index = found_index;

@@ -85,10 +85,14 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
         let sights = graph.get_reachable_sights_in_area(area.lat, area.lon,
                                                         sights_radius, edge_radius);
         if sights.is_empty() {
-            return Err(AlgorithmError::NoSightsFound);
+            return Err(AlgorithmError::NoSightsFound)
         }
 
-        let root_id = graph.get_nearest_node(area.lat, area.lon);
+        let root_id = match graph.get_nearest_node_in_area(area.lat, area.lon, area.radius) {
+            Some(nearest_node) => nearest_node,
+            None => return Err(AlgorithmError::NoNearestNodeFound)
+        };
+
         let scores = compute_scores(&sights, user_prefs);
 
         Ok(Self {
