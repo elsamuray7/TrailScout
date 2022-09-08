@@ -307,6 +307,15 @@ impl<'a> Algorithm<'a> {
         }
     }
 
+    /// Returns a reference to the underlying implementation of the `_Algorithm` trait
+    /// as a generic trait object
+    fn inner(&self) -> &dyn _Algorithm {
+        match self {
+            Self::Greedy(inner) => inner.as_algorithm(),
+            Self::SimAnnealing(inner) => inner.as_algorithm(),
+        }
+    }
+
     /// Compute a route on a graph that visits tourist attractions in a specific area based on
     /// user preferences for these tourist attractions
     ///
@@ -314,10 +323,12 @@ impl<'a> Algorithm<'a> {
     /// * an `Ok` containing the computed route in case of no errors, or
     /// * an `Err` containing an `AlgorithmError`, otherwise
     pub fn compute_route(&self) -> Result<Route, AlgorithmError> {
-        match self {
-            Self::Greedy(inner) => inner.as_algorithm(),
-            Self::SimAnnealing(inner) => inner.as_algorithm(),
-        }.compute_route()
+        self.inner().compute_route()
+    }
+
+    /// Outputs the score collected by a route computed by this algorithm
+    pub fn get_collected_score(&self, route: &Route) -> usize {
+        self.inner().get_collected_score(route)
     }
 }
 
@@ -436,9 +447,9 @@ mod test {
     use crate::utils::test_setup;
 
     /// Start time of trip or hike used for testing
-    pub const START_TIME: &str = "2022-07-01T10:00:00+01:00";
+    pub const START_TIME: &str = "2022-07-01T14:00:00+01:00";
     /// End time of trip or hike used for testing
-    pub const END_TIME: &str = "2022-07-01T16:00:00+01:00";
+    pub const END_TIME: &str = "2022-07-01T20:00:00+01:00";
 
     /// https://www.youtube.com/watch?v=ExElCQwN3T8
     pub const WALKING_SPEED_MPS: f64 = 5.0 / 3.6;
@@ -452,9 +463,9 @@ mod test {
 
     /// User category preferences used for testing
     const CATEGORY_PREFS: [SightCategoryPref; 3] = [
-        SightCategoryPref { category: Category::Restaurants, pref: 2 },
         SightCategoryPref { category: Category::Sightseeing, pref: 5 },
-        SightCategoryPref { category: Category::Nightlife, pref: 4 }
+        SightCategoryPref { category: Category::Nightlife, pref: 4 },
+        SightCategoryPref { category: Category::Restaurants, pref: 2 }
     ];
 
     /// Lazily initialized vector with algorithm instances used for testing

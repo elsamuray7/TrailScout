@@ -474,8 +474,17 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
         Ok(route)
     }
 
-    fn get_collected_score(&self, _: &Route) -> usize {
-        unimplemented!()
+    fn get_collected_score(&self, route: &Route) -> usize {
+        route.iter()
+            .map(|route_sec| {
+                match route_sec {
+                    // Start and intermediate sectors contain a sight per definition
+                    RouteSector::Start(sector) => self.scores[&sector.sight.node_id].0,
+                    RouteSector::Intermediate(sector) => self.scores[&sector.sight.node_id].0,
+                    _ => 0,
+                }
+            })
+            .sum()
     }
 }
 
@@ -511,8 +520,8 @@ mod test {
                 radius: 500.0,
             },
             UserPreferences {
-                categories: vec![SightCategoryPref { category: Category::Nightlife, pref: 3 },
-                                 SightCategoryPref { category: Category::Activities, pref: 5 }],
+                categories: vec![SightCategoryPref { category: Category::Activities, pref: 5 },
+                                 SightCategoryPref { category: Category::Nightlife, pref: 3 }],
                 sights: vec![],
             }).unwrap();
 
@@ -534,7 +543,8 @@ mod test {
             let sight = sector.sight;
             let (_, category) = algo.scores[&sight.node_id];
             assert_eq!(category, sight.category,
-                       "Sight {} in route associated with category with smaller preference", sight.node_id);
+                       "Sight {} in route associated with category with smaller preference",
+                       sight.node_id);
         };
         for route_sector in &route {
             match route_sector {
