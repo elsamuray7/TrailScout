@@ -30,6 +30,12 @@ pub enum Category {
     Animals
 }
 
+impl Hash for Category {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.to_string().hash(state);
+    }
+}
+
 #[derive(strum_macros::Display, EnumString, Deserialize, Serialize, PartialEq, Debug, Copy, Clone)]
 #[serde(rename_all = "PascalCase")]
 pub enum EdgeType {
