@@ -3,7 +3,6 @@ use std::collections::{HashMap, HashSet};
 use std::fs::{create_dir_all, File};
 use std::io;
 use std::hash::{Hash, Hasher};
-use std::io::BufWriter;
 use std::io::{BufWriter, Write, LineWriter};
 use std::path::Path;
 use crossbeam::thread;
@@ -94,12 +93,12 @@ impl Hash for OSMEdge {
 
 /// A sight node mapped on its nearest node
 #[derive(Debug, Serialize)]
-struct OSMSight {
+pub struct OSMSight { //go private again
     #[serde(skip_serializing)]
     osm_id: usize,
     node_id: usize,
-    lat: f64,
-    lon: f64,
+    pub(crate) lat: f64, //go private again
+    pub(crate) lon: f64, //go private again
     category: Category,
     name: String,
     opening_hours: String,
@@ -521,10 +520,10 @@ fn prune_edges(osm_edges: &mut Vec<OSMEdge>) {
 
 // function for clustering Picnic Barbeque spots that are in a Range of 500m to one single sightNode
 fn clustering_sights(sights: &mut Vec<OSMSight>) {
-    let mut sights_to_combine: Vec<usize>;
-    let mut visited: HashMap<usize, usize>;
+    let mut sights_to_combine: Vec<usize> = Vec::new();
+    let mut visited: HashMap<usize, usize> = HashMap::new();
     let mut index: usize = 0;
-    for sigh in sights{
+    for sigh in &*sights{
         if sigh.category == Category::PicnicBarbequeSpot && !sights_to_combine.contains(&sigh.osm_id){
             let mut area:Vec<&OSMSight> = get_sights_in_area(&sights, sigh.lat, sigh.lon, 500.0);
             visited.insert(sigh.osm_id, index);
@@ -544,13 +543,13 @@ fn clustering_sights(sights: &mut Vec<OSMSight>) {
         index += 1;
     }
     // write a list with sights that must be deleted
-    let mut combining_indixes: Vec<&usize>;
+    let mut combining_indixes: Vec<&usize> = Vec::new();
     for identifier in sights_to_combine {
         combining_indixes.push(visited.get(&identifier).unwrap());
     }
     combining_indixes.sort();
     let iterator:usize = 0;
     for deleting in combining_indixes{
-        sights.remove(index-iterator);
+        sights.remove(deleting-iterator);
     }
 }

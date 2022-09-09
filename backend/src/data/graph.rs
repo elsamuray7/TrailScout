@@ -13,6 +13,7 @@ use serde::{Serialize, Deserialize};
 use serde_enum_str::{Deserialize_enum_str, Serialize_enum_str};
 use opening_hours::OpeningHours;
 use crate::data;
+use crate::data::osm_graph_creator::OSMSight;
 use crate::data::SightsConfig;
 use crate::utils::dijkstra;
 
@@ -378,6 +379,14 @@ fn binary_search_sights_vector(sights: &Vec<Sight>, target_latitude: f64) -> usi
     result.unwrap_or_else(|index| index)
 }
 
+/// Helper method to estimate index bounds within the sights vector for latitude coordinates
+/// Move to osm_graph_creator
+fn binary_search_sights_vector2(sights: &Vec<OSMSight>, target_latitude: f64) -> usize {
+    let result = sights.binary_search_by(|sight|
+        sight.lat.total_cmp(&target_latitude));
+    result.unwrap_or_else(|index| index)
+}
+
 /// Get the nearest node (that is not in `id_filter`) to a given coordinate (latitude / longitude).
 /// The function expects a node vector sorted by latitude.
 pub fn get_nearest_node(nodes_sorted_by_lat: &Vec<&impl INode>, id_filter: &HashSet<usize>, lat: f64, lon: f64) -> usize {
@@ -440,21 +449,22 @@ pub fn get_nearest_node(nodes_sorted_by_lat: &Vec<&impl INode>, id_filter: &Hash
 
 /// Get all nodes to a given coordinate (latitude / longitude) in the radius.
 /// The function expects a node vector sorted by latitude.
-pub fn get_sights_in_area<'a>(nodes_sorted_by_lat: &'a Vec<Sight>, lat: f64, lon: f64, radius: f64) -> Vec<&'a Sight> { //) -> usize {
+/// => Move to osm_graph_creator
+pub fn get_sights_in_area<'a>(nodes_sorted_by_lat: &'a Vec<OSMSight>, lat: f64, lon: f64, radius: f64) -> Vec<&'a OSMSight> { //) -> usize {
     
     debug!("Computing sights in area: lat: {}, lon: {}, radius: {}", lat, lon, radius);
 
         //estimate bounding box with 111111 meters = 1 longitude degree
         //use binary search to find the range of elements that should be considered
-        let lower_bound = binary_search_sights_vector(&nodes_sorted_by_lat, lat - radius / 111111.0);
-        let upper_bound = binary_search_sights_vector(&nodes_sorted_by_lat, lat + radius / 111111.0);
+        let lower_bound = binary_search_sights_vector2(&nodes_sorted_by_lat, lat - radius / 111111.0);
+        let upper_bound = binary_search_sights_vector2(&nodes_sorted_by_lat, lat + radius / 111111.0);
 
         let slice = &nodes_sorted_by_lat[lower_bound..upper_bound];
 
         let center = Location::new(lat, lon);
         let radius = Distance::from_meters(radius);
         //iterate through the slice and check every sight whether it's in the target circle
-        let sights_in_area: Vec<&Sight> = slice.iter()
+        let sights_in_area: Vec<&OSMSight> = slice.iter()
             .filter(|sight| {
                 let location = Location::new(sight.lat, sight.lon);
                 location.is_in_circle(&center, radius)
