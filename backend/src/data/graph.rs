@@ -438,6 +438,35 @@ pub fn get_nearest_node(nodes_sorted_by_lat: &Vec<&impl INode>, id_filter: &Hash
     min_id
 }
 
+/// Get all nodes to a given coordinate (latitude / longitude) in the radius.
+/// The function expects a node vector sorted by latitude.
+pub fn get_sights_in_area<'a>(nodes_sorted_by_lat: &'a Vec<Sight>, lat: f64, lon: f64, radius: f64) -> Vec<&'a Sight> { //) -> usize {
+    
+    debug!("Computing sights in area: lat: {}, lon: {}, radius: {}", lat, lon, radius);
+
+        //estimate bounding box with 111111 meters = 1 longitude degree
+        //use binary search to find the range of elements that should be considered
+        let lower_bound = binary_search_sights_vector(&nodes_sorted_by_lat, lat - radius / 111111.0);
+        let upper_bound = binary_search_sights_vector(&nodes_sorted_by_lat, lat + radius / 111111.0);
+
+        let slice = &nodes_sorted_by_lat[lower_bound..upper_bound];
+
+        let center = Location::new(lat, lon);
+        let radius = Distance::from_meters(radius);
+        //iterate through the slice and check every sight whether it's in the target circle
+        let sights_in_area: Vec<&Sight> = slice.iter()
+            .filter(|sight| {
+                let location = Location::new(sight.lat, sight.lon);
+                location.is_in_circle(&center, radius)
+                    .expect("Could not determine whether sight lies in given area")
+            })
+            .collect();
+        debug!("Found {} sights within the given area (of a total of {} sights)",
+            sights_in_area.len(), nodes_sorted_by_lat.len());
+
+        sights_in_area
+}
+
 #[derive(Debug)]
 pub enum ParseError {
     IO(std::io::Error),

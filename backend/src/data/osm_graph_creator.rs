@@ -4,6 +4,7 @@ use std::fs::{create_dir_all, File};
 use std::io;
 use std::hash::{Hash, Hasher};
 use std::io::BufWriter;
+use std::io::{BufWriter, Write, LineWriter};
 use std::path::Path;
 use crossbeam::thread;
 use serde::{Deserialize, Serialize};
@@ -13,7 +14,7 @@ use itertools::Itertools;
 use log::{error, info, trace};
 use osmpbf::{BlobReader, BlobType, Element, Way};
 use crate::data;
-use crate::data::graph::{Category, EdgeType, get_nearest_node, INode};
+use crate::data::graph::{Category, EdgeType, get_nearest_node, INode, get_sights_in_area};
 use crate::data::{EdgeTypeConfig, SightsConfig};
 
 /// An osm node located at a specific coordinate extraced from the osm data.
@@ -256,7 +257,30 @@ pub fn parse_and_write_osm_data (osmpbf_file_path: &str, fmi_file_path: &str) ->
     bincode::serialize_into(&mut file, &osm_edges).expect("Error serializing edges");
 
     let time_duration = time_start.elapsed();
+    // remove next line after debugging
+    write_graph_file("./osm_graphs/bremen-latest.fmi", &mut osm_nodes, & mut osm_edges, & mut osm_sights);
+
     info!("End of writing fmi binary file after {} seconds!", time_duration.as_millis() as f32 / 1000.0);
+    Ok(())
+}
+
+//Remove whole function after debugging
+fn write_graph_file(graph_file_path_out: &str, nodes: &mut Vec<OSMNode>, edges: &mut Vec<OSMEdge>, sights: &mut Vec<OSMSight>) -> std::io::Result<()> {
+    let file = File::create(graph_file_path_out)?;
+    let mut file = LineWriter::new(file);
+
+    file.write((format!("{}\n", nodes.len())).as_bytes())?;
+    file.write((format!("{}\n", sights.len())).as_bytes())?;
+    file.write((format!("{}\n", edges.len())).as_bytes())?;
+    for node in nodes {
+        file.write(format!("{} {} {}\n", node.id, node.lat, node.lon).as_bytes())?;
+    }
+    for sight in sights {
+        file.write(format!("{} {} {} {} {}\n", sight.node_id, sight.lat, sight.lon, sight.name, sight.category.to_string()).as_bytes())?;//sight.category.to_string()).as_bytes())?;
+    }
+    for edge in &*edges {
+        file.write(format!("{} {} {}\n", edge.src, edge.tgt, edge.dist).as_bytes())?;
+    }
     Ok(())
 }
 
@@ -492,5 +516,41 @@ fn prune_edges(osm_edges: &mut Vec<OSMEdge>) {
             osm_edges.swap_remove(i);
         }
         i -= 1;
+    }
+}
+
+// function for clustering Picnic Barbeque spots that are in a Range of 500m to one single sightNode
+fn clustering_sights(sights: &mut Vec<OSMSight>) {
+    let mut sights_to_combine: Vec<usize>;
+    let mut visited: HashMap<usize, usize>;
+    let mut index: usize = 0;
+    for sigh in sights{
+        if sigh.category == Category::PicnicBarbequeSpot && !sights_to_combine.contains(&sigh.osm_id){
+            let mut area:Vec<&OSMSight> = get_sights_in_area(&sights, sigh.lat, sigh.lon, 500.0);
+            visited.insert(sigh.osm_id, index);
+            //push(index, sigh);
+            //let mut combine: HashMap<usize, &OSMSight>;
+            //let mut key:usize = 0;
+
+            // Search for sights for clustering 
+            for node in area {
+                if node.category == Category::PicnicBarbequeSpot && !visited.contains_key(&node.osm_id) {
+                    sights_to_combine.push(node.osm_id);
+                    visited.insert(sigh.osm_id, 0);
+                    //key += 1;
+                }
+            }
+        }
+        index += 1;
+    }
+    // write a list with sights that must be deleted
+    let mut combining_indixes: Vec<&usize>;
+    for identifier in sights_to_combine {
+        combining_indixes.push(visited.get(&identifier).unwrap());
+    }
+    combining_indixes.sort();
+    let iterator:usize = 0;
+    for deleting in combining_indixes{
+        sights.remove(index-iterator);
     }
 }
