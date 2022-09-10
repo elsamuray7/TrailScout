@@ -34,7 +34,7 @@ export class SettingsTaskbarTagItemComponent implements OnInit {
 
   readonly categoryLabels = new Map<string, string>([
     ["Sightseeing", "Sehenswürdigkeiten"],
-    ["Activities", "Attraktionen"],
+    ["Activities", "Aktivitäten"],
     ["Nightlife", "Nachtleben"],
     ["Restaurants", "Restaurants"],
     ["Shopping", "Shopping"],

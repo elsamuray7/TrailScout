@@ -81,6 +81,16 @@ export const seaIcon = L.icon({
     // popupAnchor:  [-3, -76] // point from which the popup should open relative to the iconAnchor
 });
 
+export const activitiesIcon = L.icon({
+  iconUrl: 'assets/icons/activities.png',
+
+  iconSize:     [30, 35], // size of the icon
+  // shadowSize:   [50, 64], // size of the shadow
+  // iconAnchor:   [22, 94], // point of the icon which will correspond to marker's location
+  // shadowAnchor: [4, 62],  // the same for the shadow
+  // popupAnchor:  [-3, -76] // point from which the popup should open relative to the iconAnchor
+});
+
 export const startIcon = L.icon({
     iconUrl: 'assets/icons/start.png',
 
@@ -124,6 +134,8 @@ export function getIcon(sight: Sight) {
         return natureIcon;
       case "Swimming":
         return seaIcon;
+      case "Activities":
+          return activitiesIcon;
       default:
         return iconDefault;
     }
