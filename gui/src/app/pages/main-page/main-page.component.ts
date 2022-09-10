@@ -119,7 +119,7 @@ export class MainPageComponent implements OnInit, OnDestroy {
 
   async showRoute(route: RouteResponse) {
     if (route.error && !route.route) {
-      this.toastService.showDanger(route.error.message ?? 'Something went wrong!');
+      this.toastService.showDanger(route.error.message + '\n' + route.error.error ?? 'Something went wrong!');
       return;
     }
     route.route?.map((r,index) => r.id = index);
