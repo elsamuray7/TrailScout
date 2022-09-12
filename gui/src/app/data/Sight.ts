@@ -5,4 +5,5 @@ export class Sight {
   node_id: number = -1;
   name: string = "";
   pref: number = -1;
+  wikidata_id: string = "";
 }

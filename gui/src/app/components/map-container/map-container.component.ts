@@ -7,7 +7,8 @@ import * as Icons from '../icons';
 import { Sight } from 'src/app/data/Sight';
 import { RouteResponse, RouteService } from 'src/app/services/route.service';
 import { GPSService } from 'src/app/services/gps.service';
-import { Subscription } from 'rxjs';
+import { firstValueFrom, lastValueFrom, map, Subscription } from 'rxjs';
+import { WikidataHandlerService } from 'src/app/services/wikidata-handler.service';
 
 
 L.Marker.prototype.options.icon = Icons.iconDefault;
@@ -42,7 +43,7 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
   sub2?: Subscription;
   sub3?: Subscription;
 
-  constructor(private gpsService: GPSService, private routeService: RouteService) {
+  constructor(private gpsService: GPSService, private routeService: RouteService, private wikidataService: WikidataHandlerService) {
   }
   ngOnDestroy() {
     this.sub1?.unsubscribe();
@@ -89,10 +90,10 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
   }
 
   async loadMap() {
-    if (!this.initLat && !this.initLng) {
+    if (!this.initLat || !this.initLng) {
       this.initLat = (await this.gpsService.getCurrentLocation())?.lat;
       this.initLng = (await this.gpsService.getCurrentLocation())?.lng;
-      if (!this.initLat && !this.initLng) {
+      if (!this.initLat || !this.initLng) {
         this.initLat = 48.783333;
         this.initLng = 9.183333;
       }
@@ -145,7 +146,7 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
     }
   }
 
-  drawSights(category: Category) {
+  async drawSights(category: Category) {
     var newLayer = new L.LayerGroup<any>();
     category.sights.forEach((sight) => {
       var latlng: LatLngExpression = {
@@ -155,7 +156,12 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
       const icon = Icons.getIcon(sight);
 
       let newMarker = new L.Marker(latlng, {icon: icon,}).addTo(newLayer);
-      newMarker.bindPopup(sight.name,{closeButton: false});
+      newMarker.on('click', async () => {
+        const data = await this.wikidataService.getWiki(sight.wikidata_id);
+        console.log(data);
+        newMarker.bindPopup('Test', {closeButton: false});
+        newMarker.openPopup();
+      })
       newLayer.addTo(this.map);
     });
     this.activeLayers.set(category.name, newLayer);
