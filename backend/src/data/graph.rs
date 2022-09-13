@@ -10,16 +10,15 @@ use geoutils::{Distance, Location};
 use itertools::Itertools;
 use log::{debug, trace, info};
 use serde::{Serialize, Deserialize};
-use serde_enum_str::{Deserialize_enum_str, Serialize_enum_str};
 use opening_hours::OpeningHours;
 use crate::data;
 use crate::data::SightsConfig;
 use crate::utils::dijkstra;
 
-#[derive(EnumString, Deserialize, Serialize, PartialEq, Eq, Debug, Copy, Clone)]
+#[derive(strum_macros::Display, EnumString, Deserialize, Serialize, PartialEq, Eq, Debug, Copy, Clone)]
 #[serde(rename_all = "PascalCase")]
 pub enum Category {
-    ThemePark,
+    Activities,
     Swimming,
     PicnicBarbequeSpot,
     MuseumExhibition,
@@ -28,8 +27,13 @@ pub enum Category {
     Restaurants,
     Sightseeing,
     Shopping,
-    Animals,
-    Other
+    Animals
+}
+
+impl Hash for Category {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.to_string().hash(state);
+    }
 }
 
 #[derive(strum_macros::Display, EnumString, Deserialize, Serialize, PartialEq, Debug, Copy, Clone)]
@@ -134,11 +138,21 @@ pub struct Sight {
     #[serde(skip)]
     pub opening_hours_parsed: Option<OpeningHours>,
     #[serde(skip_deserializing)]
-    pub duration_of_stay_minutes : usize, //default 0 when not overwritten by set_config_duration_of_stay
+    pub duration_of_stay_minutes: i64, //default 0 when not overwritten by set_config_duration_of_stay
     pub wikidata_id: String
 }
 
 impl Sight{
+    /// Get this sights opening hours
+    pub fn opening_hours(&self) -> &OpeningHours {
+        self.opening_hours_parsed.as_ref().unwrap()
+    }
+
+    /// Get the estimated time to spend at this sight in seconds
+    pub fn duration_of_stay_secs(&self) -> i64 {
+        self.duration_of_stay_minutes * 60
+    }
+
     ///Tries to parse opening hours from osm and then sets opening_hours_parsed.
     ///If osm value cannot be parsed use default value from sights config
     ///Also overwrites opening_hours if default value is used
@@ -183,9 +197,8 @@ impl Sight{
         for cat_tag_map in &sights_config.category_tag_map{
             let cat = cat_tag_map.category.parse::<Category>().unwrap();
             if self.category == cat {
-                let default_opening_hours = cat_tag_map.duration_of_stay_minutes.clone();
-                self.duration_of_stay_minutes = default_opening_hours;
-                break
+                self.duration_of_stay_minutes = cat_tag_map.duration_of_stay_minutes;
+                break;
             }
         }
     }
@@ -300,6 +313,32 @@ impl Graph {
         get_nearest_node(&nodes_sorted_by_lat, &id_filter, lat, lon)
     }
 
+    /// Get the nearest non-sight reachable graph node to a given coordinate (latitude / longitude)
+    /// Also checks if the nearest node is in a given area. Returns None if not in given area.
+    pub fn get_nearest_node_in_area(&self, lat: f64, lon: f64, radius: f64) -> Option<usize> {
+        let nodes_sorted_by_lat = self.nodes.iter()
+            .sorted_unstable_by(|node1, node2| node1.lat.total_cmp(&node2.lat))
+            .collect_vec();
+        let id_filter = self.sights.iter().map(|sight| sight.node_id)
+            //.merge(self.nodes.iter().filter(|node| self.get_degree(node.id) > 0)
+            //    .map(|node| node.id))
+            .collect();
+        let nearest_node_id = get_nearest_node(&nodes_sorted_by_lat, &id_filter, lat, lon);
+        let nearest_node = self.get_node(nearest_node_id);
+        let nearest_node_location = Location::new(nearest_node.lat(), nearest_node.lon());
+
+        let center = Location::new(lat, lon);
+        let radius = Distance::from_meters(radius);
+
+        let mut min_id: Option<usize> = None;
+        if nearest_node_location.is_in_circle(&center, radius).unwrap() {
+            min_id = Some(nearest_node_id);
+            min_id
+        } else {
+            min_id
+        }
+    }
+
     /// Get the number of outgoing edges of the node with id `node_id`
     pub fn get_degree(&self, node_id: usize) -> usize {
         self.offsets[node_id + 1] - self.offsets[node_id]
@@ -390,7 +429,7 @@ pub fn get_nearest_node(nodes_sorted_by_lat: &Vec<&impl INode>, id_filter: &Hash
     trace!("Starting to search for nearest node at index: {} for latitude: {}", found_index, lat);
 
     let mut min_dist = Distance::from_meters(f64::MAX);
-    let mut min_id = 0;
+    let mut min_id = usize::MAX;
 
     // Iterate over the left and right neighbour indices to determine the nearest node
     let mut left_index = found_index;
@@ -490,7 +529,7 @@ mod test {
     use geoutils::{Distance, Location};
     use log::{debug, trace};
     use rand::{Rng, thread_rng};
-    use crate::data::graph::{Graph, Node};
+    use crate::data::graph::Node;
     use crate::init_logging;
     use crate::utils::test_setup;
 

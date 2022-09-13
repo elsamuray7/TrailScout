@@ -5,6 +5,8 @@ import { BlockUI, NgBlockUI } from 'ng-block-ui';
 import {Subscription} from 'rxjs';
 import { ApplicationStateService } from 'src/app/services/application-state.service';
 import { RouteService } from 'src/app/services/route.service';
+import { RouteTrackerSection } from 'src/app/types.utils';
+import { GPSService } from 'src/app/services/gps.service';
 import { MapContainerComponent } from '../../components/map-container/map-container.component';
 import {MapService} from "../../services/map.service";
 import {Sight} from "../../data/Sight";
@@ -27,11 +29,11 @@ export class MainPageComponent implements OnInit, OnDestroy {
 
   mobile = false;
 
-  defaultStartPointLong = 9.183333;
-  defaultStartPointLat = 48.783333;
-
   sub?: Subscription;
   blockSub?: Subscription;
+  routeTrackerSections: RouteTrackerSection[] = [];
+
+  gpsPosition?: L.LatLng;
 
   radius?: number;
   constructor(
@@ -39,17 +41,27 @@ export class MainPageComponent implements OnInit, OnDestroy {
     private sightService: SightsServiceService,
     private offcanvasService: NgbOffcanvas,
     private applicationStateService: ApplicationStateService,
+    private routeService: RouteService,
+    private toastService: ToastService,
+    private gpsService: GPSService,
     private routeService: RouteService) {
 
     this.mobile =  applicationStateService.getIsMobileResolution();
 
-    this.sub = this.routeService.routeUpdated.subscribe(_ => {
+    this.sub = this.routeService.routeUpdated.subscribe(route => {
+      this.showRoute(route);
       this.blockUIMap.stop();
-      this.toggleViewMode();
     });
     this.blockSub = this.routeService.startRouteCall.subscribe(() => {
       this.blockUIMap.start('Loading route...');
     });
+
+
+
+    const gps = this.gpsService.getLocation().subscribe(pos => {
+      this.gpsPosition = pos as L.LatLng;
+    });
+
 
     const coords = this.mapService.getCoordniates();
     if (coords) {
@@ -65,8 +77,8 @@ export class MainPageComponent implements OnInit, OnDestroy {
     this.sub?.unsubscribe();
   }
 
-  ngOnInit(): void {
-
+  async ngOnInit() {
+    this.gpsPosition = await this.gpsService.getCurrentLocation();
   }
 
   radiusChange(radius: number) {
@@ -104,6 +116,23 @@ export class MainPageComponent implements OnInit, OnDestroy {
     }, (reason) => {
       console.log(reason);
     })
+  }
+
+  async showRoute(route: RouteResponse) {
+    if (route.error && !route.route) {
+      this.toastService.showDanger(route.error.message + '\n' + route.error.error ?? 'Something went wrong!');
+      return;
+    }
+    route.route?.map((r,index) => r.id = index);
+    this.mapContainer.drawRoute(route);
+    this.mapContainer.drawSightsOnRoute(route);
+    this.routeTrackerSections = [];
+    route.route?.forEach(route => {
+      const sight = route.sight;
+      const section = route.nodes.map(l => new L.LatLng(l.lat, l.lon));
+      this.routeTrackerSections.push({section: section, sight: sight!, routeId: route.id!});
+    });
+
   }
 
   showSight(sight: Sight) {

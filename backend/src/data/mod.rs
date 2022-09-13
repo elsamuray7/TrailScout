@@ -21,7 +21,7 @@ pub struct SightsConfig {
 pub struct CategoryTagMap {
     category: String,
     opening_hours: String,
-    duration_of_stay_minutes : usize,
+    duration_of_stay_minutes : i64,
     tags: Vec<Tag>
 }
 

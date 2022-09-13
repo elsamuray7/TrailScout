@@ -4,12 +4,14 @@
         <app-map-container id='map-container'
         [circleRadius]="radius"
         [startPoint]="markerCoords"
-        [initLat]="markerCoords?.lat ?? defaultStartPointLat"
-        [initLng]="markerCoords?.lng ?? defaultStartPointLong"
+        [initLat]="markerCoords?.lat"
+        [initLng]="markerCoords?.lng"
         (markerLocation)="markerSet($event)"></app-map-container>
-    </div>
 
+
+    </div>
     <div class="wrapper">
+        <app-route-tracker id="route-tracker" [sections]="routeTrackerSections" [userLocation]="gpsPosition"></app-route-tracker>
         <div #collapse="ngbCollapse" [(ngbCollapse)]="isCollapsed" id="collapse" [class.mobile]="mobile" [animation]="false">
             <app-settings-taskbar
             [startRadius]="radius"

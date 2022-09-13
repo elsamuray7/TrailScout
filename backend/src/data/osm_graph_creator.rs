@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::time::Instant;
 use geoutils::Location;
 use itertools::Itertools;
-use log::{error, info, trace};
+use log::{info, trace};
 use osmpbf::{BlobReader, BlobType, Element, Way};
 use crate::data;
 use crate::data::graph::{Category, EdgeType, get_nearest_node, INode};
@@ -267,16 +267,17 @@ fn create_osm_node(osm_id: usize, lat: f64, lon: f64, tags: Vec<(&str, &str)>, s
     // if sight has no name, osm_id is shown
     let mut osm_name = osm_id.to_string(); // default
     let mut osm_opening_hours = "empty".to_string(); // default
-    let mut categories: Vec<Category> = Vec::new();
+    let mut categories: HashSet<Category> = HashSet::new();
     let mut osm_wikidata_id = "empty".to_string();
     let mut is_sight = false;
     for (key, value) in tags {
         for cat_tag_map in &sight_config.category_tag_map {
+            let category = cat_tag_map.category.parse::<Category>().unwrap();
             for tag in &cat_tag_map.tags {
                 if key.eq(&tag.key) {
                     if value.eq(&tag.value) {
                         is_sight = true;
-                        categories.push(cat_tag_map.category.parse::<Category>().unwrap());
+                        categories.insert(category);
                     }
                 }
             }

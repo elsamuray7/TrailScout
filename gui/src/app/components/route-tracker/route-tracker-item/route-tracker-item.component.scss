@@ -1,0 +1,42 @@
+.item {
+    border: 1px solid green;
+    padding: 1px;
+    height: 13vh;
+    width: 14vh;
+    flex-shrink: 0;
+    color: black;
+    font-size: 1vw;
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.85), transparent)
+}
+
+.currentSection {
+    color: red !important;
+    border: 2px solid red !important;
+    font-size: 1vh;
+}
+
+.hover {
+    color: darkslategrey;
+    border: 2px solid darkslategrey;
+}
+
+img {
+    width: 7vh;
+    height: 4.5vh;
+}
+
+.mobile-img {
+    width: 7vh;
+    height: 4vh;
+}
+
+.mobile-text {
+    font-size: 2vh !important;
+}
+
+
+.sight{
+    font-size: 1.5vh;
+    font-style: italic;
+    color: darkslategrey;
+}

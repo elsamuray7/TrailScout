@@ -2,13 +2,161 @@
     "category_tag_map":
     [
         {
-            "category": "ThemePark",
+            "category": "Activities",
             "opening_hours": "Mo-Su 10:00-20:00",
             "duration_of_stay_minutes": 60,
             "tags": [
                 {
                     "key": "tourism", 
                     "value": "theme_park"
+                },
+                {
+                    "key": "sport",
+                    "value": "* ?"
+                },
+                {
+                    "key": "sport",
+                    "value": "9pin"
+                },
+                {
+                    "key": "sport",
+                    "value": "10pin"
+                },
+                {
+                    "key": "sport",
+                    "value": "american_football"
+                },
+                {
+                    "key": "sport",
+                    "value": "baseball"
+                },
+                {
+                    "key": "sport",
+                    "value": "basketball"
+                },
+                {
+                    "key": "sport",
+                    "value": "beachvolleyball"
+                },
+                {
+                    "key": "sport",
+                    "value": "billiards"
+                },
+                {
+                    "key": "sport",
+                    "value": "boules"
+                },
+                {
+                    "key": "sport",
+                    "value": "bowls"
+                },
+                {
+                    "key": "sport",
+                    "value": "climbing"
+                },
+                {
+                    "key": "sport",
+                    "value": "climbing_adventure"
+                },
+                {
+                    "key": "sport",
+                    "value": "crossfit"
+                },
+                {
+                    "key": "sport",
+                    "value": "darts"
+                },
+                {
+                    "key": "sport",
+                    "value": "fitness"
+                },
+                {
+                    "key": "sport",
+                    "value": "golf"
+                },
+                {
+                    "key": "sport",
+                    "value": "ice_skating"
+                },
+                {
+                    "key": "sport",
+                    "value": "ice_stock"
+                },
+                {
+                    "key": "sport",
+                    "value": "karting"
+                },
+                {
+                    "key": "sport",
+                    "value": "kitesurfing"
+                },
+                {
+                    "key": "sport",
+                    "value": "miniature_golf"
+                },
+                {
+                    "key": "sport",
+                    "value": "motocross"
+                },
+                {
+                    "key": "sport",
+                    "value": "parkour"
+                },
+                {
+                    "key": "sport",
+                    "value": "roller_skating"
+                },
+                {
+                    "key": "sport",
+                    "value": "running"
+                },
+                {
+                    "key": "sport",
+                    "value": "sailing"
+                },
+                {
+                    "key": "sport",
+                    "value": "skateboard"
+                },
+                {
+                    "key": "sport",
+                    "value": "soccer"
+                },
+                {
+                    "key": "sport",
+                    "value": "surfing"
+                },
+                {
+                    "key": "sport",
+                    "value": "table_tennis"
+                },
+                {
+                    "key": "sport",
+                    "value": "table_soccer"
+                },
+                {
+                    "key": "sport",
+                    "value": "ultimate"
+                },
+                {
+                    "key": "sport",
+                    "value": "wakeboarding"
+                },
+                {
+                    "key": "sport",
+                    "value": "water_ski"
+                },
+                {
+                    "key": "leisure",
+                    "value": "fitness_centre"
+                },
+                {
+                    "key": "leisure",
+                    "value": "fitnes_station"
+                },
+                {
+                    "key": "leisure",
+                    "value": "sports_centre"
                 }
             ]
         },
@@ -70,6 +218,10 @@
                 {
                     "key": "tourism", 
                     "value": "museum"
+                },
+                {
+                    "key": "amenity ",
+                    "value": "planetarium"
                 }
             ]
         },
@@ -112,10 +264,6 @@
                 {
                     "key": "amenity", 
                     "value": "nightclub"
-                },
-                {
-                    "key": "amenity", 
-                    "value": "planetarium"
                 }
             ]
         },
@@ -133,7 +281,15 @@
                     "value": "ice_cream"
                 },
                 {
-                    "key": "amenity", 
+                    "key": "shop",
+                    "value": "tea"
+                },
+                {
+                    "key": "shop",
+                    "value": "bakery"
+                },
+                {
+                    "key": "amenity",
                     "value": "restaurant"
                 },
                 {
@@ -160,12 +316,28 @@
             "duration_of_stay_minutes": 60,
             "tags": [
                 {
-                    "key": "building", 
+                    "key": "historic",
+                    "value": "building"
+                },
+                {
+                    "key": "historic",
                     "value": "castle"
                 },
                 {
                     "key": "historic", 
-                    "value": "theme_park"
+                    "value": "church"
+                },
+                {
+                    "key": "historic",
+                    "value": "city_gate"
+                },
+                {
+                    "key": "historic",
+                    "value": "monument"
+                },
+                {
+                    "key": "historic",
+                    "value": "ruins"
                 },
                 {
                     "key": "waterway", 
@@ -198,10 +370,6 @@
                 {
                     "key": "tourism", 
                     "value": "artwork"
-                },
-                {
-                    "key": "tourism", 
-                    "value": "yes"
                 }
             ]
         },
@@ -220,18 +388,7 @@
                 },
                 {
                     "key": "shop", 
-                    "value": "alcohol"
-                },{
-                    "key": "shop", 
-                    "value": "bakery"
-                },
-                {
-                    "key": "shop", 
-                    "value": "beverages"
-                },
-                {
-                    "key": "shop", 
-                    "value": "brewing_supplies"
+                    "value": "mall"
                 }
             ]
         },
@@ -247,161 +404,6 @@
                 {
                     "key": "tourism", 
                     "value": "aquarium"
-                }
-            ]
-        },
-        {
-            "category": "Other",
-            "opening_hours": "Mo-Su 10:00-20:00",
-            "duration_of_stay_minutes": 60,
-            "tags": [
-                {
-                    "key": "sport", 
-                    "value": "* ?"
-                },
-                {
-                    "key": "sport", 
-                    "value": "9pin"
-                },
-                {
-                    "key": "sport", 
-                    "value": "10pin"
-                },
-                {
-                    "key": "sport", 
-                    "value": "american_football"
-                },
-                {
-                    "key": "sport", 
-                    "value": "baseball"
-                },
-                {
-                    "key": "sport", 
-                    "value": "basketball"
-                },
-                {
-                    "key": "sport", 
-                    "value": "beachvolleyball"
-                },
-                {
-                    "key": "sport", 
-                    "value": "billiards"
-                },
-                {
-                    "key": "sport", 
-                    "value": "boules"
-                },
-                {
-                    "key": "sport", 
-                    "value": "bowls"
-                },
-                {
-                    "key": "sport", 
-                    "value": "climbing"
-                },
-                {
-                    "key": "sport", 
-                    "value": "climbing_adventure"
-                },
-                {
-                    "key": "sport", 
-                    "value": "crossfit"
-                },
-                {
-                    "key": "sport", 
-                    "value": "darts"
-                },
-                {
-                    "key": "sport", 
-                    "value": "fitness"
-                },
-                {
-                    "key": "sport", 
-                    "value": "golf"
-                },
-                {
-                    "key": "sport", 
-                    "value": "ice_skating"
-                },
-                {
-                    "key": "sport", 
-                    "value": "ice_stock"
-                },
-                {
-                    "key": "sport", 
-                    "value": "karting"
-                },
-                {
-                    "key": "sport", 
-                    "value": "kitesurfing"
-                },
-                {
-                    "key": "sport", 
-                    "value": "miniature_golf"
-                },
-                {
-                    "key": "sport", 
-                    "value": "motocross"
-                },
-                {
-                    "key": "sport", 
-                    "value": "parkour"
-                },
-                {
-                    "key": "sport", 
-                    "value": "roller_skating"
-                },
-                {
-                    "key": "sport", 
-                    "value": "running"
-                },
-                {
-                    "key": "sport", 
-                    "value": "sailing"
-                },
-                {
-                    "key": "sport", 
-                    "value": "skateboard"
-                },
-                {
-                    "key": "sport", 
-                    "value": "soccer"
-                },
-                {
-                    "key": "sport", 
-                    "value": "surfing"
-                },
-                {
-                    "key": "sport", 
-                    "value": "table_tennis"
-                },
-                {
-                    "key": "sport", 
-                    "value": "table_soccer"
-                },
-                {
-                    "key": "sport", 
-                    "value": "ultimate"
-                },
-                {
-                    "key": "sport", 
-                    "value": "wakeboarding"
-                },
-                {
-                    "key": "sport", 
-                    "value": "water_ski"
-                },
-                {
-                    "key": "leisure", 
-                    "value": "fitness_centre"
-                },
-                {
-                    "key": "leisure", 
-                    "value": "fitnes_station"
-                },
-                {
-                    "key": "leisure", 
-                    "value": "sports_centre"
                 }
             ]
         }

@@ -14,9 +14,9 @@ fn test_parsing_process_to_produce_graph_with_proper_number_of_elements() {
     let graph: &Lazy<Graph> = &test_setup::GRAPH;
     info!("Finished creating graph with {} nodes, {} sights and {} edges", graph.num_nodes, graph.num_sights, graph.num_edges);
     if test_setup::GRAPH_PATH.0.contains("bremen") {
-        assert_eq!(graph.num_nodes, 236777, "nodes");
-        assert_eq!(graph.num_sights, 3014, "sights");
-        assert_eq!(graph.num_edges, 524956, "edges");
+        assert_eq!(graph.num_nodes, 236748, "nodes");
+        assert_eq!(graph.num_sights, 2954, "sights");
+        assert_eq!(graph.num_edges, 524898, "edges");
     } else if test_setup::GRAPH_PATH.0.contains("stg") {
         assert_eq!(graph.num_nodes, 4760, "nodes");
         assert_eq!(graph.num_sights, 352, "sights");
@@ -210,25 +210,20 @@ fn test_paths_in_both_directions() {
 }
 
 #[test]
-fn test_sight_edge_tpes () {
+fn test_sight_edge_types () {
     init_logging();
     info!("Creating graph");
     let graph: &Lazy<Graph> = &test_setup::GRAPH;
     info!("Finished creating graph with {} nodes, {} sights and {} edges", graph.num_nodes, graph.num_sights, graph.num_edges);
 
     let mut num_of_sight_edge: usize = 0;
-    let mut num_of_non_sight_edge: usize = 0;
     for node in graph.nodes() {
         let edges = graph.get_outgoing_edges(node.id);
         for edge in edges {
             if edge.edge_type == EdgeType::SightEdge {
                 num_of_sight_edge += 1;
-            } else {
-                num_of_non_sight_edge += 1;
             }
         }
     }
-
     info!("Graph has {} sights and sight edges {}", graph.num_sights, num_of_sight_edge);
-    //assert_eq!(graph.num_sights, num_of_sight_edge / 2, "Number of Sights and Edges to Sights do not match!");
 }
