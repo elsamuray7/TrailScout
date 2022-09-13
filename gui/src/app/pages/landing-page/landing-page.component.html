@@ -2,7 +2,6 @@
   <div class="row" style="margin: 10px">
     <div class="col card border-primary text-center">
       <div class="card-body row">
-        <img src="assets/team-bild.jpg" class="col" alt="Ein Bild von dem Team" style="border-radius: 10px;">
         <div class="col">
           <h1 class="card-title">Willkommen bei Trailscout!</h1>
           <p>
@@ -20,7 +19,31 @@
   <div class="row card border-secondary text-center" style="margin: 10px">
     <div class="card-body">
       <h2 class="card-title">Die beste Tour durch die Stadt!</h2>
-      <img src="assets/app-Screenshot.png" alt="Ein Bild von der Main Page" style="width: 60%;">
+
+      <swiper
+        [slidesPerView]="1"
+        [navigation]="true"
+        [pagination]="{ type: 'bullets' }"
+        [centeredSlides]="true"
+        [keyboard]="{enabled: true}"
+        [virtual]="true"
+        class="my-swiper"
+      >
+        <ng-template swiperSlide>
+          Slide 1:
+          <img src="assets/app-Screenshot.png" alt="Ein Bild von der Main Page" style="width: 60%;">
+        </ng-template>
+
+        <ng-template swiperSlide>
+          Slide 2:
+          <img src="assets/app-Screenshot.png" alt="Ein Bild von der Main Page" style="width: 60%;">
+        </ng-template>
+
+        <ng-template swiperSlide>
+          Slide 3:
+          <img src="assets/app-Screenshot.png" alt="Ein Bild von der Main Page" style="width: 60%;">
+        </ng-template>
+      </swiper>
     </div>
   </div>
 </div>

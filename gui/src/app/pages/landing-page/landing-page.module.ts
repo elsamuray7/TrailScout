@@ -2,7 +2,7 @@ import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { LandingPageComponent } from './landing-page.component';
 import { NavigationModule } from '../navigation/navigation.module';
-
+import { SwiperModule } from 'swiper/angular';
 
 
 @NgModule({
@@ -11,7 +11,8 @@ import { NavigationModule } from '../navigation/navigation.module';
   ],
   imports: [
     CommonModule,
-    NavigationModule
+    NavigationModule,
+    SwiperModule
   ]
 })
 export class LandingPageModule { }
