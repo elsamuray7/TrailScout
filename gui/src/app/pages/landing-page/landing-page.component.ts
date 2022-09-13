@@ -1,6 +1,6 @@
 import { Component, OnInit, ViewEncapsulation  } from '@angular/core';
 import SwiperCore, { Keyboard, Pagination, Navigation, Virtual } from 'swiper';
-import { BehaviorSubject } from 'rxjs';
+import { Router } from '@angular/router';
 
 // install Swiper modules
 SwiperCore.use([Keyboard, Pagination, Navigation, Virtual]);
@@ -12,9 +12,14 @@ SwiperCore.use([Keyboard, Pagination, Navigation, Virtual]);
 })
 export class LandingPageComponent implements OnInit {
 
-  constructor() { }
+  constructor(private router: Router) { }
 
   ngOnInit(): void {
+  }
+
+  //Keine Ahnung ob man das Routing so macht
+  goToPage(pageName:string){
+    this.router.navigate([`${pageName}`]);
   }
 
 

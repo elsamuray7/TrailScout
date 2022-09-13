@@ -3,22 +3,26 @@
     <div class="col card border-primary text-center">
       <div class="card-body row">
         <div class="col">
-          <h1 class="card-title">Willkommen bei Trailscout!</h1>
+          <h1 class="card-title">Spannende Touren mit Trailscout</h1>
           <p>
-            Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et
-            dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet
-            clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet,
-            consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, s
-            ed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea t
-            akimata sanctus est Lorem ipsum dolor sit amet.
+            Zu Beginn einer Reise stellt sich das Problem der Routenwahl.
+            Für gewöhnlich möchte man so schnell wie möglich von A nach B kommen.
+            Das ist aber anders, wenn man eine Wanderung oder Stadttour planen will.
+            Statt die Reisedauer zu minimieren, soll die Anzahl an interessanten Orten in der Route maximiert werden.
+          </p>
+          <p>
+            Trailscout liefert diese Funktion.
+            Interessante Orte in der Umgebung des Startpunktes können ausgewählt und priorisiert werden.
+            Zusammen mit der gewünschten Laufzeit berechnet Trailscout einen Rundkurs für Sie.
           </p>
         </div>
+        <button  (click)='goToPage("main")'>Jetzt Planen</button>
       </div>
     </div>
   </div>
   <div class="row card border-secondary text-center" style="margin: 10px">
     <div class="card-body">
-      <h2 class="card-title">Die beste Tour durch die Stadt!</h2>
+      <h2 class="card-title">Trailscout - So gehts:</h2>
 
       <swiper
         [slidesPerView]="1"
@@ -30,17 +34,32 @@
         class="my-swiper"
       >
         <ng-template swiperSlide>
-          Slide 1:
+          Slide 1 Startpunkt wählen & Settings:
           <img src="assets/app-Screenshot.png" alt="Ein Bild von der Main Page" style="width: 60%;">
         </ng-template>
 
         <ng-template swiperSlide>
-          Slide 2:
+          Slide 2 Sights anschauen:
           <img src="assets/app-Screenshot.png" alt="Ein Bild von der Main Page" style="width: 60%;">
         </ng-template>
 
         <ng-template swiperSlide>
-          Slide 3:
+          Slide 3 Kategorien:
+          <img src="assets/app-Screenshot.png" alt="Ein Bild von der Main Page" style="width: 60%;">
+        </ng-template>
+
+        <ng-template swiperSlide>
+          Slide 4 Individuelle Sights:
+          <img src="assets/app-Screenshot.png" alt="Ein Bild von der Main Page" style="width: 60%;">
+        </ng-template>
+
+        <ng-template swiperSlide>
+          Slide 5 Route berechnen:
+          <img src="assets/app-Screenshot.png" alt="Ein Bild von der Main Page" style="width: 60%;">
+        </ng-template>
+
+        <ng-template swiperSlide>
+          Slide 6 Route anschauen:
           <img src="assets/app-Screenshot.png" alt="Ein Bild von der Main Page" style="width: 60%;">
         </ng-template>
       </swiper>
