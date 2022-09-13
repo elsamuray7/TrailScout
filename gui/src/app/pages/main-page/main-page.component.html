@@ -11,7 +11,7 @@
 
     </div>
     <div class="wrapper">
-        <app-route-tracker id="route-tracker" [sections]="routeTrackerSections" [userLocation]="gpsPosition"></app-route-tracker>
+        <app-route-tracker *ngIf="isRouteModeActive()" id="route-tracker" [sections]="routeTrackerSections" [userLocation]="gpsPosition"></app-route-tracker>
         <div #collapse="ngbCollapse" [(ngbCollapse)]="isCollapsed" id="collapse" [class.mobile]="mobile" [animation]="false">
             <app-settings-taskbar
             [startRadius]="radius"

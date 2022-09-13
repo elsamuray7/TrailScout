@@ -104,12 +104,6 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
 
     this.showStartPoint();
     this.markerLocation.emit(this.startPoint);
-    if (this.startPoint) {
-      this.marker = new L.Marker(this.startPoint, {icon: Icons.startIcon});
-      this.marker.addTo(this.map);
-      this.addCircle(this.startPoint);
-      this.markerLocation.emit(this.startPoint)
-    }
 
   }
 
@@ -123,7 +117,7 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
       }
     }
     this.map = L.map('map', {
-      center: [this.initLat, this.initLng],
+      center: [this.initLat!, this.initLng!],
       zoom: this.initZoom
     });
 
@@ -151,10 +145,6 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
   async onClick(event: any, map: L.Map) {
     const latlng = event.latlng as L.LatLng;
     this.hideMarker();
-    this.marker = new L.Marker(latlng);
-    if (this.marker) {
-      this.marker.removeFrom(map);
-    }
     this.marker = new L.Marker(latlng, {icon: Icons.startIcon});
     this.marker.addTo(map);
     this.addCircle(latlng);
@@ -163,7 +153,7 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
 
   showStartPoint() {
     if (this.startPoint) {
-      this.marker = new L.Marker(this.startPoint);
+      this.marker = new L.Marker(this.startPoint, {icon: Icons.startIcon});
       this.marker.addTo(this.map);
       this.addCircle(this.startPoint);
     }

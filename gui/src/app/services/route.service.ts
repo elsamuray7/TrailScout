@@ -30,9 +30,9 @@ export class RouteService {
 
   private readonly backendUrl: String;
   private route?: RouteResponse;
-  public routeUpdated = new EventEmitter<any>();
+  public routeUpdated = new EventEmitter<RouteResponse>();
   public startRouteCall = new EventEmitter<any>();
-  public id$: Subject<number | null> = new Subject(); 
+  public id$: Subject<number | null> = new Subject();
   public id_clicked$: Subject<number> = new Subject();
 
   constructor(private http: HttpClient) {
@@ -52,7 +52,7 @@ export class RouteService {
       ).subscribe((route ) => {
       this.route = route as RouteResponse;
       if (this.route)  {
-        this.routeUpdated.emit(route);
+        this.routeUpdated.emit(this.route);
       }
 
     });
