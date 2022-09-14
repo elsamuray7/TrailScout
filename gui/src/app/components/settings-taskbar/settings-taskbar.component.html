@@ -1,4 +1,4 @@
-<div class="card text-white border-primary mb-3">
+<div class="card text-white border-primary mb-3" style="height: 93vh;">
     <div class="row">
         <div class="inputs">
             <div class="row justify-content-around">
@@ -54,8 +54,9 @@
                 </ngb-panel>
             </ngb-accordion>
 
-            <div class="card" style="background-color: black; height: 24vh; margin-top: 3vh; ">
+            <div *ngIf="!this.getLastRequest()" class="card" style="background-color: black; margin-top: 3vh; ">
                 "start": {{startTime.hour}}:{{startTime.minute}}
+                <br>
                 "end": {{endTime.hour}}:{{startTime.minute}}
                 <br>
                 "radius": {{mapService.getRadius()}}km
@@ -63,7 +64,20 @@
                 "categories":
                 <br>
                 <div *ngFor="let category of categories" style="text-align: center;">
-                    {{category.name}}: {{category.pref}}
+                    <div *ngIf="category.sights.length > 0">{{category.name}}: {{category.pref}}</div>
+                </div>
+            </div>
+            <div *ngIf="this.getLastRequest()" class="card" style="background-color: black; margin-top: 3vh; ">
+                "start": {{this.getLastRequest()!.start}}
+                <br>
+                "end": {{this.getLastRequest()!.end}}
+                <br>
+                "radius": {{this.getLastRequest()!.area.radius / 1000}}km
+                <br>
+                "categories":
+                <br>
+                <div *ngFor="let category of this.getLastRequest()!.user_prefs.categories" style="text-align: center;">
+                  {{category.category}}: {{category.pref}}
                 </div>
             </div>
         </div>

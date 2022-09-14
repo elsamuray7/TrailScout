@@ -21,7 +21,27 @@ export interface RouteResponse {
   route?: route[];
   error?: any
 }
-
+export interface RouteRequest {
+  start: string;
+  end: string;
+  walking_speed_kmh: number;
+  area: {
+    lat: number;
+    lon: number;
+    radius: number;
+  }
+  user_prefs: {
+    categories: {
+      category: string;
+      pref: number;
+    }[]
+    sights: {
+      id: number;
+      category: string;
+      pref: number;
+    }[]
+  }
+}
 
 @Injectable({
   providedIn: 'root'
@@ -30,6 +50,7 @@ export class RouteService {
 
   private readonly backendUrl: String;
   private route?: RouteResponse;
+  private lastRequest?: RouteRequest;
   public routeUpdated = new EventEmitter<RouteResponse>();
   public startRouteCall = new EventEmitter<any>();
   public id$: Subject<number | null> = new Subject();
@@ -40,7 +61,7 @@ export class RouteService {
     this.id$.next(null);
   }
 
-  public async calculateRoute(request: any) {
+  public async calculateRoute(request: RouteRequest) {
     this.startRouteCall.emit();
     this.http.post(this.backendUrl + "/route", request).pipe(
       timeout(300000),
@@ -50,15 +71,20 @@ export class RouteService {
         return of(null)
       })
       ).subscribe((route ) => {
-      this.route = route as RouteResponse;
-      if (this.route)  {
-        this.routeUpdated.emit(this.route);
-      }
+        this.lastRequest = request;
+        this.route = route as RouteResponse;
+        if (this.route)  {
+          this.routeUpdated.emit(this.route);
+        }
 
     });
   }
 
   public getRoute(): RouteResponse | null{
     return this.route ? this.route : null;
+  }
+
+  public getLastRequest(): RouteRequest | null {
+    return this.lastRequest ? this.lastRequest : null;
   }
 }

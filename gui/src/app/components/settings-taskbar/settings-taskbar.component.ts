@@ -3,7 +3,7 @@ import { NgbTimeStruct } from '@ng-bootstrap/ng-bootstrap';
 import { SightsServiceService } from '../../services/sights-service.service';
 import {Category} from "../../data/Category";
 import {MapService} from "../../services/map.service";
-import {RouteService} from "../../services/route.service";
+import {RouteRequest, RouteService} from "../../services/route.service";
 import { ToastService } from '../../services/toast.service';
 import { CookieHandlerService } from 'src/app/services/cookie-handler.service';
 import {Sight} from "../../data/Sight";
@@ -191,5 +191,9 @@ export class SettingsTaskbarComponent implements OnInit {
       }
     }
     return false;
+  }
+
+  getLastRequest(): RouteRequest | null{
+    return this.routeService.getLastRequest();
   }
 }
