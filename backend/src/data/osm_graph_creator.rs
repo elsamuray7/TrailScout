@@ -8,12 +8,12 @@ use std::path::Path;
 use crossbeam::thread;
 use serde::{Deserialize, Serialize};
 use std::time::Instant;
-use geoutils::Location;
+use geoutils::{Location, Distance};
 use itertools::Itertools;
-use log::{error, info, trace};
+use log::{error, info, trace, debug};
 use osmpbf::{BlobReader, BlobType, Element, Way};
 use crate::data;
-use crate::data::graph::{Category, EdgeType, get_nearest_node, INode, get_sights_in_area};
+use crate::data::graph::{Category, EdgeType, get_nearest_node, INode};
 use crate::data::{EdgeTypeConfig, SightsConfig};
 
 /// An osm node located at a specific coordinate extraced from the osm data.
@@ -93,12 +93,12 @@ impl Hash for OSMEdge {
 
 /// A sight node mapped on its nearest node
 #[derive(Debug, Serialize)]
-pub struct OSMSight { //go private again
+struct OSMSight {
     #[serde(skip_serializing)]
     osm_id: usize,
     node_id: usize,
-    pub(crate) lat: f64, //go private again
-    pub(crate) lon: f64, //go private again
+    lat: f64,
+    lon: f64,
     category: Category,
     name: String,
     opening_hours: String,
@@ -192,7 +192,7 @@ pub fn parse_and_write_osm_data (osmpbf_file_path: &str, fmi_file_path: &str) ->
     let time_duration = time_start.elapsed();
     info!("Finished id post processing after {} seconds!", time_duration.as_millis() as f32 / 1000.0);
 
-    integrate_sights_into_graph(&osm_nodes, &mut osm_edges, &osm_sights, &is_sight_node);
+    integrate_sights_into_graph(&osm_nodes, &mut osm_edges, &mut osm_sights, &is_sight_node);
     let time_duration = time_start.elapsed();
     info!("Finished mapping sights into graph after {} seconds!", time_duration.as_millis() as f32 / 1000.0);
 
@@ -275,7 +275,7 @@ fn write_graph_file(graph_file_path_out: &str, nodes: &mut Vec<OSMNode>, edges: 
         file.write(format!("{} {} {}\n", node.id, node.lat, node.lon).as_bytes())?;
     }
     for sight in sights {
-        file.write(format!("{} {} {} {} {}\n", sight.node_id, sight.lat, sight.lon, sight.name, sight.category.to_string()).as_bytes())?;//sight.category.to_string()).as_bytes())?;
+        file.write(format!("{} {} {} {} \n", sight.node_id, sight.lat, sight.lon, sight.name).as_bytes())?;//, sight.category.to_string()).as_bytes())?;//sight.category.to_string()).as_bytes())?;
     }
     for edge in &*edges {
         file.write(format!("{} {} {}\n", edge.src, edge.tgt, edge.dist).as_bytes())?;
@@ -465,13 +465,14 @@ fn id_post_processing(osm_nodes: &mut Vec<OSMNode>, osm_edges: &mut Vec<OSMEdge>
 }
 
 /// Creates one edge (`osm_edges`) for each direction from a sight (`osm_sights`) and the nearest non sight node (`osm_nodes`).
-fn integrate_sights_into_graph(osm_nodes: &Vec<OSMNode>, osm_edges: &mut Vec<OSMEdge>, osm_sights: &Vec<OSMSight>, is_sight_node: &HashSet<usize>) {
+fn integrate_sights_into_graph(osm_nodes: &Vec<OSMNode>, osm_edges: &mut Vec<OSMEdge>, osm_sights: &mut Vec<OSMSight>, is_sight_node: &HashSet<usize>) {
     let nodes_sorted_by_lat = osm_nodes.iter()
         .sorted_unstable_by(|n1, n2|{
             return n1.lat.total_cmp(&n2.lat);
         })
         .collect_vec();
 
+        clustering_sights(osm_sights);
     let mut n = 0 as f64;
     for sight in osm_sights.iter() {
         n += 1.0;
@@ -527,16 +528,15 @@ fn clustering_sights(sights: &mut Vec<OSMSight>) {
         if sigh.category == Category::PicnicBarbequeSpot && !sights_to_combine.contains(&sigh.osm_id){
             let mut area:Vec<&OSMSight> = get_sights_in_area(&sights, sigh.lat, sigh.lon, 500.0);
             visited.insert(sigh.osm_id, index);
-            //push(index, sigh);
-            //let mut combine: HashMap<usize, &OSMSight>;
-            //let mut key:usize = 0;
 
             // Search for sights for clustering 
             for node in area {
+                info!("{}  ;   {}",node.category == Category::PicnicBarbequeSpot, !visited.contains_key(&node.osm_id));
+                
                 if node.category == Category::PicnicBarbequeSpot && !visited.contains_key(&node.osm_id) {
+                    info!("Combining candidates");
                     sights_to_combine.push(node.osm_id);
                     visited.insert(sigh.osm_id, 0);
-                    //key += 1;
                 }
             }
         }
@@ -546,10 +546,50 @@ fn clustering_sights(sights: &mut Vec<OSMSight>) {
     let mut combining_indixes: Vec<&usize> = Vec::new();
     for identifier in sights_to_combine {
         combining_indixes.push(visited.get(&identifier).unwrap());
+        //debug!("hat einen Inhalt");
     }
     combining_indixes.sort();
     let iterator:usize = 0;
     for deleting in combining_indixes{
         sights.remove(deleting-iterator);
+        debug!("Removing Sights")
     }
+}
+
+/// Get all nodes to a given coordinate (latitude / longitude) in the radius.
+/// The function expects a node vector sorted by latitude.
+/// => Move to osm_graph_creator
+fn get_sights_in_area<'a>(nodes_sorted_by_lat: &'a Vec<OSMSight>, lat: f64, lon: f64, radius: f64) -> Vec<&'a OSMSight> { //) -> usize {
+    
+    debug!("Computing sights in area: lat: {}, lon: {}, radius: {}", lat, lon, radius);
+
+        //estimate bounding box with 111111 meters = 1 longitude degree
+        //use binary search to find the range of elements that should be considered
+        let lower_bound = binary_search_sights_vector2(&nodes_sorted_by_lat, lat - radius / 111111.0);
+        let upper_bound = binary_search_sights_vector2(&nodes_sorted_by_lat, lat + radius / 111111.0);
+
+        let slice = &nodes_sorted_by_lat[lower_bound..upper_bound];
+
+        let center = Location::new(lat, lon);
+        let radius = Distance::from_meters(radius);
+        //iterate through the slice and check every sight whether it's in the target circle
+        let sights_in_area: Vec<&OSMSight> = slice.iter()
+            .filter(|sight| {
+                let location = Location::new(sight.lat, sight.lon);
+                location.is_in_circle(&center, radius)
+                    .expect("Could not determine whether sight lies in given area")
+            })
+            .collect();
+        debug!("Found {} sights within the given area (of a total of {} sights)",
+            sights_in_area.len(), nodes_sorted_by_lat.len());
+
+        sights_in_area
+}
+
+/// Helper method to estimate index bounds within the sights vector for latitude coordinates
+/// Move to osm_graph_creator
+fn binary_search_sights_vector2(sights: &Vec<OSMSight>, target_latitude: f64) -> usize {
+    let result = sights.binary_search_by(|sight|
+        sight.lat.total_cmp(&target_latitude));
+    result.unwrap_or_else(|index| index)
 }
