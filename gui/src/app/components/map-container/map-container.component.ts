@@ -234,7 +234,29 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
         }
         const icon = Icons.getIcon(section.sight);
         var newMarker = new L.Marker(latlng, {icon: icon}).addTo(this.routeSightLayer);
-        newMarker.bindPopup(section.sight.name,{closeButton: false});
+        newMarker.on('click', async () => {
+          newMarker.unbindPopup();
+          let popup = L.popup({closeButton: false});
+          newMarker.bindPopup(popup);
+          newMarker.openPopup();
+          let data;
+          if (this.wikiCache.has(section!.sight!.wikidata_id)) {
+            data = this.wikiCache.get(section!.sight!.wikidata_id);
+          } else {
+            data = await this.wikidataService.getWiki(section!.sight!.wikidata_id) as WikiResult;
+            this.wikiCache.set(section!.sight!.wikidata_id, data);
+          }
+          if (data) {
+            const image = this.wikidataService.getImagePath(data!.entities[section!.sight!.wikidata_id]?.claims?.P18[0].mainsnak.datavalue.value);
+            const photoPath = `<img src="${image}" height="150px" width="150px"/>`;
+            popup.setContent(this.getSightName(section!.sight!.name) + "</br>"+ photoPath)
+          } else {
+            popup.setContent(this.getSightName(section!.sight!.name));
+          }
+          
+          
+          
+        })
         this.routeSightLayer.addTo(this.map);
       }
     });
