@@ -7,7 +7,7 @@
         <img class="col-2"[src]="icon()" [class.mobile-img]="mobile">
     </div>
     <div class="sight" [class.mobile-text]="mobile">
-        {{section?.sight?.name}}
+        {{getSightName(section?.sight?.name)}}
     </div>
     <div class="sight" [class.mobile-text]="mobile" *ngIf="lastSection() ">
         Zurück zum Start

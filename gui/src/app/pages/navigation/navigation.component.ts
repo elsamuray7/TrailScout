@@ -18,6 +18,6 @@ export class NavigationComponent implements OnInit {
   }
 
   mainPage() {
-    this.route.navigate(['main']);
+    this.route.navigate(['scout']);
   }
 }

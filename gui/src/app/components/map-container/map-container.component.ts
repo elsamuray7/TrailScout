@@ -8,7 +8,7 @@ import { Sight } from 'src/app/data/Sight';
 import { RouteResponse, RouteService } from 'src/app/services/route.service';
 import { GPSService } from 'src/app/services/gps.service';
 import { firstValueFrom, lastValueFrom, map, Subscription } from 'rxjs';
-import { WikidataHandlerService } from 'src/app/services/wikidata-handler.service';
+import { WikidataHandlerService, WikiResult } from 'src/app/services/wikidata-handler.service';
 
 
 L.Marker.prototype.options.icon = Icons.iconDefault;
@@ -42,6 +42,7 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
   sub1?: Subscription;
   sub2?: Subscription;
   sub3?: Subscription;
+  wikiCache = new Map<string, WikiResult>();
 
   constructor(private gpsService: GPSService, private routeService: RouteService, private wikidataService: WikidataHandlerService) {
   }
@@ -157,10 +158,28 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
 
       let newMarker = new L.Marker(latlng, {icon: icon,}).addTo(newLayer);
       newMarker.on('click', async () => {
-        const data = await this.wikidataService.getWiki(sight.wikidata_id);
-        console.log(data);
-        newMarker.bindPopup('Test', {closeButton: false});
+        newMarker.unbindPopup();
+        let popup = L.popup({closeButton: false});
+        newMarker.bindPopup(popup);
         newMarker.openPopup();
+        let data;
+        if (this.wikiCache.has(sight.wikidata_id)) {
+          data = this.wikiCache.get(sight.wikidata_id);
+        } else {
+          data = await this.wikidataService.getWiki(sight.wikidata_id) as WikiResult;
+          this.wikiCache.set(sight.wikidata_id, data);
+        }
+        
+        if (data) {
+          const image = this.wikidataService.getImagePath(data!.entities[sight.wikidata_id]?.claims?.P18[0].mainsnak.datavalue.value);
+          const photoPath = `<img src="${image}" height="150px" width="150px"/>`;
+          popup.setContent(sight.name + "</br>"+ photoPath)
+        } else {
+          popup.setContent(sight.name);
+        }
+        
+        
+        
       })
       newLayer.addTo(this.map);
     });
