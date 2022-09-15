@@ -8,7 +8,7 @@
                         [disableTooltip]="calculationAllowed()">Calculate</span></button>
                 <button type="button" class="btn btn-secondary btn-lg close col" (click)="close()">Close</button>
             </div>
-            <ngb-accordion #acc="ngbAccordion" [closeOthers]="true" activeIds="radius">
+            <ngb-accordion #acc="ngbAccordion" [closeOthers]="true" activeIds="radius" *ngIf="!this.isRouteModeActive()">
                 <ngb-panel id="radius" [title]="radius > 0 ? 'Radius: ' + radius + 'km' : 'Radius'" [disabled]="!startPointSet"
                     [class.disabled]="!startPointSet">
                     <ng-template ngbPanelContent >
@@ -54,20 +54,7 @@
                 </ngb-panel>
             </ngb-accordion>
 
-            <div *ngIf="!this.getLastRequest()" class="card" style="background-color: black; margin-top: 3vh; ">
-                "start": {{startTime.hour}}:{{startTime.minute}}
-                <br>
-                "end": {{endTime.hour}}:{{startTime.minute}}
-                <br>
-                "radius": {{mapService.getRadius()}}km
-                <br>
-                "categories":
-                <br>
-                <div *ngFor="let category of categories" style="text-align: center;">
-                    <div *ngIf="category.sights.length > 0">{{category.name}}: {{category.pref}}</div>
-                </div>
-            </div>
-            <div *ngIf="this.getLastRequest()" class="card" style="background-color: black; margin-top: 3vh; ">
+            <div *ngIf="this.isRouteModeActive()" class="card" style="background-color: black; margin-top: 3vh; ">
                 "start": {{this.getLastRequest()!.start}}
                 <br>
                 "end": {{this.getLastRequest()!.end}}
@@ -77,10 +64,9 @@
                 "categories":
                 <br>
                 <div *ngFor="let category of this.getLastRequest()!.user_prefs.categories" style="text-align: center;">
-                  {{category.category}}: {{category.pref}}
+                    {{category.category}}: {{category.pref}}
                 </div>
             </div>
         </div>
-
     </div>
 </div>

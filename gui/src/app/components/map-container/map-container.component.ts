@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, EventEmitter, Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges } from '@angular/core';
+import { AfterViewInit, Component, EventEmitter, Input, OnChanges, OnDestroy, Output, SimpleChanges } from '@angular/core';
 import * as L from 'leaflet';
 import { GeoSearchControl, OpenStreetMapProvider } from 'leaflet-geosearch';
 import { LatLngExpression } from 'leaflet';
@@ -143,12 +143,14 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
   }
 
   async onClick(event: any, map: L.Map) {
-    const latlng = event.latlng as L.LatLng;
-    this.hideMarker();
-    this.marker = new L.Marker(latlng, {icon: Icons.startIcon});
-    this.marker.addTo(map);
-    this.addCircle(latlng);
-    this.markerLocation.emit(latlng)
+    if (!this.applicationStateService.isRouteModeActive()) {
+      const latlng = event.latlng as L.LatLng;
+      this.hideMarker();
+      this.marker = new L.Marker(latlng, {icon: Icons.startIcon});
+      this.marker.addTo(map);
+      this.addCircle(latlng);
+      this.markerLocation.emit(latlng);
+    }
   }
 
   showStartPoint() {

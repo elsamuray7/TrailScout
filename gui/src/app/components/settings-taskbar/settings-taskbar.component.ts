@@ -7,6 +7,7 @@ import {RouteRequest, RouteService} from "../../services/route.service";
 import { ToastService } from '../../services/toast.service';
 import { CookieHandlerService } from 'src/app/services/cookie-handler.service';
 import {Sight} from "../../data/Sight";
+import {ApplicationStateService} from "../../services/application-state.service";
 
 @Component({
   selector: 'app-settings-taskbar',
@@ -35,6 +36,7 @@ export class SettingsTaskbarComponent implements OnInit {
               public mapService: MapService,
               private routeService: RouteService,
               private cookieService: CookieHandlerService,
+              private applicationStateService: ApplicationStateService,
               private toastService: ToastService) {
     this.currentDate = new Date();
     this._startTime = {hour: this.currentDate.getHours(), minute: this.currentDate.getMinutes(), second: 0};
@@ -94,7 +96,7 @@ export class SettingsTaskbarComponent implements OnInit {
   }
 
   calculationAllowed() {
-    return this.radius > 0 && this.startPointSet && !!this.getCategories().find(cat => cat.pref > 0
+    return !this.isRouteModeActive() && this.radius > 0 && this.startPointSet && !!this.getCategories().find(cat => cat.pref > 0
       || !!cat.getAllSightsWithSpecialPref().find(sight => sight.pref > 0));
   }
 
@@ -191,6 +193,10 @@ export class SettingsTaskbarComponent implements OnInit {
       }
     }
     return false;
+  }
+
+  isRouteModeActive(): boolean {
+    return this.applicationStateService.isRouteModeActive();
   }
 
   getLastRequest(): RouteRequest | null{
