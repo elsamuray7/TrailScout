@@ -1,3 +1,7 @@
 @import '~swiper/swiper.min.css';
 @import '~swiper/modules/navigation/navigation.min.css';
 @import '~swiper/modules/pagination/pagination.min.css';
+
+.swiper-button-prev, .swiper-button-next, .swiper-pagination-bullet{
+  --swiper-theme-color: #375a7f; /* Glaub nicht das es smart ist die Farbe zu hardcoden aber kp. wo man color scheme info herkriegt */
+}
