@@ -22,6 +22,14 @@
   max-height: 100%;
 }
 
+.request-summary {
+  margin: 2vh 0;
+}
+
+.request-summary > div {
+  margin-left: 15px;
+}
+
 ::ng-deep .accordion .accordion-item {
     max-height: 50vh !important;
     overflow: auto !important;

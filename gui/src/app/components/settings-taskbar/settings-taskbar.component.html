@@ -54,18 +54,32 @@
                 </ngb-panel>
             </ngb-accordion>
 
-            <div *ngIf="this.isRouteModeActive()" class="card" style="background-color: black; margin-top: 3vh; ">
-                "start": {{this.getLastRequest()!.start}}
-                <br>
-                "end": {{this.getLastRequest()!.end}}
-                <br>
-                "radius": {{this.getLastRequest()!.area.radius / 1000}}km
-                <br>
-                "categories":
-                <br>
-                <div *ngFor="let category of this.getLastRequest()!.user_prefs.categories" style="text-align: center;">
-                    {{category.category}}: {{category.pref}}
+            <div *ngIf="this.isRouteModeActive()" style="margin-top: 3vh; ">
+              <div class="request-summary">
+                <h4>Radius</h4>
+                <div>{{this.getLastRequest()!.area.radius / 1000}} kilometer</div>
+              </div>
+              <div class="request-summary">
+                <h4>Hike Duration</h4>
+                <h5>Start:</h5>
+                <div>{{this.simplifyTime(this.getLastRequest()!.start)}}</div>
+                <h5>End:</h5>
+                <div>{{this.simplifyTime(this.getLastRequest()!.end)}}</div>
+              </div>
+              <div class="request-summary">
+                <h4>Category Preferences:</h4>
+                <div *ngIf="this.getLastRequest()!.user_prefs.categories.length == 0"><i>None</i></div>
+                <div *ngFor="let category of this.getLastRequest()!.user_prefs.categories">
+                  {{category.category}}: {{this.prefToString(category.pref)}}
                 </div>
+              </div>
+              <div class="request-summary">
+                <h4>Sight Preferences:</h4>
+                <div *ngIf="this.getLastRequest()!.user_prefs.sights.length == 0"><i>None</i></div>
+                <div *ngFor="let sight of this.getLastRequest()!.user_prefs.sights">
+                  {{sight.name}}: {{this.prefToString(sight.pref)}}
+                </div>
+              </div>
             </div>
         </div>
     </div>

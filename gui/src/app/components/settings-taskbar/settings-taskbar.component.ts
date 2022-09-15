@@ -111,9 +111,11 @@ export class SettingsTaskbarComponent implements OnInit {
           "pref": category.pref
         })
       }
+      // sight name is not used in the backend, but it is used for the Request Summary
       category.getAllSightsWithSpecialPref().forEach((sight) => {
         sights.push({
           "id": sight.node_id,
+          "name": sight.name,
           "category": sight.category,
           "pref": sight.pref
         });
@@ -201,5 +203,15 @@ export class SettingsTaskbarComponent implements OnInit {
 
   getLastRequest(): RouteRequest | null{
     return this.routeService.getLastRequest();
+  }
+
+  // turns 2022-09-15T23:56:00.007Z into 2022-09-15 23:56:00
+  simplifyTime(time: string): string {
+    return time.replace("T", " ").split(".")[0];
+  }
+
+  prefToString(pref: number): string {
+    const prefStrings = ["Niedriger", "Niedrig", "Neutral", "Hoch", "Höher"]
+    return prefStrings[pref-1];
   }
 }

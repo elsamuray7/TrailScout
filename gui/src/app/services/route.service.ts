@@ -37,6 +37,7 @@ export interface RouteRequest {
     }[]
     sights: {
       id: number;
+      name: string;
       category: string;
       pref: number;
     }[]
