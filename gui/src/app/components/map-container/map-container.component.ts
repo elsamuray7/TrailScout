@@ -169,13 +169,12 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
           data = await this.wikidataService.getWiki(sight.wikidata_id) as WikiResult;
           this.wikiCache.set(sight.wikidata_id, data);
         }
-        
         if (data) {
           const image = this.wikidataService.getImagePath(data!.entities[sight.wikidata_id]?.claims?.P18[0].mainsnak.datavalue.value);
           const photoPath = `<img src="${image}" height="150px" width="150px"/>`;
-          popup.setContent(sight.name + "</br>"+ photoPath)
+          popup.setContent(this.getSightName(sight.name) + "</br>"+ photoPath)
         } else {
-          popup.setContent(sight.name);
+          popup.setContent(this.getSightName(sight.name));
         }
         
         
@@ -261,5 +260,17 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
 
   showSight(sight: Sight) {
     this.map.flyTo(new L.LatLng(sight.lat, sight.lon), 19);
+  }
+
+  getSightName(name: string | undefined) {
+    if (!name) {
+      return 'Startpunkt';
+    }
+    //Check if string does not only contain numbers
+    if(!/^\d+$/.test(name)) {
+      return name;
+    } else {
+      return 'Kein Name verfügbar'
+    }
   }
 }
