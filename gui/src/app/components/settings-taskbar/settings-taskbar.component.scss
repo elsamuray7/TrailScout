@@ -1,5 +1,4 @@
 .card {
-  height: 93vh;
   overflow-y: hidden;
   overflow-x: hidden;
 }
@@ -21,6 +20,14 @@
   margin: auto;
   margin-top: 1vh;
   max-height: 100%;
+}
+
+.request-summary {
+  margin: 2vh 0;
+}
+
+.request-summary > div {
+  margin-left: 15px;
 }
 
 ::ng-deep .accordion .accordion-item {
