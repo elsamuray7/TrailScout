@@ -49,6 +49,7 @@ export class MainPageComponent implements OnInit, OnDestroy {
     this.mobile =  applicationStateService.getIsMobileResolution();
 
     this.sub = this.routeService.routeUpdated.subscribe(route => {
+      this.blockUIMap.stop();
       this.toggleViewMode();
       if (route.error && !route.route) {
         this.toastService.showDanger(route.error.message + '\n' + route.error.error ?? 'Something went wrong!');
