@@ -9,6 +9,7 @@ import { RouteResponse, RouteService } from 'src/app/services/route.service';
 import { GPSService } from 'src/app/services/gps.service';
 import { Subscription } from 'rxjs';
 import { ApplicationStateService } from '../../services/application-state.service';
+import { WikidataHandlerService, WikiResult } from 'src/app/services/wikidata-handler.service';
 
 
 L.Marker.prototype.options.icon = Icons.iconDefault;
@@ -42,9 +43,10 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
   sub1?: Subscription;
   sub2?: Subscription;
   sub3?: Subscription;
+  wikiCache = new Map<string, WikiResult>();
 
   constructor(private applicationStateService: ApplicationStateService,
-              private gpsService: GPSService, private routeService: RouteService) {
+              private gpsService: GPSService, private routeService: RouteService, private wikidataService: WikidataHandlerService) {
     this.applicationStateService.routeModeChangedEvent.subscribe(isActive => {
       if (isActive) {
         //hide Start point, Radius and Settings
@@ -108,10 +110,10 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
   }
 
   async loadMap() {
-    if (!this.initLat && !this.initLng) {
+    if (!this.initLat || !this.initLng) {
       this.initLat = (await this.gpsService.getCurrentLocation())?.lat;
       this.initLng = (await this.gpsService.getCurrentLocation())?.lng;
-      if (!this.initLat && !this.initLng) {
+      if (!this.initLat || !this.initLng) {
         this.initLat = 48.783333;
         this.initLng = 9.183333;
       }
@@ -192,7 +194,29 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
       const icon = Icons.getIcon(sight);
 
       let newMarker = new L.Marker(latlng, {icon: icon,}).addTo(newLayer);
-      newMarker.bindPopup(sight.name,{closeButton: false});
+      newMarker.on('click', async () => {
+        newMarker.unbindPopup();
+        let popup = L.popup({closeButton: false});
+        newMarker.bindPopup(popup);
+        newMarker.openPopup();
+        let data;
+        if (this.wikiCache.has(sight.wikidata_id)) {
+          data = this.wikiCache.get(sight.wikidata_id);
+        } else {
+          data = await this.wikidataService.getWiki(sight.wikidata_id) as WikiResult;
+          this.wikiCache.set(sight.wikidata_id, data);
+        }
+        if (data) {
+          const image = this.wikidataService.getImagePath(data!.entities[sight.wikidata_id]?.claims?.P18[0].mainsnak.datavalue.value);
+          const photoPath = `<img src="${image}" height="150px" width="150px"/>`;
+          popup.setContent(this.getSightName(sight.name) + "</br>"+ photoPath)
+        } else {
+          popup.setContent(this.getSightName(sight.name));
+        }
+        
+        
+        
+      })
       newLayer.addTo(this.map);
     });
     this.activeLayers.set(category.name, newLayer);
@@ -260,7 +284,29 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
         }
         const icon = Icons.getIcon(section.sight);
         var newMarker = new L.Marker(latlng, {icon: icon}).addTo(this.routeSightLayer);
-        newMarker.bindPopup(section.sight.name,{closeButton: false});
+        newMarker.on('click', async () => {
+          newMarker.unbindPopup();
+          let popup = L.popup({closeButton: false});
+          newMarker.bindPopup(popup);
+          newMarker.openPopup();
+          let data;
+          if (this.wikiCache.has(section!.sight!.wikidata_id)) {
+            data = this.wikiCache.get(section!.sight!.wikidata_id);
+          } else {
+            data = await this.wikidataService.getWiki(section!.sight!.wikidata_id) as WikiResult;
+            this.wikiCache.set(section!.sight!.wikidata_id, data);
+          }
+          if (data) {
+            const image = this.wikidataService.getImagePath(data!.entities[section!.sight!.wikidata_id]?.claims?.P18[0].mainsnak.datavalue.value);
+            const photoPath = `<img src="${image}" height="150px" width="150px"/>`;
+            popup.setContent(this.getSightName(section!.sight!.name) + "</br>"+ photoPath)
+          } else {
+            popup.setContent(this.getSightName(section!.sight!.name));
+          }
+          
+          
+          
+        })
         this.routeSightLayer.addTo(this.map);
       }
     });
@@ -286,5 +332,17 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
 
   showSight(sight: Sight) {
     this.map.flyTo(new L.LatLng(sight.lat, sight.lon), 19);
+  }
+
+  getSightName(name: string | undefined) {
+    if (!name) {
+      return 'Startpunkt';
+    }
+    //Check if string does not only contain numbers
+    if(!/^\d+$/.test(name)) {
+      return name;
+    } else {
+      return 'Kein Name verfügbar'
+    }
   }
 }
