@@ -11,6 +11,7 @@ import { RouteTrackerComponent } from './route-tracker/route-tracker.component';
 import { RouteTrackerItemComponent } from './route-tracker/route-tracker-item/route-tracker-item.component';
 import { GPSService } from '../services/gps.service';
 import { WikidataHandlerService } from '../services/wikidata-handler.service';
+import {AppRoutingModule} from "../app-routing.module";
 
 
 @NgModule({
@@ -23,11 +24,12 @@ import { WikidataHandlerService } from '../services/wikidata-handler.service';
     RouteTrackerComponent,
     RouteTrackerItemComponent
   ],
-  imports: [
-    CommonModule,
-    FormsModule,
-    NgbModule
-  ],
+    imports: [
+        CommonModule,
+        FormsModule,
+        NgbModule,
+        AppRoutingModule
+    ],
   exports: [
     NavigationTaskbarComponent,
     SettingsTaskbarComponent,

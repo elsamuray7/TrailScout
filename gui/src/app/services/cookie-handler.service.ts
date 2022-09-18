@@ -20,7 +20,7 @@ export class CookieHandlerService {
   }
 
   setLocationCookie(latlng: L.LatLng) {
-    if (!this.cookiesAllowed) {
+    if (!this.cookiesAllowed || latlng === undefined) {
       return;
     }
     const latlngString: string = JSON.stringify(latlng)
