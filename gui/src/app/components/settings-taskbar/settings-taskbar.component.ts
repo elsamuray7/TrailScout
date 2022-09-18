@@ -223,4 +223,8 @@ export class SettingsTaskbarComponent implements OnInit {
     const prefStrings = ["Niedriger", "Niedrig", "Neutral", "Hoch", "Höher"]
     return prefStrings[pref-1];
   }
+
+  isRadiusToBig(): boolean {
+    return this.startRadius ? this.startRadius * 2 > this.walkSpeed / 60 * this.getMinutesBetweenStartAndEnd() : false;
+  }
 }
