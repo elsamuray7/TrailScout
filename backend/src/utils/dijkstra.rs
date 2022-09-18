@@ -176,12 +176,51 @@ pub fn run_ota_dijkstra_in_area(graph: &Graph, src_id: usize,
     result
 }
 
+/// Run a Dijkstra from the source node with id `src_id` to all other nodes until the stop
+/// condition holds true
+pub fn run_partial_dijkstra<F>(graph: &Graph, src_id: usize, stop_cond: F) -> DijkstraResult
+    where F: Fn(usize) -> bool
+{
+    let (mut result, mut pq) = init_result_and_pq(graph, src_id);
+
+    while !pq.is_empty() {
+        let node_id = pq.pop(&result.dists);
+        if stop_cond(node_id) {
+            break;
+        } else {
+            process_edges(graph, node_id, &mut result, &mut pq);
+        }
+    }
+
+    result
+}
+
+/// Run a Dijkstra from the source node with id `src_id` to all other nodes in the given area
+/// until the stop condition holds true
+pub fn run_partial_dijkstra_in_area<F>(graph: &Graph, src_id: usize, stop_cond: F,
+                                       lat: f64, lon: f64, radius: f64) -> DijkstraResult
+    where F: Fn(usize) -> bool
+{
+    let (mut result, mut pq) = init_result_and_pq(graph, src_id);
+
+    while !pq.is_empty() {
+        let node_id = pq.pop(&result.dists);
+        if stop_cond(node_id) {
+            break;
+        } else {
+            process_edges_in_area(graph, node_id, &mut result, &mut pq, lat, lon, radius);
+        }
+    }
+
+    result
+}
+
 #[cfg(test)]
 mod test {
-    use pathfinding::prelude::{dijkstra, dijkstra_all};
+    use pathfinding::prelude::{dijkstra, dijkstra_all, dijkstra_partial};
     use rand::{Rng, thread_rng};
     use crate::init_logging;
-    use crate::utils::dijkstra::{run_dijkstra, run_ota_dijkstra, run_ota_dijkstra_in_area};
+    use crate::utils::dijkstra::{run_dijkstra, run_ota_dijkstra, run_ota_dijkstra_in_area, run_partial_dijkstra};
     use crate::utils::test_setup;
 
     #[test]
@@ -234,6 +273,51 @@ mod test {
                 .collect::<Vec<(usize, usize)>>();
         let exp_result = dijkstra_all(&src_id,
                                       |&node_id| successors(node_id));
+
+        for node_id in 0..graph.num_nodes {
+            let actual_dist = result.dist_to(node_id);
+            let expected = exp_result.get(&node_id);
+
+            if node_id == src_id {
+                assert!(actual_dist.is_some());
+                assert!(expected.is_none());
+                let actual_dist = actual_dist.unwrap();
+                assert_eq!(actual_dist, 0);
+            } else {
+                match expected {
+                    Some(&(_, exp_dist)) => {
+                        assert!(actual_dist.is_some());
+                        let actual_dist = actual_dist.unwrap();
+                        assert_eq!(actual_dist, exp_dist, "Distances differ: actual: {}, expected: {}",
+                                   actual_dist, exp_dist);
+                    }
+                    None => assert!(actual_dist.is_none())
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_partial_dijkstra() {
+        init_logging();
+
+        let graph = &test_setup::GRAPH;
+
+        let mut rng = thread_rng();
+        let src_id = rng.gen_range(0..graph.num_nodes);
+        let tgt_id = rng.gen_range(0..graph.num_nodes);
+
+        let result = run_partial_dijkstra(&graph, src_id,
+                                          |node_id| node_id == tgt_id);
+
+        let successors = |node_id: usize|
+            graph.get_outgoing_edges(node_id)
+                .into_iter()
+                .map(|edge| (edge.tgt, edge.dist))
+                .collect::<Vec<(usize, usize)>>();
+        let exp_result = dijkstra_partial(&src_id,
+                                      |&node_id| successors(node_id),
+                                          |&node_id| node_id == tgt_id).0;
 
         for node_id in 0..graph.num_nodes {
             let actual_dist = result.dist_to(node_id);
