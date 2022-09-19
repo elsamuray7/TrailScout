@@ -8,10 +8,10 @@
         [initLng]="markerCoords?.lng"
         (markerLocation)="markerSet($event)"></app-map-container>
 
-        
+
     </div>
     <div class="wrapper">
-        <app-route-tracker id="route-tracker" [sections]="routeTrackerSections" [userLocation]="gpsPosition"></app-route-tracker>
+        <app-route-tracker *ngIf="isRouteModeActive()" id="route-tracker" [sections]="routeTrackerSections" [userLocation]="gpsPosition"></app-route-tracker>
         <div #collapse="ngbCollapse" [(ngbCollapse)]="isCollapsed" id="collapse" [class.mobile]="mobile" [animation]="false">
             <app-settings-taskbar
             [startRadius]="radius"
@@ -32,7 +32,10 @@
             ngbTooltip="Click on Map to select startpoint first"
             [disableTooltip]="!!markerCoords"
             ></i>
-            
-        </div>
+    </div>
+  <button class='btn btn-primary' id='modeToggle' (click)='this.toggleViewMode()' [disabled]='!this.routeAvailable()'>
+    <div *ngIf='!this.isRouteModeActive()'><i class='bi-signpost'></i> Show Route</div>
+    <div *ngIf='this.isRouteModeActive()'><i class='bi-sliders'></i> Show Settings</div>
+  </button>
   <app-toast></app-toast>
 </div>

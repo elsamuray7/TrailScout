@@ -3,8 +3,8 @@
     <a class="navbar-brand">Trailscout</a>
     <div class='col-4 navbar-nav'>
       <div class="row nav-buttons">
-        <a class="nav-link" type="button" (click)="startButtonClick()" id="start">Start</a>
-        <a class="nav-link" type="button" (click)="mainButtonClick()" id="main">Main</a>
+        <a class="nav-link" [routerLinkActive]="['active']" [routerLink]="['start']" id="start">Start</a>
+        <a class="nav-link" [routerLinkActive]="['active']" [routerLink]="['scout']" id="main">Scout</a>
       </div>
 
     </div>

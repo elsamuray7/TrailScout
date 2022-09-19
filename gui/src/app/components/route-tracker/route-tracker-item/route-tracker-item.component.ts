@@ -56,4 +56,16 @@ export class RouteTrackerItemComponent implements OnInit {
   getImage() {
     return {'background-image' : `url(${this.icon()})` };
   }
+
+  getSightName(name: string | undefined) {
+    if (!name) {
+      return 'Startpunkt';
+    }
+    //Check if string does not only contain numbers
+    if(!/^\d+$/.test(name)) {
+      return name;
+    } else {
+      return 'Kein Name verfügbar'
+    }
+  }
 }

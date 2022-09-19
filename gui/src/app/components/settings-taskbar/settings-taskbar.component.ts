@@ -3,10 +3,11 @@ import { NgbTimeStruct } from '@ng-bootstrap/ng-bootstrap';
 import { SightsServiceService } from '../../services/sights-service.service';
 import {Category} from "../../data/Category";
 import {MapService} from "../../services/map.service";
-import {RouteService} from "../../services/route.service";
+import {RouteRequest, RouteService} from "../../services/route.service";
 import { ToastService } from '../../services/toast.service';
 import { CookieHandlerService } from 'src/app/services/cookie-handler.service';
 import {Sight} from "../../data/Sight";
+import {ApplicationStateService} from "../../services/application-state.service";
 
 @Component({
   selector: 'app-settings-taskbar',
@@ -30,11 +31,21 @@ export class SettingsTaskbarComponent implements OnInit {
   private currentDate: Date;
   refreshing: boolean = false;
   categories: any[] = [];
+  walkSpeed: number = 3.8;
+
+  readonly walkSpeedlabels = new Map<number, string>([
+    [2.7, "Sehr Langsam"],
+    [3.2, "Langsam"],
+    [3.8, "Normal"],
+    [4.8, "Schnell"],
+    [6.4, "Sehr Schnell"]
+  ]);
 
   constructor(private sightsService: SightsServiceService,
               public mapService: MapService,
               private routeService: RouteService,
               private cookieService: CookieHandlerService,
+              private applicationStateService: ApplicationStateService,
               private toastService: ToastService) {
     this.currentDate = new Date();
     this._startTime = {hour: this.currentDate.getHours(), minute: this.currentDate.getMinutes(), second: 0};
@@ -94,7 +105,7 @@ export class SettingsTaskbarComponent implements OnInit {
   }
 
   calculationAllowed() {
-    return this.radius > 0 && this.startPointSet && !!this.getCategories().find(cat => cat.pref > 0
+    return !this.isRouteModeActive() && this.radius > 0 && this.startPointSet && !!this.getCategories().find(cat => cat.pref > 0
       || !!cat.getAllSightsWithSpecialPref().find(sight => sight.pref > 0));
   }
 
@@ -109,9 +120,11 @@ export class SettingsTaskbarComponent implements OnInit {
           "pref": category.pref
         })
       }
+      // sight name is not used in the backend, but it is used for the Request Summary
       category.getAllSightsWithSpecialPref().forEach((sight) => {
         sights.push({
           "id": sight.node_id,
+          "name": sight.name,
           "category": sight.category,
           "pref": sight.pref
         });
@@ -120,7 +133,7 @@ export class SettingsTaskbarComponent implements OnInit {
     const request = {
       "start": this.transformTimeToISO8601Date(this._startTime),
       "end": this.transformTimeToISO8601Date(this._endTime, !this.isStartBeforeEnd()),
-      "walking_speed_kmh": 3,
+      "walking_speed_kmh": this.walkSpeed,
       "area": {
         "lat": this.mapService.getCoordniates().lat,
         "lon": this.mapService.getCoordniates().lng,
@@ -191,5 +204,27 @@ export class SettingsTaskbarComponent implements OnInit {
       }
     }
     return false;
+  }
+
+  isRouteModeActive(): boolean {
+    return this.applicationStateService.isRouteModeActive();
+  }
+
+  getLastRequest(): RouteRequest | null{
+    return this.routeService.getLastRequest();
+  }
+
+  // turns 2022-09-15T23:56:00.007Z into 2022-09-15 23:56:00
+  simplifyTime(time: string): string {
+    return time.replace("T", " ").split(".")[0];
+  }
+
+  prefToString(pref: number): string {
+    const prefStrings = ["Niedriger", "Niedrig", "Neutral", "Hoch", "Höher"]
+    return prefStrings[pref-1];
+  }
+
+  isRadiusToBig(): boolean {
+    return this.startRadius ? this.startRadius * 2 > this.walkSpeed / 60 * this.getMinutesBetweenStartAndEnd() : false;
   }
 }

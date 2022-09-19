@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, EventEmitter, Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges } from '@angular/core';
+import { AfterViewInit, Component, EventEmitter, Input, OnChanges, OnDestroy, Output, SimpleChanges } from '@angular/core';
 import * as L from 'leaflet';
 import { GeoSearchControl, OpenStreetMapProvider } from 'leaflet-geosearch';
 import { LatLngExpression } from 'leaflet';
@@ -8,6 +8,8 @@ import { Sight } from 'src/app/data/Sight';
 import { RouteResponse, RouteService } from 'src/app/services/route.service';
 import { GPSService } from 'src/app/services/gps.service';
 import { Subscription } from 'rxjs';
+import { ApplicationStateService } from '../../services/application-state.service';
+import { WikidataHandlerService, WikiResult } from 'src/app/services/wikidata-handler.service';
 
 
 L.Marker.prototype.options.icon = Icons.iconDefault;
@@ -41,8 +43,31 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
   sub1?: Subscription;
   sub2?: Subscription;
   sub3?: Subscription;
+  wikiCache = new Map<string, WikiResult>();
 
-  constructor(private gpsService: GPSService, private routeService: RouteService) {
+  constructor(private applicationStateService: ApplicationStateService,
+              private gpsService: GPSService, private routeService: RouteService, private wikidataService: WikidataHandlerService) {
+    this.applicationStateService.routeModeChangedEvent.subscribe(isActive => {
+      if (isActive) {
+        //hide Start point, Radius and Settings
+        //this.hideMarker();
+        this.hideCircle();
+        this.hideAllSights();
+        const route = this.routeService.getRoute();
+        if (route != null) {
+          this.drawRoute(route);
+          this.drawSightsOnRoute(route);
+        }
+      } else {
+        //this.showStartPoint();
+        if(this.startPoint) {
+          this.addCircle(this.startPoint);
+        }
+        this.showAllActiveSights();
+        this.hideRoute();
+        this.hideSightsOnRoute();
+      }
+    })
   }
   ngOnDestroy() {
     this.sub1?.unsubscribe();
@@ -79,20 +104,16 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
     });
     this.map.addControl(searchControl);
 
-    if (this.startPoint) {
-      this.marker = new L.Marker(this.startPoint, {icon: Icons.startIcon});
-      this.marker.addTo(this.map);
-      this.addCircle(this.startPoint);
-      this.markerLocation.emit(this.startPoint)
-    }
+    this.showStartPoint();
+    this.markerLocation.emit(this.startPoint);
 
   }
 
   async loadMap() {
-    if (!this.initLat && !this.initLng) {
+    if (!this.initLat || !this.initLng) {
       this.initLat = (await this.gpsService.getCurrentLocation())?.lat;
       this.initLng = (await this.gpsService.getCurrentLocation())?.lng;
-      if (!this.initLat && !this.initLng) {
+      if (!this.initLat || !this.initLng) {
         this.initLat = 48.783333;
         this.initLng = 9.183333;
       }
@@ -124,24 +145,42 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
   }
 
   async onClick(event: any, map: L.Map) {
-    const latlng = event.latlng as L.LatLng;
-    if (this.marker) {
-      this.marker.removeFrom(map);
+    if (!this.applicationStateService.isRouteModeActive()) {
+      const latlng = event.latlng as L.LatLng;
+      this.hideMarker();
+      this.marker = new L.Marker(latlng, {icon: Icons.startIcon});
+      this.marker.addTo(map);
+      this.addCircle(latlng);
+      this.markerLocation.emit(latlng);
     }
-    this.marker = new L.Marker(latlng, {icon: Icons.startIcon});
-    this.marker.addTo(map);
-    this.addCircle(latlng);
-    this.markerLocation.emit(latlng)
+  }
+
+  showStartPoint() {
+    if (this.startPoint) {
+      this.marker = new L.Marker(this.startPoint, {icon: Icons.startIcon});
+      this.marker.addTo(this.map);
+      this.addCircle(this.startPoint);
+    }
   }
 
   addCircle(latlng: L.LatLng) {
     if (this.circleRadius || this.circleRadius === 0) {
-      if (this.circle) {
-        this.circle.removeFrom(this.map);
-      }
+      this.hideCircle();
       if (latlng && this.circleRadius > 0) {
         this.circle = L.circle(latlng, this.circleRadius * 1000).addTo(this.map);
       }
+    }
+  }
+
+  hideCircle() {
+    if (this.circle) {
+      this.circle.removeFrom(this.map);
+    }
+  }
+
+  hideMarker() {
+    if (this.marker) {
+      this.marker.removeFrom(this.map);
     }
   }
 
@@ -155,7 +194,29 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
       const icon = Icons.getIcon(sight);
 
       let newMarker = new L.Marker(latlng, {icon: icon,}).addTo(newLayer);
-      newMarker.bindPopup(sight.name,{closeButton: false});
+      newMarker.on('click', async () => {
+        newMarker.unbindPopup();
+        let popup = L.popup({closeButton: false});
+        newMarker.bindPopup(popup);
+        newMarker.openPopup();
+        let data;
+        if (this.wikiCache.has(sight.wikidata_id)) {
+          data = this.wikiCache.get(sight.wikidata_id);
+        } else {
+          data = await this.wikidataService.getWiki(sight.wikidata_id) as WikiResult;
+          this.wikiCache.set(sight.wikidata_id, data);
+        }
+        if (data) {
+          const image = this.wikidataService.getImagePath(data!.entities[sight.wikidata_id]?.claims?.P18[0].mainsnak.datavalue.value);
+          const photoPath = `<img src="${image}" height="150px" width="150px"/>`;
+          popup.setContent(this.getSightName(sight.name) + "</br>"+ photoPath)
+        } else {
+          popup.setContent(this.getSightName(sight.name));
+        }
+        
+        
+        
+      })
       newLayer.addTo(this.map);
     });
     this.activeLayers.set(category.name, newLayer);
@@ -164,12 +225,25 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
   hideSights(category: Category) {
     if (this.activeLayers.has(category.name)) {
       this.map.removeLayer(this.activeLayers.get(category.name));
+      this.activeLayers.delete(category.name);
     }
   }
 
-  
+  hideAllSights() {
+    for (let category of this.activeLayers.values()) {
+      this.map.removeLayer(category);
+    }
+  }
+
+  showAllActiveSights() {
+    for (let category of this.activeLayers.values()) {
+      this.map.addLayer(category);
+    }
+  }
+
+
   drawRoute(_route: RouteResponse) {
-    this.hideRoute()
+    this.hideRoute();
     this.routeLayer = new L.LayerGroup<any>();
     this.routePoly = [];
     var r = 55;
@@ -185,7 +259,7 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
       this.routePoly.push(new L.Polyline(sectionNodes, { color: "rgb(" + r + " ," + g + ",0)", weight: 6 }).addTo(this.routeLayer));
         r += colorStepsize;
         g -= colorStepsize;
-     
+
     });
     this.routeLayer.addTo(this.map);
     this._sectionEvent.emit(_sections);
@@ -210,7 +284,29 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
         }
         const icon = Icons.getIcon(section.sight);
         var newMarker = new L.Marker(latlng, {icon: icon}).addTo(this.routeSightLayer);
-        newMarker.bindPopup(section.sight.name,{closeButton: false});
+        newMarker.on('click', async () => {
+          newMarker.unbindPopup();
+          let popup = L.popup({closeButton: false});
+          newMarker.bindPopup(popup);
+          newMarker.openPopup();
+          let data;
+          if (this.wikiCache.has(section!.sight!.wikidata_id)) {
+            data = this.wikiCache.get(section!.sight!.wikidata_id);
+          } else {
+            data = await this.wikidataService.getWiki(section!.sight!.wikidata_id) as WikiResult;
+            this.wikiCache.set(section!.sight!.wikidata_id, data);
+          }
+          if (data) {
+            const image = this.wikidataService.getImagePath(data!.entities[section!.sight!.wikidata_id]?.claims?.P18[0].mainsnak.datavalue.value);
+            const photoPath = `<img src="${image}" height="150px" width="150px"/>`;
+            popup.setContent(this.getSightName(section!.sight!.name) + "</br>"+ photoPath)
+          } else {
+            popup.setContent(this.getSightName(section!.sight!.name));
+          }
+          
+          
+          
+        })
         this.routeSightLayer.addTo(this.map);
       }
     });
@@ -231,10 +327,22 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
     if (bounds) {
       this.map.fitBounds(bounds);
     }
-    
+
   }
 
   showSight(sight: Sight) {
     this.map.flyTo(new L.LatLng(sight.lat, sight.lon), 19);
+  }
+
+  getSightName(name: string | undefined) {
+    if (!name) {
+      return 'Startpunkt';
+    }
+    //Check if string does not only contain numbers
+    if(!/^\d+$/.test(name)) {
+      return name;
+    } else {
+      return 'Kein Name verfügbar'
+    }
   }
 }

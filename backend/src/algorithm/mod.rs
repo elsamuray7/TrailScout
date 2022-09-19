@@ -15,7 +15,7 @@ use crate::algorithm::sa_lin_yu::SimAnnealingLinYu;
 type ScoreMap = HashMap<usize, (usize, Category)>;
 
 /// Circular area around a geographic coordinate
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct Area {
     lat: f64,
     lon: f64,
@@ -96,7 +96,7 @@ impl SightPref {
 }
 
 /// User preferences for sights and sight categories
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct UserPreferences {
     categories: Vec<SightCategoryPref>,
     sights: Vec<SightPref>,
