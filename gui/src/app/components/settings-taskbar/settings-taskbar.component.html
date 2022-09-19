@@ -1,4 +1,4 @@
-<div class="card text-white border-primary mb-3">
+<div class="card text-white border-primary mb-3" style="height: 93vh;">
     <div class="row">
         <div class="inputs">
             <div class="row justify-content-around">
@@ -8,7 +8,7 @@
                         [disableTooltip]="calculationAllowed()">Calculate</span></button>
                 <button type="button" class="btn btn-secondary btn-lg close col" (click)="close()">Close</button>
             </div>
-            <ngb-accordion #acc="ngbAccordion" [closeOthers]="true" activeIds="radius">
+            <ngb-accordion #acc="ngbAccordion" [closeOthers]="true" activeIds="radius" *ngIf="!this.isRouteModeActive()">
                 <ngb-panel id="radius" [title]="radius > 0 ? 'Radius: ' + radius + 'km' : 'Radius'" [disabled]="!startPointSet"
                     [class.disabled]="!startPointSet">
                     <ng-template ngbPanelContent >
@@ -54,19 +54,33 @@
                 </ngb-panel>
             </ngb-accordion>
 
-            <div class="card" style="background-color: black; height: 24vh; margin-top: 3vh; ">
-                "start": {{startTime.hour}}:{{startTime.minute}}
-                "end": {{endTime.hour}}:{{startTime.minute}}
-                <br>
-                "radius": {{mapService.getRadius()}}km
-                <br>
-                "categories":
-                <br>
-                <div *ngFor="let category of categories" style="text-align: center;">
-                    {{category.name}}: {{category.pref}}
+            <div *ngIf="this.isRouteModeActive()" style="margin-top: 3vh; ">
+              <div class="request-summary">
+                <h4>Radius</h4>
+                <div>{{this.getLastRequest()!.area.radius / 1000}} kilometer</div>
+              </div>
+              <div class="request-summary">
+                <h4>Hike Duration</h4>
+                <h5>Start:</h5>
+                <div>{{this.simplifyTime(this.getLastRequest()!.start)}}</div>
+                <h5>End:</h5>
+                <div>{{this.simplifyTime(this.getLastRequest()!.end)}}</div>
+              </div>
+              <div class="request-summary">
+                <h4>Category Preferences:</h4>
+                <div *ngIf="this.getLastRequest()!.user_prefs.categories.length == 0"><i>None</i></div>
+                <div *ngFor="let category of this.getLastRequest()!.user_prefs.categories">
+                  {{category.category}}: {{this.prefToString(category.pref)}}
                 </div>
+              </div>
+              <div class="request-summary">
+                <h4>Sight Preferences:</h4>
+                <div *ngIf="this.getLastRequest()!.user_prefs.sights.length == 0"><i>None</i></div>
+                <div *ngFor="let sight of this.getLastRequest()!.user_prefs.sights">
+                  {{sight.name}}: {{this.prefToString(sight.pref)}}
+                </div>
+              </div>
             </div>
         </div>
-
     </div>
 </div>

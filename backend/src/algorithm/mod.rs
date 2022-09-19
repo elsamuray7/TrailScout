@@ -433,6 +433,9 @@ pub enum AlgorithmError {
     /// Error indicating that an algorithm has been requested without category or sight preferences
     #[display(fmt = "No preferences for categories or sights provided")]
     NoPreferencesProvided,
+    /// Error indicating that no node has been found in the requested area
+    #[display(fmt = "No nearest node found in requested area")]
+    NoNearestNodeFound,
 }
 
 #[cfg(test)]

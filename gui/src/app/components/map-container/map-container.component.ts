@@ -1,92 +1,125 @@
-import { AfterViewInit, Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
+import { AfterViewInit, Component, EventEmitter, Input, OnChanges, OnDestroy, Output, SimpleChanges } from '@angular/core';
 import * as L from 'leaflet';
 import { GeoSearchControl, OpenStreetMapProvider } from 'leaflet-geosearch';
 import { LatLngExpression } from 'leaflet';
-import {Category} from "../../data/Category";
-import * as Icons from './icons';
+import { Category } from "../../data/Category";
+import * as Icons from '../icons';
 import { Sight } from 'src/app/data/Sight';
-import { RouteResponse } from 'src/app/services/route.service';
+import { RouteResponse, RouteService } from 'src/app/services/route.service';
+import { GPSService } from 'src/app/services/gps.service';
+import { Subscription } from 'rxjs';
+import { ApplicationStateService } from '../../services/application-state.service';
+import { WikidataHandlerService, WikiResult } from 'src/app/services/wikidata-handler.service';
 
-const iconRetinaUrl = 'assets/marker-icon-2x.png';
-const iconUrl = 'assets/marker-icon.png';
-const shadowUrl = 'assets/marker-shadow.png';
-const iconDefault = L.icon({
-  iconRetinaUrl,
-  iconUrl,
-  shadowUrl,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  tooltipAnchor: [16, -28],
-  shadowSize: [41, 41]
-});
-L.Marker.prototype.options.icon = iconDefault;
+
+L.Marker.prototype.options.icon = Icons.iconDefault;
 
 @Component({
   selector: 'app-map-container',
   templateUrl: './map-container.component.html',
   styleUrls: ['./map-container.component.scss']
 })
-export class MapContainerComponent implements AfterViewInit, OnChanges {
+export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestroy {
   map!: L.Map;
 
-  @Input() initLat = 48.7758459;
-  @Input() initLng = 9.1829321;
+  @Input() initLat?: number;
+  @Input() initLng?: number;
   @Input() initZoom = 10;
   @Input() circleRadius?: number;
   @Input() startPoint?: L.LatLng;
 
   @Output() markerLocation = new EventEmitter;
+  @Output('sections') _sectionEvent = new EventEmitter;
   private marker?: L.Marker;
   private circle?: L.Circle;
   private activeLayers = new Map<string, any>();
 
+  currentLocation: L.Marker | undefined;
+
   routeSightLayer: L.LayerGroup;
   routeLayer: L.LayerGroup;
-  routePoly?: L.Polyline;
+  routePoly: L.Polyline[] = [];
 
-  constructor() {
+  sub1?: Subscription;
+  sub2?: Subscription;
+  sub3?: Subscription;
+  wikiCache = new Map<string, WikiResult>();
+
+  constructor(private applicationStateService: ApplicationStateService,
+              private gpsService: GPSService, private routeService: RouteService, private wikidataService: WikidataHandlerService) {
+    this.applicationStateService.routeModeChangedEvent.subscribe(isActive => {
+      if (isActive) {
+        //hide Start point, Radius and Settings
+        //this.hideMarker();
+        this.hideCircle();
+        this.hideAllSights();
+        const route = this.routeService.getRoute();
+        if (route != null) {
+          this.drawRoute(route);
+          this.drawSightsOnRoute(route);
+        }
+      } else {
+        //this.showStartPoint();
+        if(this.startPoint) {
+          this.addCircle(this.startPoint);
+        }
+        this.showAllActiveSights();
+        this.hideRoute();
+        this.hideSightsOnRoute();
+      }
+    })
   }
+  ngOnDestroy() {
+    this.sub1?.unsubscribe();
+    this.sub2?.unsubscribe();
+    this.sub3?.unsubscribe();
+  }
+
   ngOnChanges(changes: SimpleChanges): void {
     this.addCircle(this.marker?.getLatLng()!);
   }
 
-  ngAfterViewInit(): void {
-    this.loadMap();
+  async ngAfterViewInit() {
+    await this.loadMap();
     this.map.on('click', event => this.onClick(event, this.map));
 
     const searchControl = GeoSearchControl({
       provider: new OpenStreetMapProvider(),
       style: 'bar',
       position: 'topleft',
-          showMarker: false,
-          marker: {
-            draggable: true,
-          },
-          maxMarker: 1,
-          autoClose: true,
-          autoComplete: true,
-          retainZoomLevel: true,
-          maxSuggestions: 5,
-          keepResult: true,
-          resultFormat: function(t:any) {
-            return "" + t.result.label;
-          },
-          updateMap: !0
+      showMarker: false,
+      marker: {
+        draggable: true,
+      },
+      maxMarker: 1,
+      autoClose: true,
+      autoComplete: true,
+      retainZoomLevel: true,
+      maxSuggestions: 5,
+      keepResult: true,
+      resultFormat: function (t: any) {
+        return "" + t.result.label;
+      },
+      updateMap: !0
     });
     this.map.addControl(searchControl);
 
-    if (this.startPoint) {
-      this.marker = new L.Marker(this.startPoint);
-      this.marker.addTo(this.map);
-      this.addCircle(this.startPoint);
-      this.markerLocation.emit(this.startPoint)
-    }
+    this.showStartPoint();
+    this.markerLocation.emit(this.startPoint);
+
   }
 
-  loadMap() {
+  async loadMap() {
+    if (!this.initLat || !this.initLng) {
+      this.initLat = (await this.gpsService.getCurrentLocation())?.lat;
+      this.initLng = (await this.gpsService.getCurrentLocation())?.lng;
+      if (!this.initLat || !this.initLng) {
+        this.initLat = 48.783333;
+        this.initLng = 9.183333;
+      }
+    }
     this.map = L.map('map', {
-      center: [this.initLat, this.initLng],
+      center: [this.initLat!, this.initLng!],
       zoom: this.initZoom
     });
 
@@ -97,27 +130,57 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
     });
 
     tiles.addTo(this.map);
+
+    this.sub1 = this.routeService.id$.subscribe(id => {
+      this.highlightSection(id);
+    });
+    this.sub2 = this.routeService.id_clicked$.subscribe(id => {
+      this.showSection(id);
+    });
+    this.sub3 = this.gpsService.getLocation().subscribe((location: any) => {
+      this.currentLocation?.removeFrom(this.map);
+      this.currentLocation = new L.Marker(location);
+      this.currentLocation.addTo(this.map);
+    })
   }
 
   async onClick(event: any, map: L.Map) {
-    const latlng = event.latlng as L.LatLng;
-    if (this.marker) {
-      this.marker.removeFrom(map);
+    if (!this.applicationStateService.isRouteModeActive()) {
+      const latlng = event.latlng as L.LatLng;
+      this.hideMarker();
+      this.marker = new L.Marker(latlng, {icon: Icons.startIcon});
+      this.marker.addTo(map);
+      this.addCircle(latlng);
+      this.markerLocation.emit(latlng);
     }
-    this.marker = new L.Marker(latlng);
-    this.marker.addTo(map);
-    this.addCircle(latlng);
-    this.markerLocation.emit(latlng)
+  }
+
+  showStartPoint() {
+    if (this.startPoint) {
+      this.marker = new L.Marker(this.startPoint, {icon: Icons.startIcon});
+      this.marker.addTo(this.map);
+      this.addCircle(this.startPoint);
+    }
   }
 
   addCircle(latlng: L.LatLng) {
     if (this.circleRadius || this.circleRadius === 0) {
-      if (this.circle) {
-        this.circle.removeFrom(this.map);
-      }
+      this.hideCircle();
       if (latlng && this.circleRadius > 0) {
         this.circle = L.circle(latlng, this.circleRadius * 1000).addTo(this.map);
       }
+    }
+  }
+
+  hideCircle() {
+    if (this.circle) {
+      this.circle.removeFrom(this.map);
+    }
+  }
+
+  hideMarker() {
+    if (this.marker) {
+      this.marker.removeFrom(this.map);
     }
   }
 
@@ -128,10 +191,32 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
         lat: sight.lat,
         lng: sight.lon
       }
-      const icon = this.getIcon(sight);
+      const icon = Icons.getIcon(sight);
 
       let newMarker = new L.Marker(latlng, {icon: icon,}).addTo(newLayer);
-      newMarker.bindPopup(sight.name,{closeButton: false});
+      newMarker.on('click', async () => {
+        newMarker.unbindPopup();
+        let popup = L.popup({closeButton: false});
+        newMarker.bindPopup(popup);
+        newMarker.openPopup();
+        let data;
+        if (this.wikiCache.has(sight.wikidata_id)) {
+          data = this.wikiCache.get(sight.wikidata_id);
+        } else {
+          data = await this.wikidataService.getWiki(sight.wikidata_id) as WikiResult;
+          this.wikiCache.set(sight.wikidata_id, data);
+        }
+        if (data) {
+          const image = this.wikidataService.getImagePath(data!.entities[sight.wikidata_id]?.claims?.P18[0].mainsnak.datavalue.value);
+          const photoPath = `<img src="${image}" height="150px" width="150px"/>`;
+          popup.setContent(this.getSightName(sight.name) + "</br>"+ photoPath)
+        } else {
+          popup.setContent(this.getSightName(sight.name));
+        }
+        
+        
+        
+      })
       newLayer.addTo(this.map);
     });
     this.activeLayers.set(category.name, newLayer);
@@ -140,48 +225,44 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
   hideSights(category: Category) {
     if (this.activeLayers.has(category.name)) {
       this.map.removeLayer(this.activeLayers.get(category.name));
+      this.activeLayers.delete(category.name);
     }
   }
 
-  getIcon(sight: Sight) {
-    const cat = sight.category;
-    switch(cat) {
-      case "Sightseeing":
-        return Icons.sightsIcon;
-      case "Nightlife":
-        return Icons.nightIcon;
-      case "Restaurants":
-        return Icons.restaurantIcon;
-      case "Shopping":
-        return Icons.shoppingIcon;
-      case "PicnicBarbequeSpot":
-        return Icons.grillIcon;
-      case "MuseumExhibition":
-        return Icons.museumIcon;
-      case "Nature":
-        return Icons.natureIcon;
-      case "Swimming":
-        return Icons.seaIcon;
-      default:
-        return iconDefault;
+  hideAllSights() {
+    for (let category of this.activeLayers.values()) {
+      this.map.removeLayer(category);
     }
   }
+
+  showAllActiveSights() {
+    for (let category of this.activeLayers.values()) {
+      this.map.addLayer(category);
+    }
+  }
+
+
   drawRoute(_route: RouteResponse) {
-    this.hideRoute()
+    this.hideRoute();
     this.routeLayer = new L.LayerGroup<any>();
+    this.routePoly = [];
     var r = 55;
     var g = 255;
-    var colorStepsize = (g-r) / _route.route!.length;
-    _route.route!.map(section => {
+    var colorStepsize = (g - r) / _route.route!.length;
+    const _sections: L.LatLng[][] = [] = [];
+    _route.route!.forEach(section => {
+      _sections.push(section.nodes.map(node => new L.LatLng(node.lat, node.lon)));
       var sectionNodes: L.LatLng[] = [];
-      section.nodes.map(node => {
-          sectionNodes.push(new L.LatLng(node.lat, node.lon));
-        });
-      this.routePoly = new L.Polyline(sectionNodes, {color: "rgb("+r+" ,"+g+",0)", weight: 6}).addTo(this.routeLayer);
-      r += colorStepsize;
-      g -= colorStepsize;
+      section.nodes.forEach(node => {
+        sectionNodes.push(new L.LatLng(node.lat, node.lon));
       });
+      this.routePoly.push(new L.Polyline(sectionNodes, { color: "rgb(" + r + " ," + g + ",0)", weight: 6 }).addTo(this.routeLayer));
+        r += colorStepsize;
+        g -= colorStepsize;
+
+    });
     this.routeLayer.addTo(this.map);
+    this._sectionEvent.emit(_sections);
   }
 
   hideRoute() {
@@ -201,15 +282,67 @@ export class MapContainerComponent implements AfterViewInit, OnChanges {
           lat: section.sight.lat,
           lng: section.sight.lon
         }
-        const icon = this.getIcon(section.sight);
+        const icon = Icons.getIcon(section.sight);
         var newMarker = new L.Marker(latlng, {icon: icon}).addTo(this.routeSightLayer);
-        newMarker.bindPopup(section.sight.name,{closeButton: false});
+        newMarker.on('click', async () => {
+          newMarker.unbindPopup();
+          let popup = L.popup({closeButton: false});
+          newMarker.bindPopup(popup);
+          newMarker.openPopup();
+          let data;
+          if (this.wikiCache.has(section!.sight!.wikidata_id)) {
+            data = this.wikiCache.get(section!.sight!.wikidata_id);
+          } else {
+            data = await this.wikidataService.getWiki(section!.sight!.wikidata_id) as WikiResult;
+            this.wikiCache.set(section!.sight!.wikidata_id, data);
+          }
+          if (data) {
+            const image = this.wikidataService.getImagePath(data!.entities[section!.sight!.wikidata_id]?.claims?.P18[0].mainsnak.datavalue.value);
+            const photoPath = `<img src="${image}" height="150px" width="150px"/>`;
+            popup.setContent(this.getSightName(section!.sight!.name) + "</br>"+ photoPath)
+          } else {
+            popup.setContent(this.getSightName(section!.sight!.name));
+          }
+          
+          
+          
+        })
         this.routeSightLayer.addTo(this.map);
       }
     });
   }
 
+  highlightSection(id: number | null) {
+    if (id === null) {
+      this.routePoly.forEach(r => r.setStyle({weight: 6}));
+      return;
+    }
+    const poly = this.routePoly.find((r,index) =>  index === id);
+    poly?.setStyle({weight: 14});
+  }
+
+  showSection(id: number) {
+    const poly = this.routePoly.find((r, index) => index === id);
+    const bounds = poly?.getBounds();
+    if (bounds) {
+      this.map.fitBounds(bounds);
+    }
+
+  }
+
   showSight(sight: Sight) {
     this.map.flyTo(new L.LatLng(sight.lat, sight.lon), 19);
+  }
+
+  getSightName(name: string | undefined) {
+    if (!name) {
+      return 'Startpunkt';
+    }
+    //Check if string does not only contain numbers
+    if(!/^\d+$/.test(name)) {
+      return name;
+    } else {
+      return 'Kein Name verfügbar'
+    }
   }
 }

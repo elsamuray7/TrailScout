@@ -4,6 +4,7 @@
 # Ignore OSM data too large for GitHub
 germany-*.osm.pbf
 baden-wuerttemberg-latest.osm.pbf
+BaWü-1-9-22.osm.pbf
 # Ignore graph files generated from OSM data
 osm_graphs/**.fmi
 osm_graphs/**.fmibin

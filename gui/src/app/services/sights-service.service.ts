@@ -10,7 +10,7 @@ import { Category } from '../data/Category';
 export class SightsServiceService {
   private readonly backendUrl: String;
   private categories: Category[] = [];
-  private presetCategories = ["Sightseeing", "Other", "Nightlife", "Restaurants", "Shopping", "PicnicBarbequeSpot",
+  private presetCategories = ["Sightseeing", "Activities", "Nightlife", "Restaurants", "Shopping", "PicnicBarbequeSpot",
     "MuseumExhibition", "Nature", "Swimming"];
   public updating = new EventEmitter();
   public updateSuccessful = new EventEmitter<boolean>();
