@@ -31,6 +31,15 @@ export class SettingsTaskbarComponent implements OnInit {
   private currentDate: Date;
   refreshing: boolean = false;
   categories: any[] = [];
+  walkSpeed: number = 3.8;
+
+  readonly walkSpeedlabels = new Map<number, string>([
+    [2.7, "Sehr Langsam"],
+    [3.2, "Langsam"],
+    [3.8, "Normal"],
+    [4.8, "Schnell"],
+    [6.4, "Sehr Schnell"]
+  ]);
 
   constructor(private sightsService: SightsServiceService,
               public mapService: MapService,
@@ -124,7 +133,7 @@ export class SettingsTaskbarComponent implements OnInit {
     const request = {
       "start": this.transformTimeToISO8601Date(this._startTime),
       "end": this.transformTimeToISO8601Date(this._endTime, !this.isStartBeforeEnd()),
-      "walking_speed_kmh": 3,
+      "walking_speed_kmh": this.walkSpeed,
       "area": {
         "lat": this.mapService.getCoordniates().lat,
         "lon": this.mapService.getCoordniates().lng,
@@ -213,5 +222,9 @@ export class SettingsTaskbarComponent implements OnInit {
   prefToString(pref: number): string {
     const prefStrings = ["Niedriger", "Niedrig", "Neutral", "Hoch", "Höher"]
     return prefStrings[pref-1];
+  }
+
+  isRadiusToBig(): boolean {
+    return this.startRadius ? this.startRadius * 2 > this.walkSpeed / 60 * this.getMinutesBetweenStartAndEnd() : false;
   }
 }

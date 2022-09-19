@@ -25,9 +25,29 @@
                     </ng-template>
                 </ngb-panel>
                 <ngb-panel
-                    [title]="'Hike duration: ' + getMinutesBetweenStartAndEnd() + 'mins'"
                     [disabled]="!startPointSet">
+                    <ng-template ngbPanelTitle>
+                      Hike duration: {{getMinutesBetweenStartAndEnd()}} mins
+                      <i *ngIf="isRadiusToBig()" class="bi bi-exclamation-triangle-fill"></i>
+                    </ng-template>
                     <ng-template class="row" ngbPanelContent>
+                        <div>
+                            <h5>
+                                Laufgeschwindigkeit
+                                <i *ngIf="isRadiusToBig()" class="bi bi-exclamation-triangle-fill" ngbTooltip="Der Radius ist zu groß für die angegebenen Einstellungen"></i>
+                            </h5>
+                            <div ngbDropdown class="d-inline-block">
+                                <button type="button" class="custom-btn btn btn-outline-primary" id="dropdownBasic1" ngbDropdownToggle>{{walkSpeedlabels.get(this.walkSpeed)}}</button>
+                                <div ngbDropdownMenu aria-labelledby="dropdownBasic1">
+                                    <button (click)='this.walkSpeed = 2.7;' ngbDropdownItem>Sehr Langsam</button>
+                                    <button (click)='this.walkSpeed = 3.2;' ngbDropdownItem>Langsam</button>
+                                    <button (click)='this.walkSpeed = 3.8;' ngbDropdownItem>Normal</button>
+                                    <button (click)='this.walkSpeed = 4.8;' ngbDropdownItem>Schnell</button>
+                                    <button (click)='this.walkSpeed = 6.4;' ngbDropdownItem>Sehr Schnell</button>
+                                </div>
+                            </div>
+                        </div>
+                        <br>
                         <div>
                             <h5>Start Time</h5>
                             <ngb-timepicker class="form-control"
