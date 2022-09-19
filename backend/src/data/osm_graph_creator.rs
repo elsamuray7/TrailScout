@@ -10,7 +10,8 @@ use serde::{Deserialize, Serialize};
 use std::time::Instant;
 use geoutils::Location;
 use itertools::Itertools;
-use log::{info, trace};
+use log::{debug, info, trace};
+use log::Level::Debug;
 use osmpbf::{BlobReader, BlobType, Element, Way};
 use crate::data;
 use crate::data::graph::{Category, EdgeType, get_nearest_node, INode};
@@ -106,7 +107,7 @@ struct OSMSight {
 }
 
 /// Parse given `graph_file`. If it does not exist yet, build it from `source_file` first.
-pub fn checked_create_fmi_graph(graph_file: &str, osm_source_file: &str) -> std::io::Result<()> {
+pub fn checked_create_fmi_graph(graph_file: &str, osm_source_file: &str) -> io::Result<()> {
     if !Path::new(graph_file).exists() && Path::new(osm_source_file).exists() {
         parse_and_write_osm_data(osm_source_file, graph_file)?
     }
@@ -181,10 +182,15 @@ pub fn parse_and_write_osm_data (osmpbf_file_path: &str, fmi_file_path: &str) ->
     info!("Finished reading PBF file after {} seconds!", time_duration.as_millis() as f32 / 1000.0);
     }).ok();
 
+    //Remove more unwanted sights
+    remove_some_sights_without_name(&mut osm_sights);
+
     let nodes_before_pruning = osm_nodes.len();
     prune_nodes_without_edges(&mut osm_nodes, &osm_edges, &osm_sights);
     let time_duration = time_start.elapsed();
     info!("Finished pruning of {} nodes without edges after {} seconds!", nodes_before_pruning - osm_nodes.len(), time_duration.as_millis() as f32 / 1000.0);
+
+
 
     // HashSet to check whether a node is a sight or not
     let mut is_sight_node = HashSet::new();
@@ -245,7 +251,7 @@ pub fn parse_and_write_osm_data (osmpbf_file_path: &str, fmi_file_path: &str) ->
     info!("End of PBF data parsing after {} seconds!", time_duration.as_millis() as f32 / 1000.0);
 
     info!("Start writing the fmi binary file!");
-    let path = std::path::Path::new(fmi_file_path);
+    let path = Path::new(fmi_file_path);
     let prefix = path.parent().unwrap();
     create_dir_all(prefix)?;
 
@@ -265,7 +271,7 @@ pub fn parse_and_write_osm_data (osmpbf_file_path: &str, fmi_file_path: &str) ->
 /// Only creates OSMSights with a specific tag defined in the `sight_config`.
 fn create_osm_node(osm_id: usize, lat: f64, lon: f64, tags: Vec<(&str, &str)>, sight_config: &SightsConfig, result: &mut (Vec<OSMNode>, Vec<OSMEdge>, Vec<OSMSight>)) {
     // if sight has no name, osm_id is shown
-    let mut osm_name = osm_id.to_string(); // default
+    let mut osm_name = "None".to_string(); // default
     let mut osm_opening_hours = "empty".to_string(); // default
     let mut categories: HashSet<Category> = HashSet::new();
     let mut osm_wikidata_id = "empty".to_string();
@@ -364,6 +370,20 @@ fn create_osm_edges(w: Way, edge_type_config: &EdgeTypeConfig, result: &mut (Vec
             }
         }
     }
+}
+
+/// Remove Sights when they do not have a name, except when they are of category nature or
+/// PicnicBarbequeSpot (These types of sights rarely have names but are still cool).
+fn remove_some_sights_without_name(osm_sights: &mut Vec<OSMSight>){
+
+    info!("Nodes Before remove_some_sights_without_name: {}", osm_sights.len());
+    osm_sights.retain(
+        |sight| !sight.name.eq("None") | matches!(sight.category, Category::Nature)
+            | matches!(sight.category, Category::PicnicBarbequeSpot)
+    );
+    info!("Nodes After remove_some_sights_without_name: {}", osm_sights.len());
+
+
 }
 
 /// Removes every node from `osm_nodes` which has no edge in `osm_edges`.

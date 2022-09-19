@@ -279,6 +279,7 @@ impl Graph {
         
         let time_duration = time_start.elapsed();
         info!("End graph creation after {} seconds!", time_duration.as_millis() as f32 / 1000.0);
+        info!("Graph has {} Nodes, {} Edges, {} Sights ", nodes.len(), edges.len(), sights.len());
 
         Ok(Self {
             nodes,

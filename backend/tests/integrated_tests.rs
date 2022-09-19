@@ -14,9 +14,9 @@ fn test_parsing_process_to_produce_graph_with_proper_number_of_elements() {
     let graph: &Lazy<Graph> = &test_setup::GRAPH;
     info!("Finished creating graph with {} nodes, {} sights and {} edges", graph.num_nodes, graph.num_sights, graph.num_edges);
     if test_setup::GRAPH_PATH.0.contains("bremen") {
-        assert_eq!(graph.num_nodes, 236748, "nodes");
-        assert_eq!(graph.num_sights, 2954, "sights");
-        assert_eq!(graph.num_edges, 524898, "edges");
+        assert_eq!(graph.num_nodes, 235230, "nodes");
+        assert_eq!(graph.num_sights, 1432, "sights");
+        assert_eq!(graph.num_edges, 521860, "edges");
     } else if test_setup::GRAPH_PATH.0.contains("stg") {
         assert_eq!(graph.num_nodes, 4760, "nodes");
         assert_eq!(graph.num_sights, 352, "sights");
@@ -158,7 +158,7 @@ fn get_sights_with_radius_1000_meters() {
     if test_setup::GRAPH_PATH.0.contains("bremen") {
         //when you google "bremen lat long" then 53.0793° N, 8.8017° E is the result
         let sights_bremen_1000 = graph.get_sights_in_area(53.0793, 8.8017, 1000.0);
-        assert_eq!(sights_bremen_1000.len(), 456, "Bremen doesn't have the correct number of sights");
+        assert_eq!(sights_bremen_1000.len(), 253, "Bremen doesn't have the correct number of sights");
     } else if test_setup::GRAPH_PATH.0.contains("stg") {
         //when you google "stuttgart lat long" then 48.7758° N, 9.1829° E is the result
         let sights_stg_1000 = graph.get_sights_in_area(48.7758, 9.1829, 1000.0);
