@@ -2,6 +2,8 @@ import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MainPageModule } from './main-page/main-page.module';
 import { PageNotFoundComponent } from './page-not-found/page-not-found.component';
+import { LandingPageComponent } from './landing-page/landing-page.component';
+import { LandingPageModule } from './landing-page/landing-page.module';
 
 
 
@@ -11,7 +13,8 @@ import { PageNotFoundComponent } from './page-not-found/page-not-found.component
   ],
   imports: [
     CommonModule,
-    MainPageModule
+    MainPageModule,
+    LandingPageModule
   ]
 })
 export class PagesModule { }
