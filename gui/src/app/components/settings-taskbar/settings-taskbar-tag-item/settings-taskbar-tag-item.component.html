@@ -9,11 +9,11 @@
         <div ngbDropdownMenu aria-labelledby="dropdownBasic1">
           <!--<button *ngFor='let value of priorityLabels.values()'ngbDropdownItem>{{value}}</button>-->
           <button (click)='this.category.pref = 0;' ngbDropdownItem>Gar nicht</button>
-          <button (click)='this.category.pref = 1;' ngbDropdownItem>Niedriger</button>
+          <button (click)='this.category.pref = 1;' ngbDropdownItem>Sehr Niedrig</button>
           <button (click)='this.category.pref = 2;' ngbDropdownItem>Niedrig</button>
           <button (click)='this.category.pref = 3;' ngbDropdownItem>Neutral</button>
           <button (click)='this.category.pref = 4;' ngbDropdownItem>Hoch</button>
-          <button (click)='this.category.pref = 5;' ngbDropdownItem>Höher</button>
+          <button (click)='this.category.pref = 5;' ngbDropdownItem>Sehr Hoch</button>
         </div>
       </div>
       <input
@@ -45,11 +45,11 @@
           <button type="button" class="custom-btn btn btn-outline-primary" id="dropdownBasic2" style="margin-left: 7px;" ngbDropdownToggle>Priorität - {{priorityLabels.get(sight.pref)}}</button>
           <div ngbDropdownMenu aria-labelledby="dropdownBasic2">
             <button (click)='sight.pref = 0;' ngbDropdownItem>Gar nicht</button>
-            <button (click)='sight.pref = 1;' ngbDropdownItem>Niedriger</button>
+            <button (click)='sight.pref = 1;' ngbDropdownItem>Sehr Niedrig</button>
             <button (click)='sight.pref = 2;' ngbDropdownItem>Niedrig</button>
             <button (click)='sight.pref = 3;' ngbDropdownItem>Neutral</button>
             <button (click)='sight.pref = 4;' ngbDropdownItem>Hoch</button>
-            <button (click)='sight.pref = 5;' ngbDropdownItem>Höher</button>
+            <button (click)='sight.pref = 5;' ngbDropdownItem>Sehr Hoch</button>
           </div>
         </div>
         </div>
