@@ -30,7 +30,7 @@ export class SightsServiceService {
       "lon": coords["lng"],
       "radius": radius * 1000 // convert to meters
     }
-    this.toastService.showStandard('Updating sights...');
+    this.toastService.showStandard('Aktualisiere Sehenswürdigkeiten...');
     this.updating.emit();
     this.http.post(this.backendUrl + "/sights", body).subscribe((sights ) => {
       for (let category of this.categories) {
@@ -45,10 +45,10 @@ export class SightsServiceService {
           }
         }
       }
-      this.toastService.showSuccess('Successfully updated sights!');
+      this.toastService.showSuccess('Sehenswürdigkeiten erfolgreich aktualisiert!');
       this.updateSuccessful.emit(true);
     }, (error => {
-      this.toastService.showDanger('Something went wrong!');
+      this.toastService.showDanger('Etwas ist schief gelaufen!');
       this.updateSuccessful.emit(false);
     }));
   }

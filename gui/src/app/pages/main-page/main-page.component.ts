@@ -51,7 +51,7 @@ export class MainPageComponent implements OnInit, OnDestroy {
     this.sub = this.routeService.routeUpdated.subscribe(route => {
       this.blockUIMap.stop();
       if (route.error && !route.route) {
-        this.toastService.showDanger(route.error.message + '\n' + route.error.error ?? 'Something went wrong!');
+        this.toastService.showDanger(route.error.message + '\n' + route.error.error ?? 'Etwas ist schiefgelaufen!');
         return;
       }
       this.toggleViewMode();
@@ -65,7 +65,7 @@ export class MainPageComponent implements OnInit, OnDestroy {
       this.blockUIMap.stop();
     });
     this.blockSub = this.routeService.startRouteCall.subscribe(() => {
-      this.blockUIMap.start('Loading route...');
+      this.blockUIMap.start('Berechne Route...');
     });
 
 
