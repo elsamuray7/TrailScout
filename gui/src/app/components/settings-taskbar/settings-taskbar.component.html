@@ -5,19 +5,19 @@
                 <button class="btn-primary btn btn-lg col" type="button"
                     id="setting-btn" (click)="calculate()" [disabled]="!calculationAllowed()">
                     <span ngbTooltip="Type in radius or walking time to allow routing"
-                        [disableTooltip]="calculationAllowed()">Calculate</span></button>
-                <button type="button" class="btn btn-secondary btn-lg close col" (click)="close()">Close</button>
+                        [disableTooltip]="calculationAllowed()">Berechnen</span></button>
+                <button type="button" class="btn btn-secondary btn-lg close col" (click)="close()">Schließen</button>
             </div>
             <ngb-accordion #acc="ngbAccordion" [closeOthers]="true" activeIds="radius" *ngIf="!this.isRouteModeActive()">
                 <ngb-panel id="radius" [title]="radius > 0 ? 'Radius: ' + radius + 'km' : 'Radius'" [disabled]="!startPointSet"
                     [class.disabled]="!startPointSet">
                     <ng-template ngbPanelContent >
                       <div class='d-flex justify-content-between col' style='gap: 10px'>
-                        <input id='radiusInput' type="number" placeholder="Enter radius in km..." class="form-control"
+                        <input id='radiusInput' type="number" placeholder="Radius in km" class="form-control"
                                [(ngModel)]="radius" />
                         <button class="btn-primary btn" id="refresh" type="submit" [disabled]='refreshing || !radius || radius <= 0'
                                 (click)="refreshSights()" style='flex-grow:1;'>
-                          <span *ngIf='!refreshing'>Refresh</span>
+                          <span *ngIf='!refreshing'>Aktualisieren</span>
                           <div *ngIf='refreshing' class="spinner-border" role="status">
                           </div>
                         </button>
@@ -27,7 +27,7 @@
                 <ngb-panel
                     [disabled]="!startPointSet">
                     <ng-template ngbPanelTitle>
-                      Hike duration: {{getMinutesBetweenStartAndEnd()}} mins
+                      Dauer der Wanderung: {{getMinutesBetweenStartAndEnd()}} mins
                       <i *ngIf="isRadiusToBig()" class="bi bi-exclamation-triangle-fill"></i>
                     </ng-template>
                     <ng-template class="row" ngbPanelContent>
@@ -49,13 +49,13 @@
                         </div>
                         <br>
                         <div>
-                            <h5>Start Time</h5>
+                            <h5>Start</h5>
                             <ngb-timepicker class="form-control"
                                 [(ngModel)]="startTime"></ngb-timepicker>
                         </div>
                         <br>
                         <div>
-                            <h5>End Time</h5>
+                            <h5>Ende</h5>
                             <ngb-timepicker class="form-control"
                                 [(ngModel)]="endTime"></ngb-timepicker>
                         </div>
@@ -63,7 +63,7 @@
                 </ngb-panel>
                 <ngb-panel [title]="'Tags'" [disabled]="!startPointSet" (hidden)="hideAllSights()">
                     <ng-template class="row" ngbPanelContent>
-                        <small *ngIf="!foundAnySights()"> No Sights were found. Please check your Settings and hit "Refresh"! </small>
+                        <small *ngIf="!foundAnySights()"> Keine Sehenswürdigkeiten gefunden. Überprüfen Sie bitte ihre Einstellungen und klicken auf "Aktualisieren" </small>
                         <div *ngFor="let category of this.getCategories()">
                             <app-settings-taskbar-tag-item *ngIf="category.sights.length > 0" [category]="category"
                                                            (showSightEvent)="this.showSightEvent.emit($event)"
@@ -80,21 +80,21 @@
                 <div>{{this.getLastRequest()!.area.radius / 1000}} kilometer</div>
               </div>
               <div class="request-summary">
-                <h4>Hike Duration</h4>
+                <h4>Dauer der Wanderung</h4>
                 <h5>Start:</h5>
                 <div>{{this.simplifyTime(this.getLastRequest()!.start)}}</div>
-                <h5>End:</h5>
+                <h5>Ende:</h5>
                 <div>{{this.simplifyTime(this.getLastRequest()!.end)}}</div>
               </div>
               <div class="request-summary">
-                <h4>Category Preferences:</h4>
+                <h4>Kategorie Präferenzen:</h4>
                 <div *ngIf="this.getLastRequest()!.user_prefs.categories.length == 0"><i>None</i></div>
                 <div *ngFor="let category of this.getLastRequest()!.user_prefs.categories">
                   {{category.category}}: {{this.prefToString(category.pref)}}
                 </div>
               </div>
               <div class="request-summary">
-                <h4>Sight Preferences:</h4>
+                <h4>Einzelne Präferenzen:</h4>
                 <div *ngIf="this.getLastRequest()!.user_prefs.sights.length == 0"><i>None</i></div>
                 <div *ngFor="let sight of this.getLastRequest()!.user_prefs.sights">
                   {{sight.name}}: {{this.prefToString(sight.pref)}}
