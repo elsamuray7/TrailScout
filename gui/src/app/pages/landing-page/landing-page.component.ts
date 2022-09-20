@@ -1,6 +1,7 @@
 import { Component, OnInit, ViewEncapsulation  } from '@angular/core';
 import SwiperCore, { Keyboard, Pagination, Navigation, Virtual } from 'swiper';
 import { Router } from '@angular/router';
+import { ApplicationStateService } from 'src/app/services/application-state.service';
 
 // install Swiper modules
 SwiperCore.use([Keyboard, Pagination, Navigation, Virtual]);
@@ -12,9 +13,12 @@ SwiperCore.use([Keyboard, Pagination, Navigation, Virtual]);
 })
 export class LandingPageComponent implements OnInit {
 
-  constructor(private router: Router) { }
+  mobile = false;
+
+  constructor(private router: Router, private mobileState: ApplicationStateService) { }
 
   ngOnInit(): void {
+    this.mobile = this.mobileState.getIsMobileResolution();
   }
 
   //Keine Ahnung ob man das Routing so macht

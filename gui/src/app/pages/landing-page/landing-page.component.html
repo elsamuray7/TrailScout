@@ -18,9 +18,9 @@
           <p>
             Mit unserem Routenplaner Trailscout ist das Erstellen einer solche Sightseeing-Tour einfach möglich.
             Wähle aus, welche der vielen interessanten Sehenswürdigkeiten du besonders interessant findest und unsere
-            Algorithmen werden ihr Möglichstes tun, dir beste Tour nach deinen Bedürfnissen zu erstellen.
-            Ob Museen, Highlights in der Natur oder Restaurants und Shopping Malls,
-            Trailscout kennt dank Open Street Map die wichtigsten Sehenswürdigkeiten und ist einfach erweiterbar.
+            Algorithmen werden ihr Möglichstes tun, dir besten Touren nach deinen Bedürfnissen zu erstellen.
+            Ob Museen, Highlights in der Natur, Restaurants oder das Nachtleben in deiner Stadt,
+            Trailscout kennt dank Open Street Map die interessantesten Orte und führt dich zu ihnen.
 
           </p>
 
@@ -34,7 +34,7 @@
   </div>
   <div class="row card border-secondary text-center" style="margin: 10px">
     <div class="card-body">
-      <h2 class="card-title">Trailscout - So gehts:</h2>
+      <h2 class="card-title">Trailscout - Der Weg ist das Ziel!</h2>
 
       <swiper
         [slidesPerView]="1"
@@ -46,34 +46,20 @@
         class="my-swiper"
       >
         <ng-template swiperSlide>
-          Slide 1 Startpunkt wählen & Settings:
-          <img src="assets/app-Screenshot.png" alt="Ein Bild von der Main Page" style="width: 60%;">
+          Mit Trailscout die Perfekte Wanderroute entdecken!
+          <img src="assets/screenshot_1.png" alt="Ein Bild von der Main Page" style="width: 60%;" [class.mobile]="mobile">
         </ng-template>
 
         <ng-template swiperSlide>
-          Slide 2 Sights anschauen:
-          <img src="assets/app-Screenshot.png" alt="Ein Bild von der Main Page" style="width: 60%;">
+          Radius, Laufgeschwindigkeit, Start-und Endzeit, sowie Präferenzen eingeben und eine für sich angepasste Route bekommen!
+          <img src="assets/screenshot_2.png" alt="Ein Bild von der Main Page" style="width: 60%;" [class.mobile]="mobile">
         </ng-template>
 
         <ng-template swiperSlide>
-          Slide 3 Kategorien:
-          <img src="assets/app-Screenshot.png" alt="Ein Bild von der Main Page" style="width: 60%;">
+          Auch auf mobilen Geräten benutzbar!
+          <img src="assets/screenshot_3.png" alt="Ein Bild von der Main Page" style="height: 40%;" [class.mobile]="mobile">
         </ng-template>
 
-        <ng-template swiperSlide>
-          Slide 4 Individuelle Sights:
-          <img src="assets/app-Screenshot.png" alt="Ein Bild von der Main Page" style="width: 60%;">
-        </ng-template>
-
-        <ng-template swiperSlide>
-          Slide 5 Route berechnen:
-          <img src="assets/app-Screenshot.png" alt="Ein Bild von der Main Page" style="width: 60%;">
-        </ng-template>
-
-        <ng-template swiperSlide>
-          Slide 6 Route anschauen:
-          <img src="assets/app-Screenshot.png" alt="Ein Bild von der Main Page" style="width: 60%;">
-        </ng-template>
       </swiper>
     </div>
   </div>
