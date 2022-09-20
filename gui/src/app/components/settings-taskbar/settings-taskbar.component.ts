@@ -4,7 +4,6 @@ import { SightsServiceService } from '../../services/sights-service.service';
 import {Category} from "../../data/Category";
 import {MapService} from "../../services/map.service";
 import {RouteRequest, RouteService} from "../../services/route.service";
-import { ToastService } from '../../services/toast.service';
 import { CookieHandlerService } from 'src/app/services/cookie-handler.service';
 import {Sight} from "../../data/Sight";
 import {ApplicationStateService} from "../../services/application-state.service";
@@ -45,11 +44,16 @@ export class SettingsTaskbarComponent implements OnInit {
               public mapService: MapService,
               private routeService: RouteService,
               private cookieService: CookieHandlerService,
-              private applicationStateService: ApplicationStateService,
-              private toastService: ToastService) {
+              private applicationStateService: ApplicationStateService) {
     this.currentDate = new Date();
     this._startTime = {hour: this.currentDate.getHours(), minute: this.currentDate.getMinutes(), second: 0};
     this._endTime = {hour: this.startTime.hour + 1, minute: this.startTime.minute, second: this.startTime.second};
+    this.sightsService.updating.subscribe((_) => {
+      this.refreshing = true;
+    });
+    this.sightsService.updateSuccessful.subscribe((_) => {
+      this.refreshing = false;
+    });
    }
 
   ngOnInit(): void {
@@ -59,19 +63,6 @@ export class SettingsTaskbarComponent implements OnInit {
         this.radius = this.startRadius;
       }
   }, 0);
-
-    this.sightsService.updating.subscribe((_) => {
-      this.refreshing = true;
-      this.toastService.showStandard('Updating sights...');
-    })
-    this.sightsService.updateSuccessful.subscribe((success) => {
-      this.refreshing = false;
-      if (success) {
-        this.toastService.showSuccess('Successfully updated sights!');
-      } else {
-        this.toastService.showDanger('Something went wrong!');
-      }
-    });
     this.categories = this.sightsService.getCategories();
   }
 
