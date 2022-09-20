@@ -105,7 +105,7 @@ export class SettingsTaskbarComponent implements OnInit {
   }
 
   calculationAllowed() {
-    return !this.isRouteModeActive() && this.radius > 0 && this.startPointSet && !!this.getCategories().find(cat => cat.pref > 0
+    return !this.isRouteModeActive() && this.radius > 0 && this.startPointSet && !!this.getCategories().find(cat => (cat.pref > 0 && cat.sights.length > 0)
       || !!cat.getAllSightsWithSpecialPref().find(sight => sight.pref > 0));
   }
 
