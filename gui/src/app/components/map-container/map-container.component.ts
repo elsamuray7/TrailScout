@@ -50,7 +50,7 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
     this.applicationStateService.routeModeChangedEvent.subscribe(isActive => {
       if (isActive) {
         //hide Start point, Radius and Settings
-        //this.hideMarker();
+        this.hideMarker();
         this.hideCircle();
         this.hideAllSights();
         const route = this.routeService.getRoute();
@@ -59,7 +59,7 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
           this.drawSightsOnRoute(route);
         }
       } else {
-        //this.showStartPoint();
+        this.showStartPoint();
         if(this.startPoint) {
           this.addCircle(this.startPoint);
         }
@@ -213,9 +213,9 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
         } else {
           popup.setContent(this.getSightName(sight.name));
         }
-        
-        
-        
+
+
+
       })
       newLayer.addTo(this.map);
     });
@@ -276,6 +276,14 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
   drawSightsOnRoute(route: RouteResponse) {
     this.hideSightsOnRoute();
     this.routeSightLayer = new L.LayerGroup<any>();
+    //draw Start Point
+    if (route.route![0].nodes.length > 0) {
+      var latlng: LatLngExpression = {
+        lat: route.route![0].nodes[0].lat,
+        lng: route.route![0].nodes[0].lon
+      }
+      var newMarker = new L.Marker(latlng, {icon: Icons.startIcon}).addTo(this.routeSightLayer);
+    }
     route.route!.map(section => {
       if (section.sight) {
         var latlng: LatLngExpression = {
@@ -303,9 +311,9 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
           } else {
             popup.setContent(this.getSightName(section!.sight!.name));
           }
-          
-          
-          
+
+
+
         })
         this.routeSightLayer.addTo(this.map);
       }

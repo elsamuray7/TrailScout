@@ -8,7 +8,7 @@ pub struct RouteProviderReq {
     pub start: String,
     pub end: String,
     /// Walking speed in kilometers per hour
-    pub walking_speed_kmh: usize,
+    pub walking_speed_kmh: f64,
     pub area: Area,
     pub user_prefs: UserPreferences,
 }

@@ -1,3 +1,4 @@
+use std::cmp::{min, max};
 use std::collections::HashSet;
 use std::fmt::{Debug, Formatter};
 use std::fs::File;
@@ -7,7 +8,6 @@ use std::num::{ParseFloatError, ParseIntError};
 use std::time::Instant;
 use strum_macros::EnumString;
 use geoutils::{Distance, Location};
-use itertools::Itertools;
 use log::{debug, trace, info};
 use serde::{Serialize, Deserialize};
 use opening_hours::OpeningHours;
@@ -225,6 +225,7 @@ impl Debug for Sight {
 /// mapped on their nearest nodes, respectively.
 pub struct Graph {
     nodes: Vec<Node>,
+    node_ids_by_lat: Vec<usize>,
     pub edges: Vec<Edge>,
     pub offsets: Vec<usize>,
     pub num_nodes: usize,
@@ -276,6 +277,10 @@ impl Graph {
             sight.set_config_duration_of_stay(&sights_config);
         }
 
+        //create node list sorted by lat
+        let mut node_ids_by_lat:Vec<usize> = (0..num_nodes).collect();
+        node_ids_by_lat.sort_unstable_by(|x, y|
+            nodes.get(*x).unwrap().lat.total_cmp(&nodes.get(*y).unwrap().lat));
         
         let time_duration = time_start.elapsed();
         info!("End graph creation after {} seconds!", time_duration.as_millis() as f32 / 1000.0);
@@ -283,6 +288,7 @@ impl Graph {
 
         Ok(Self {
             nodes,
+            node_ids_by_lat: node_ids_by_lat,
             edges,
             offsets,
             num_nodes,
@@ -302,29 +308,30 @@ impl Graph {
         &self.nodes[node_id]
     }
 
-    /// Get the nearest non-sight reachable graph node to a given coordinate (latitude / longitude)
+    /// Get the nearest non-sight reachable graph node to a given coordinate (latitude / longitude).
+    /// Uses the internal efficient implementation.
     pub fn get_nearest_node(&self, lat: f64, lon: f64) -> usize {
-        let nodes_sorted_by_lat = self.nodes.iter()
-            .sorted_unstable_by(|node1, node2| node1.lat.total_cmp(&node2.lat))
-            .collect_vec();
         let id_filter = self.sights.iter().map(|sight| sight.node_id)
-            //.merge(self.nodes.iter().filter(|node| self.get_degree(node.id) > 0)
-            //    .map(|node| node.id))
             .collect();
-        get_nearest_node(&nodes_sorted_by_lat, &id_filter, lat, lon)
+        get_nearest_node(&self.nodes, &self.node_ids_by_lat, &id_filter, lat, lon)
+    }
+
+    /// Get the nearest non-sight reachable graph node to a given coordinate (latitude / longitude).
+    /// Uses the internal naive implementation.
+    pub fn get_nearest_node_naive(&self, lat: f64, lon: f64) -> usize {
+        let id_filter = self.sights.iter().map(|sight| sight.node_id)
+            .collect();
+        get_nearest_node_naive(&self.nodes, &id_filter, lat, lon)
     }
 
     /// Get the nearest non-sight reachable graph node to a given coordinate (latitude / longitude)
     /// Also checks if the nearest node is in a given area. Returns None if not in given area.
     pub fn get_nearest_node_in_area(&self, lat: f64, lon: f64, radius: f64) -> Option<usize> {
-        let nodes_sorted_by_lat = self.nodes.iter()
-            .sorted_unstable_by(|node1, node2| node1.lat.total_cmp(&node2.lat))
-            .collect_vec();
         let id_filter = self.sights.iter().map(|sight| sight.node_id)
             //.merge(self.nodes.iter().filter(|node| self.get_degree(node.id) > 0)
             //    .map(|node| node.id))
             .collect();
-        let nearest_node_id = get_nearest_node(&nodes_sorted_by_lat, &id_filter, lat, lon);
+        let nearest_node_id = get_nearest_node(&self.nodes, &self.node_ids_by_lat, &id_filter, lat, lon);
         let nearest_node = self.get_node(nearest_node_id);
         let nearest_node_location = Location::new(nearest_node.lat(), nearest_node.lon());
 
@@ -382,8 +389,7 @@ impl Graph {
         let sights_in_area: Vec<&Sight> = slice.iter()
             .filter(|sight| {
                 let location = Location::new(sight.lat, sight.lon);
-                location.is_in_circle(&center, radius)
-                    .expect("Could not determine whether sight lies in given area")
+                location.haversine_distance_to(&center).meters() <= radius.meters()
             })
             .collect();
         debug!("Found {} sights within the given area (of a total of {} sights)",
@@ -419,25 +425,25 @@ fn binary_search_sights_vector(sights: &Vec<Sight>, target_latitude: f64) -> usi
 }
 
 /// Get the nearest node (that is not in `id_filter`) to a given coordinate (latitude / longitude).
-/// The function expects a node vector sorted by latitude.
-pub fn get_nearest_node(nodes_sorted_by_lat: &Vec<&impl INode>, id_filter: &HashSet<usize>, lat: f64, lon: f64) -> usize {
+/// The function uses `nodes_by_lat` to minimize the number of possible nearest nodes.
+pub(crate) fn get_nearest_node(nodes: &Vec<impl INode>, nodes_by_lat: &Vec<usize>, id_filter: &HashSet<usize>, lat: f64, lon: f64) -> usize {
     // Location to find the nearest node for
     let location = Location::new(lat, lon);
 
     // Search the index of the node with the closest latitude coordinate within the list of nodes
-    let result = nodes_sorted_by_lat.binary_search_by(|n| n.lat().total_cmp(&lat));
-    let found_index = result.unwrap_or_else(|index| index);
+    let result = nodes_by_lat.binary_search_by(|n| nodes[*n].lat().total_cmp(&lat));
+    let found_index = result.unwrap_or_else(|index| min(index, nodes.len()-1));
     trace!("Starting to search for nearest node at index: {} for latitude: {}", found_index, lat);
 
     let mut min_dist = Distance::from_meters(f64::MAX);
     let mut min_id = usize::MAX;
 
     // Iterate over the left and right neighbour indices to determine the nearest node
-    let mut left_index = found_index;
+    let mut left_index = max(found_index-1, 0);
     let mut right_index = found_index;
     loop {
         for i in [left_index, right_index] {
-            let node = nodes_sorted_by_lat[i];
+            let node = &nodes[nodes_by_lat[i]];
 
             // If the distance with the current nodes longitude set to the longitude of the
             // location is greater than the minimum distance so far, abort and output the node
@@ -445,7 +451,7 @@ pub fn get_nearest_node(nodes_sorted_by_lat: &Vec<&impl INode>, id_filter: &Hash
             let node_loc_lon_aligned = Location::new(node.lat(), location.longitude());
             // Use haversine distance here for more efficiency
             let minimum_possible_distance = location.haversine_distance_to(&node_loc_lon_aligned);
-            if minimum_possible_distance.meters() >= min_dist.meters() {
+            if minimum_possible_distance.meters() > min_dist.meters() {
                 trace!("Minimum possible distance: {} for node: {} greater/equal to minimum distance so far: {} for node: {}",
                 minimum_possible_distance, node.id(), min_dist, min_id);
                 return min_id;
@@ -467,12 +473,35 @@ pub fn get_nearest_node(nodes_sorted_by_lat: &Vec<&impl INode>, id_filter: &Hash
             }
         }
 
-        if left_index == 0 && right_index == nodes_sorted_by_lat.len() - 1 {
+        if left_index == 0 && right_index == nodes.len() - 1 {
             break;
         }
 
         left_index = if left_index == 0 { 0 } else { left_index - 1 };
-        right_index = if right_index == nodes_sorted_by_lat.len() - 1 { right_index } else { right_index + 1 };
+        right_index = if right_index == nodes.len() - 1 { right_index } else { right_index + 1 };
+    }
+
+    min_id
+}
+
+/// Get the nearest node (that is not in `id_filter`) to a given coordinate (latitude / longitude)
+fn get_nearest_node_naive(nodes: &Vec<impl INode>, id_filter: &HashSet<usize>, lat: f64, lon: f64) -> usize {
+    let location = Location::new(lat, lon);
+
+    let mut min_dist = Distance::from_meters(f64::MAX);
+    let mut min_id = usize::MAX;
+
+    for (id, node) in nodes.iter().enumerate() {
+        if !id_filter.contains(&id) {
+            let node_loc = Location::new(node.lat(), node.lon());
+            let dist = location.haversine_distance_to(&node_loc);
+            if dist.meters() < min_dist.meters() {
+                trace!("Updating minimum distance so far from: {} for node: {} to: {} for node: {}",
+                        min_dist, min_id, dist, id);
+                min_dist = dist;
+                min_id = id;
+            }
+        }
     }
 
     min_id
@@ -528,9 +557,9 @@ mod test {
     use std::collections::HashSet;
     use std::time::Instant;
     use geoutils::{Distance, Location};
-    use log::{debug, trace};
+    use log::{debug, trace, info};
     use rand::{Rng, thread_rng};
-    use crate::data::graph::Node;
+    use crate::data::graph::{get_nearest_node_naive, Node};
     use crate::init_logging;
     use crate::utils::test_setup;
 
@@ -557,52 +586,23 @@ mod test {
         assert_eq!(offsets_clone, graph.offsets, "Offsets are not in ascending order");
     }
 
-    fn get_nearest_node_naive(nodes: &Vec<&Node>, id_filter: &HashSet<usize>, lat: f64, lon: f64) -> usize {
-        let location = Location::new(lat, lon);
-
-        let mut min_dist = Distance::from_meters(f64::MAX);
-        let mut min_id = 0;
-
-        for (id, node) in nodes.iter().enumerate() {
-            if !id_filter.contains(&id) {
-                let node_loc = Location::new(node.lat, node.lon);
-                let dist = location.haversine_distance_to(&node_loc);
-                if dist.meters() < min_dist.meters() {
-                    trace!("Updating minimum distance so far from: {} for node: {} to: {} for node: {}",
-                        min_dist, min_id, dist, id);
-                    min_dist = dist;
-                    min_id = id;
-                }
-            }
-        }
-
-        min_id
-    }
-
     #[test]
     fn test_nearest_node() {
         init_logging();
 
         let graph = &test_setup::GRAPH;
+        info!("Loading Graph {}", graph.num_nodes);
 
         let (lat, lon) = RADISSON_BLU_HOTEL;
         let location = Location::new(lat, lon);
 
-        let start = Instant::now();
         let actual = graph.get_nearest_node(lat, lon);
-        let elapsed = start.elapsed().as_millis();
-        debug!("Efficient implementation took {} ms", elapsed);
 
-        let start = Instant::now();
         let id_filter = graph.sights.iter().map(|sight| sight.node_id)
-            //.merge(graph.nodes.iter().filter(|node| graph.get_degree(node.id) > 0)
-            //    .map(|node| node.id))
             .collect();
-        let expected = get_nearest_node_naive(&graph.nodes.iter().collect(),
-                                              &id_filter, lat, lon);
-        let elapsed = start.elapsed().as_millis();
-        debug!("Naive implementation took {} ms", elapsed);
 
+        let expected = get_nearest_node_naive(&graph.nodes,
+                                              &id_filter, lat, lon);
 
         let actual_node = graph.get_node(actual);
         let expected_node = graph.get_node(expected);
@@ -610,6 +610,11 @@ mod test {
         let expected_loc = Location::new(expected_node.lat, expected_node.lon);
         let actual_dist = location.haversine_distance_to(&actual_loc);
         let expected_dist = location.haversine_distance_to(&expected_loc);
+
+
+        debug!("Searched for latitude: {}, found latitude {}", lat, actual_node.lat);
+        debug!("Expected nearest node: {} with dist: {}, got: {} with dist: {} from efficient implementation",
+        expected, expected_dist, actual, actual_dist);
 
         assert_eq!(actual, expected, "Expected nearest node: {} with dist: {}, got: {} with dist: {} from efficient implementation",
                    expected, expected_dist, actual, actual_dist);

@@ -14,9 +14,11 @@ fn test_parsing_process_to_produce_graph_with_proper_number_of_elements() {
     let graph: &Lazy<Graph> = &test_setup::GRAPH;
     info!("Finished creating graph with {} nodes, {} sights and {} edges", graph.num_nodes, graph.num_sights, graph.num_edges);
     if test_setup::GRAPH_PATH.0.contains("bremen") {
+
         assert_eq!(graph.num_nodes, 235230, "nodes");
         assert_eq!(graph.num_sights, 1432, "sights");
         assert_eq!(graph.num_edges, 521860, "edges");
+
     } else if test_setup::GRAPH_PATH.0.contains("stg") {
         assert_eq!(graph.num_nodes, 4760, "nodes");
         assert_eq!(graph.num_sights, 352, "sights");
