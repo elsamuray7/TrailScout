@@ -225,7 +225,7 @@ impl Debug for Sight {
 /// mapped on their nearest nodes, respectively.
 pub struct Graph {
     nodes: Vec<Node>,
-    nodeIds_by_lat: Vec<usize>,
+    node_ids_by_lat: Vec<usize>,
     pub edges: Vec<Edge>,
     pub offsets: Vec<usize>,
     pub num_nodes: usize,
@@ -278,8 +278,8 @@ impl Graph {
         }
 
         //create node list sorted by lat
-        let mut nodeIds_by_lat:Vec<usize> = (0..num_nodes).collect();
-        nodeIds_by_lat.sort_unstable_by(|x, y| 
+        let mut node_ids_by_lat:Vec<usize> = (0..num_nodes).collect();
+        node_ids_by_lat.sort_unstable_by(|x, y|
             nodes.get(*x).unwrap().lat.total_cmp(&nodes.get(*y).unwrap().lat));
         
         let time_duration = time_start.elapsed();
@@ -287,7 +287,7 @@ impl Graph {
 
         Ok(Self {
             nodes,
-            nodeIds_by_lat,
+            node_ids_by_lat: node_ids_by_lat,
             edges,
             offsets,
             num_nodes,
@@ -312,7 +312,7 @@ impl Graph {
     pub fn get_nearest_node(&self, lat: f64, lon: f64) -> usize {
         let id_filter = self.sights.iter().map(|sight| sight.node_id)
             .collect();
-        get_nearest_node(&self.nodes, &self.nodeIds_by_lat, &id_filter, lat, lon)
+        get_nearest_node(&self.nodes, &self.node_ids_by_lat, &id_filter, lat, lon)
     }
 
     /// Get the nearest non-sight reachable graph node to a given coordinate (latitude / longitude).
@@ -330,7 +330,7 @@ impl Graph {
             //.merge(self.nodes.iter().filter(|node| self.get_degree(node.id) > 0)
             //    .map(|node| node.id))
             .collect();
-        let nearest_node_id = get_nearest_node(&self.nodes, &self.nodeIds_by_lat, &id_filter, lat, lon);
+        let nearest_node_id = get_nearest_node(&self.nodes, &self.node_ids_by_lat, &id_filter, lat, lon);
         let nearest_node = self.get_node(nearest_node_id);
         let nearest_node_location = Location::new(nearest_node.lat(), nearest_node.lon());
 
@@ -599,7 +599,8 @@ mod test {
 
         let id_filter = graph.sights.iter().map(|sight| sight.node_id)
             .collect();
-        let expected = get_nearest_node_naive(&graph.nodes.iter().collect(),
+
+        let expected = get_nearest_node_naive(&graph.nodes,
                                               &id_filter, lat, lon);
 
         let actual_node = graph.get_node(actual);

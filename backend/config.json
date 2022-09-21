@@ -2,8 +2,8 @@
     "ip": "0.0.0.0",
     "port": 8080,
     "log_level": "debug",
-    "graph_file_path": "./osm_graphs/BaWü-1-9-22.fmibin",
-    "source_file": "./osm_graphs/BaWü-1-9-22.osm.pbf",
+    "graph_file_path": "./osm_graphs/Bremen31-8-22.fmibin",
+    "source_file": "./osm_graphs/Bremen31-8-22.osm.pbf",
     "routing_algorithm": "DerAllerbesteste"
 }
 
