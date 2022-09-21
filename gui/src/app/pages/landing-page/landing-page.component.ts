@@ -23,7 +23,7 @@ export class LandingPageComponent implements OnInit {
 
   //Keine Ahnung ob man das Routing so macht
   goToPage(pageName:string){
-    this.router.navigate([`${pageName}`]);
+    this.router.navigate([pageName]);
   }
 
 
