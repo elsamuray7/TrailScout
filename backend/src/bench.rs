@@ -21,8 +21,8 @@ fn bench_dijkstra(graph_file: &str, iter_warmup: usize, iter_measure: usize) {
     let mut own_res = vec![0; iter_measure];
     let mut pathfinding_res = vec![0; iter_measure];
 
-    let do_iteration = || {
-        let mut rng = thread_rng();
+    let mut rng = thread_rng();
+    let mut do_iteration = || {
         let src_id = rng.gen_range(0..graph.num_nodes);
 
         let start = Instant::now();
@@ -156,6 +156,48 @@ fn bench_sa_vs_greedy(graph_file: &str, settings: usize, iter: usize, radius: f6
     log::info!("Sim. Annealing avg. score: {avg_score_sa}, runtime: {avg_runt_sa} ms");
 }
 
+fn bench_nearest_node(graph_file: &str, iter_warmup: usize, iter_measure: usize) {
+    let graph = Graph::parse_from_file(graph_file)
+        .expect("Failed to parse graph file");
+
+    log::info!("Benchmarking implementations to compute the nearest node to a position on graph \
+        {graph_file} with {iter_warmup} warm up and {iter_measure} measured iterations");
+
+    let mut measure_naive = vec![0; iter_measure];
+    let mut measure_eff = vec![0; iter_measure];
+
+    let mut rng = thread_rng();
+    let mut do_iteration = || {
+        let rand_id = rng.gen_range(0..graph.num_nodes);
+        let rand_node = graph.get_node(rand_id);
+        let pos_lat = rand_node.lat + 0.000001;
+        let pos_lon = rand_node.lon - 0.000001;
+
+        let start = Instant::now();
+        graph.get_nearest_node_naive(pos_lat, pos_lon);
+        let elapsed_naive = start.elapsed().as_micros();
+
+        let start = Instant::now();
+        graph.get_nearest_node(pos_lat, pos_lon);
+        let elapsed_eff = start.elapsed().as_micros();
+
+        (elapsed_naive, elapsed_eff)
+    };
+
+    for _ in 0..iter_warmup {
+        do_iteration();
+    }
+    for i in 0..iter_measure {
+        let (naive, eff) = do_iteration();
+        measure_naive[i] = naive;
+        measure_eff[i] = eff;
+    }
+
+    let avg_naive: u128 = measure_naive.iter().sum::<u128>() / iter_measure as u128;
+    let avg_eff: u128 = measure_eff.iter().sum::<u128>() / iter_measure as u128;
+    log::info!("Avg. naive: {avg_naive} µs vs. avg eff.: {avg_eff} µs");
+}
+
 fn main() {
     init_logging();
 
@@ -167,7 +209,7 @@ fn main() {
             let graph_file = args[2].as_str();
             let iter_warmup: usize = args[3].parse().unwrap();
             let iter_measure: usize = args[4].parse().unwrap();
-            bench_dijkstra(graph_file, iter_warmup, iter_measure)
+            bench_dijkstra(graph_file, iter_warmup, iter_measure);
         }
         "algo" => {
             let graph_file = args[2].as_str();
@@ -184,6 +226,12 @@ fn main() {
             let radius: f64 = args[5].parse().unwrap();
             let walking_time: i64 = args[6].parse().unwrap();
             bench_sa_vs_greedy(graph_file, settings, iter, radius, walking_time);
+        }
+        "nn" => {
+            let graph_file = args[2].as_str();
+            let iter_warmup: usize = args[3].parse().unwrap();
+            let iter_measure: usize = args[4].parse().unwrap();
+            bench_nearest_node(graph_file, iter_warmup, iter_measure);
         }
         _ => ()
     }

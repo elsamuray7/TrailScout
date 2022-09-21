@@ -444,16 +444,16 @@ fn id_post_processing(osm_nodes: &mut Vec<OSMNode>, osm_edges: &mut Vec<OSMEdge>
 
 /// Creates one edge (`osm_edges`) for each direction from a sight (`osm_sights`) and the nearest non sight node (`osm_nodes`).
 fn integrate_sights_into_graph(osm_nodes: &Vec<OSMNode>, osm_edges: &mut Vec<OSMEdge>, osm_sights: &Vec<OSMSight>, is_sight_node: &HashSet<usize>) {
-    let nodes_sorted_by_lat = osm_nodes.iter()
-        .sorted_unstable_by(|n1, n2|{
-            return n1.lat.total_cmp(&n2.lat);
-        })
-        .collect_vec();
+
+    //create node list sorted by lat
+    let mut nodeIds_by_lat:Vec<usize> = (0..osm_nodes.len()).collect();
+    nodeIds_by_lat.sort_unstable_by(|x, y| 
+        osm_nodes.get(*x).unwrap().lat.total_cmp(&osm_nodes.get(*y).unwrap().lat));
 
     let mut n = 0 as f64;
     for sight in osm_sights.iter() {
         n += 1.0;
-        let nearest_node_id = get_nearest_node(&nodes_sorted_by_lat, &is_sight_node, sight.lat, sight.lon);
+        let nearest_node_id = get_nearest_node(&osm_nodes, &nodeIds_by_lat, &is_sight_node, sight.lat, sight.lon);
         let nearest_node = &osm_nodes[nearest_node_id];
         let sight_loc = Location::new(sight.lat, sight.lon);
         let nearest_node_loc = Location::new(nearest_node.lat, nearest_node.lon);
