@@ -4,7 +4,7 @@ import * as L from 'leaflet';
 import { BlockUI, NgBlockUI } from 'ng-block-ui';
 import {Subscription} from 'rxjs';
 import { ApplicationStateService } from 'src/app/services/application-state.service';
-import {RouteResponse, RouteService} from 'src/app/services/route.service';
+import {RouteService} from 'src/app/services/route.service';
 import { RouteTrackerSection } from 'src/app/types.utils';
 import { GPSService } from 'src/app/services/gps.service';
 import { MapContainerComponent } from '../../components/map-container/map-container.component';
@@ -50,11 +50,11 @@ export class MainPageComponent implements OnInit, OnDestroy {
 
     this.sub = this.routeService.routeUpdated.subscribe(route => {
       this.blockUIMap.stop();
-      this.toggleViewMode();
       if (route.error && !route.route) {
-        this.toastService.showDanger(route.error.message + '\n' + route.error.error ?? 'Something went wrong!');
+        this.toastService.showDanger(route.error.message + '\n' + route.error.error ?? 'Etwas ist schiefgelaufen!');
         return;
       }
+      this.toggleViewMode();
       route.route?.map((r,index) => r.id = index);
       this.routeTrackerSections = [];
       route.route?.forEach(route => {
@@ -65,7 +65,7 @@ export class MainPageComponent implements OnInit, OnDestroy {
       this.blockUIMap.stop();
     });
     this.blockSub = this.routeService.startRouteCall.subscribe(() => {
-      this.blockUIMap.start('Loading route...');
+      this.blockUIMap.start('Berechne Route...');
     });
 
 

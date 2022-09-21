@@ -3,6 +3,7 @@ import { environment } from '../../environments/environment';
 import { HttpClient } from '@angular/common/http';
 import { Sight } from '../data/Sight';
 import { Category } from '../data/Category';
+import {ToastService} from "./toast.service";
 
 @Injectable({
   providedIn: 'root'
@@ -15,7 +16,8 @@ export class SightsServiceService {
   public updating = new EventEmitter();
   public updateSuccessful = new EventEmitter<boolean>();
 
-  constructor(private http: HttpClient) {
+  constructor(private http: HttpClient,
+              private toastService: ToastService) {
     this.backendUrl = environment.backendUrl;
     this.presetCategories.forEach((category) => {
       this.categories.push(new Category(category));
@@ -28,6 +30,7 @@ export class SightsServiceService {
       "lon": coords["lng"],
       "radius": radius * 1000 // convert to meters
     }
+    this.toastService.showStandard('Aktualisiere Sehenswürdigkeiten...');
     this.updating.emit();
     this.http.post(this.backendUrl + "/sights", body).subscribe((sights ) => {
       for (let category of this.categories) {
@@ -42,8 +45,10 @@ export class SightsServiceService {
           }
         }
       }
+      this.toastService.showSuccess('Sehenswürdigkeiten erfolgreich aktualisiert!');
       this.updateSuccessful.emit(true);
     }, (error => {
+      this.toastService.showDanger('Etwas ist schief gelaufen!');
       this.updateSuccessful.emit(false);
     }));
   }

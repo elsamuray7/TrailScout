@@ -25,11 +25,11 @@ export class SettingsTaskbarTagItemComponent implements OnInit {
   prio: number = 3;
   readonly priorityLabels = new Map<number, string>([
     [0, "Gar Nicht"],
-    [1, "Niedriger"],
+    [1, "Sehr Niedrig"],
     [2, "Niedrig"],
     [3, "Neutral"],
     [4, "Hoch"],
-    [5, "Höher"]
+    [5, "Sehr Hoch"]
   ]);
 
   readonly categoryLabels = new Map<string, string>([
