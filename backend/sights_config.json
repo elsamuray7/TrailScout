@@ -12,10 +12,6 @@
                 },
                 {
                     "key": "sport",
-                    "value": "* ?"
-                },
-                {
-                    "key": "sport",
                     "value": "9pin"
                 },
                 {
@@ -194,10 +190,6 @@
                 },
                 {
                     "key": "leisure", 
-                    "value": "park"
-                },
-                {
-                    "key": "leisure", 
                     "value": "picnic_table"
                 },
                 {
@@ -233,6 +225,10 @@
                 {
                     "key": "water", 
                     "value": "river"
+                },
+                {
+                    "key": "leisure",
+                    "value": "park"
                 },
                 {
                     "key": "water", 
@@ -277,20 +273,8 @@
                     "value": "coffee"
                 },
                 {
-                    "key": "shop", 
-                    "value": "ice_cream"
-                },
-                {
-                    "key": "shop",
-                    "value": "tea"
-                },
-                {
-                    "key": "shop",
-                    "value": "bakery"
-                },
-                {
                     "key": "amenity",
-                    "value": "restaurant"
+                    "value": "ice_cream"
                 },
                 {
                     "key": "amenity", 
@@ -299,14 +283,6 @@
                 {
                     "key": "amenity", 
                     "value": "cafe"
-                },
-                {
-                    "key": "amenity", 
-                    "value": "fast_food"
-                },
-                {
-                    "key": "amenity", 
-                    "value": "food_court"
                 }
             ]
         },
@@ -349,19 +325,7 @@
                 },
                 {
                     "key": "man_made", 
-                    "value": "cross"
-                },
-                {
-                    "key": "man_made", 
                     "value": "obelisk"
-                },
-                {
-                    "key": "man_made", 
-                    "value": "watermill"
-                },
-                {
-                    "key": "man_made", 
-                    "value": "windmill"
                 },
                 {
                     "key": "tourism", 
