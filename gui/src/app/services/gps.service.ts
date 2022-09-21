@@ -25,7 +25,7 @@ export class GPSService {
                 
             },
             (error: any) => resolve(undefined),
-            {timeout: 2000});
+            {timeout: 1000});
         })
         
     }
