@@ -12,7 +12,7 @@ export class SightsServiceService {
   private readonly backendUrl: String;
   private categories: Category[] = [];
   private presetCategories = ["Sightseeing", "Activities", "Nightlife", "Restaurants", "Shopping", "PicnicBarbequeSpot",
-    "MuseumExhibition", "Nature", "Swimming"];
+    "MuseumExhibition", "Nature", "Swimming", "Animals"];
   public updating = new EventEmitter();
   public updateSuccessful = new EventEmitter<boolean>();
 

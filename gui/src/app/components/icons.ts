@@ -2,89 +2,99 @@ import L from "leaflet";
 import { Sight } from "../data/Sight";
 
 export const sightsIcon = L.icon({
-    iconUrl: 'assets/icons/sights.png',
+  iconUrl: 'assets/icons/sights.png',
 
-    iconSize:     [30, 35], // size of the icon
-    // shadowSize:   [50, 64], // size of the shadow
-    // iconAnchor:   [22, 94], // point of the icon which will correspond to marker's location
-    // shadowAnchor: [4, 62],  // the same for the shadow
-    // popupAnchor:  [-3, -76] // point from which the popup should open relative to the iconAnchor
+  iconSize: [30, 35], // size of the icon
+  // shadowSize:   [50, 64], // size of the shadow
+  // iconAnchor:   [22, 94], // point of the icon which will correspond to marker's location
+  // shadowAnchor: [4, 62],  // the same for the shadow
+  // popupAnchor:  [-3, -76] // point from which the popup should open relative to the iconAnchor
 });
 
 export const nightIcon = L.icon({
-    iconUrl: 'assets/icons/nachtleben.png',
+  iconUrl: 'assets/icons/nachtleben.png',
 
-    iconSize:     [30, 35], // size of the icon
-    // shadowSize:   [50, 64], // size of the shadow
-    // iconAnchor:   [22, 94], // point of the icon which will correspond to marker's location
-    // shadowAnchor: [4, 62],  // the same for the shadow
-    // popupAnchor:  [-3, -76] // point from which the popup should open relative to the iconAnchor
+  iconSize: [30, 35], // size of the icon
+  // shadowSize:   [50, 64], // size of the shadow
+  // iconAnchor:   [22, 94], // point of the icon which will correspond to marker's location
+  // shadowAnchor: [4, 62],  // the same for the shadow
+  // popupAnchor:  [-3, -76] // point from which the popup should open relative to the iconAnchor
 });
 
 export const restaurantIcon = L.icon({
-    iconUrl: 'assets/icons/restaurant.png',
+  iconUrl: 'assets/icons/restaurant.png',
 
-    iconSize:     [30, 35], // size of the icon
-    // shadowSize:   [50, 64], // size of the shadow
-    // iconAnchor:   [22, 94], // point of the icon which will correspond to marker's location
-    // shadowAnchor: [4, 62],  // the same for the shadow
-    // popupAnchor:  [-3, -76] // point from which the popup should open relative to the iconAnchor
+  iconSize: [30, 35], // size of the icon
+  // shadowSize:   [50, 64], // size of the shadow
+  // iconAnchor:   [22, 94], // point of the icon which will correspond to marker's location
+  // shadowAnchor: [4, 62],  // the same for the shadow
+  // popupAnchor:  [-3, -76] // point from which the popup should open relative to the iconAnchor
 });
 
 export const shoppingIcon = L.icon({
-    iconUrl: 'assets/icons/shopping.png',
+  iconUrl: 'assets/icons/shopping.png',
 
-    iconSize:     [30, 35], // size of the icon
-    // shadowSize:   [50, 64], // size of the shadow
-    // iconAnchor:   [22, 94], // point of the icon which will correspond to marker's location
-    // shadowAnchor: [4, 62],  // the same for the shadow
-    // popupAnchor:  [-3, -76] // point from which the popup should open relative to the iconAnchor
+  iconSize: [30, 35], // size of the icon
+  // shadowSize:   [50, 64], // size of the shadow
+  // iconAnchor:   [22, 94], // point of the icon which will correspond to marker's location
+  // shadowAnchor: [4, 62],  // the same for the shadow
+  // popupAnchor:  [-3, -76] // point from which the popup should open relative to the iconAnchor
 });
 
 export const grillIcon = L.icon({
-    iconUrl: 'assets/icons/grill.png',
+  iconUrl: 'assets/icons/grill.png',
 
-    iconSize:     [30, 35], // size of the icon
-    // shadowSize:   [50, 64], // size of the shadow
-    // iconAnchor:   [22, 94], // point of the icon which will correspond to marker's location
-    // shadowAnchor: [4, 62],  // the same for the shadow
-    // popupAnchor:  [-3, -76] // point from which the popup should open relative to the iconAnchor
+  iconSize: [30, 35], // size of the icon
+  // shadowSize:   [50, 64], // size of the shadow
+  // iconAnchor:   [22, 94], // point of the icon which will correspond to marker's location
+  // shadowAnchor: [4, 62],  // the same for the shadow
+  // popupAnchor:  [-3, -76] // point from which the popup should open relative to the iconAnchor
 });
 
 export const museumIcon = L.icon({
-    iconUrl: 'assets/icons/museum.png',
+  iconUrl: 'assets/icons/museum.png',
 
-    iconSize:     [30, 35], // size of the icon
-    // shadowSize:   [50, 64], // size of the shadow
-    // iconAnchor:   [22, 94], // point of the icon which will correspond to marker's location
-    // shadowAnchor: [4, 62],  // the same for the shadow
-    // popupAnchor:  [-3, -76] // point from which the popup should open relative to the iconAnchor
+  iconSize: [30, 35], // size of the icon
+  // shadowSize:   [50, 64], // size of the shadow
+  // iconAnchor:   [22, 94], // point of the icon which will correspond to marker's location
+  // shadowAnchor: [4, 62],  // the same for the shadow
+  // popupAnchor:  [-3, -76] // point from which the popup should open relative to the iconAnchor
 });
 
 export const natureIcon = L.icon({
-    iconUrl: 'assets/icons/natur.png',
+  iconUrl: 'assets/icons/natur.png',
 
-    iconSize:     [30, 35], // size of the icon
-    // shadowSize:   [50, 64], // size of the shadow
-    // iconAnchor:   [22, 94], // point of the icon which will correspond to marker's location
-    // shadowAnchor: [4, 62],  // the same for the shadow
-    // popupAnchor:  [-3, -76] // point from which the popup should open relative to the iconAnchor
+  iconSize: [30, 35], // size of the icon
+  // shadowSize:   [50, 64], // size of the shadow
+  // iconAnchor:   [22, 94], // point of the icon which will correspond to marker's location
+  // shadowAnchor: [4, 62],  // the same for the shadow
+  // popupAnchor:  [-3, -76] // point from which the popup should open relative to the iconAnchor
 });
 
 export const seaIcon = L.icon({
-    iconUrl: 'assets/icons/see.png',
+  iconUrl: 'assets/icons/see.png',
 
-    iconSize:     [30, 35], // size of the icon
-    // shadowSize:   [50, 64], // size of the shadow
-    // iconAnchor:   [22, 94], // point of the icon which will correspond to marker's location
-    // shadowAnchor: [4, 62],  // the same for the shadow
-    // popupAnchor:  [-3, -76] // point from which the popup should open relative to the iconAnchor
+  iconSize: [30, 35], // size of the icon
+  // shadowSize:   [50, 64], // size of the shadow
+  // iconAnchor:   [22, 94], // point of the icon which will correspond to marker's location
+  // shadowAnchor: [4, 62],  // the same for the shadow
+  // popupAnchor:  [-3, -76] // point from which the popup should open relative to the iconAnchor
 });
 
 export const activitiesIcon = L.icon({
   iconUrl: 'assets/icons/activities.png',
 
-  iconSize:     [30, 35], // size of the icon
+  iconSize: [30, 35], // size of the icon
+  // shadowSize:   [50, 64], // size of the shadow
+  // iconAnchor:   [22, 94], // point of the icon which will correspond to marker's location
+  // shadowAnchor: [4, 62],  // the same for the shadow
+  // popupAnchor:  [-3, -76] // point from which the popup should open relative to the iconAnchor
+});
+
+export const animalsIcon = L.icon({
+  iconUrl: 'assets/icons/animals.png',
+
+  iconSize: [30, 35], // size of the icon
   // shadowSize:   [50, 64], // size of the shadow
   // iconAnchor:   [22, 94], // point of the icon which will correspond to marker's location
   // shadowAnchor: [4, 62],  // the same for the shadow
@@ -92,13 +102,13 @@ export const activitiesIcon = L.icon({
 });
 
 export const startIcon = L.icon({
-    iconUrl: 'assets/icons/start.png',
+  iconUrl: 'assets/icons/start.png',
 
-    iconSize:     [30, 35], // size of the icon
-    // shadowSize:   [50, 64], // size of the shadow
-    // iconAnchor:   [22, 94], // point of the icon which will correspond to marker's location
-    // shadowAnchor: [4, 62],  // the same for the shadow
-    // popupAnchor:  [-3, -76] // point from which the popup should open relative to the iconAnchor
+  iconSize: [30, 35], // size of the icon
+  // shadowSize:   [50, 64], // size of the shadow
+  // iconAnchor:   [22, 94], // point of the icon which will correspond to marker's location
+  // shadowAnchor: [4, 62],  // the same for the shadow
+  // popupAnchor:  [-3, -76] // point from which the popup should open relative to the iconAnchor
 });
 
 const iconRetinaUrl = 'assets/marker-icon-2x.png';
@@ -116,27 +126,30 @@ export const iconDefault = L.icon({
 });
 
 export function getIcon(sight: Sight) {
-    const cat = sight.category;
-    switch (cat) {
-      case "Sightseeing":
-        return sightsIcon;
-      case "Nightlife":
-        return nightIcon;
-      case "Restaurants":
-        return restaurantIcon;
-      case "Shopping":
-        return shoppingIcon;
-      case "PicnicBarbequeSpot":
-        return grillIcon;
-      case "MuseumExhibition":
-        return museumIcon;
-      case "Nature":
-        return natureIcon;
-      case "Swimming":
-        return seaIcon;
-      case "Activities":
-          return activitiesIcon;
-      default:
-        return iconDefault;
-    }
+  const cat = sight.category;
+  switch (cat) {
+    case "Sightseeing":
+      return sightsIcon;
+    case "Nightlife":
+      return nightIcon;
+    case "Restaurants":
+      return restaurantIcon;
+    case "Shopping":
+      return shoppingIcon;
+    case "PicnicBarbequeSpot":
+      return grillIcon;
+    case "MuseumExhibition":
+      return museumIcon;
+    case "Nature":
+      return natureIcon;
+    case "Swimming":
+      return seaIcon;
+    case "Activities":
+      return activitiesIcon;
+    case "Animals":
+      return animalsIcon;
+    default:
+      return iconDefault;
   }
+}
+

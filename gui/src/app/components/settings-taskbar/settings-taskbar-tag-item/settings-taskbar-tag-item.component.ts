@@ -41,7 +41,8 @@ export class SettingsTaskbarTagItemComponent implements OnInit {
     ["PicnicBarbequeSpot", "Picknick & Grillen"],
     ["MuseumExhibition", "Museen"],
     ["Nature", "Natur"],
-    ["Swimming", "Badeplätze"]
+    ["Swimming", "Badeplätze"],
+    ["Animals", "Tiere"]
   ]);
 
   constructor() {
