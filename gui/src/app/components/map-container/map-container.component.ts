@@ -10,6 +10,7 @@ import { GPSService } from 'src/app/services/gps.service';
 import { Subscription } from 'rxjs';
 import { ApplicationStateService } from '../../services/application-state.service';
 import { WikidataHandlerService, WikiResult } from 'src/app/services/wikidata-handler.service';
+import {SightsServiceService} from "../../services/sights-service.service";
 
 
 L.Marker.prototype.options.icon = Icons.iconDefault;
@@ -46,7 +47,10 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
   wikiCache = new Map<string, WikiResult>();
 
   constructor(private applicationStateService: ApplicationStateService,
-              private gpsService: GPSService, private routeService: RouteService, private wikidataService: WikidataHandlerService) {
+              private gpsService: GPSService,
+              private routeService: RouteService,
+              private wikidataService: WikidataHandlerService,
+              private sightService: SightsServiceService) {
     this.applicationStateService.routeModeChangedEvent.subscribe(isActive => {
       if (isActive) {
         //hide Start point, Radius and Settings
@@ -68,6 +72,13 @@ export class MapContainerComponent implements AfterViewInit, OnChanges, OnDestro
         this.hideSightsOnRoute();
       }
     })
+    this.sightService.updateSuccessful.subscribe(_ => {
+      const activeCategories = this.sightService.getCategories().filter(category => this.activeLayers.has(category.name))
+      activeCategories.forEach(category => {
+        this.hideSights(category);
+        this.drawSights(category);
+      });
+    });
   }
   ngOnDestroy() {
     this.sub1?.unsubscribe();
