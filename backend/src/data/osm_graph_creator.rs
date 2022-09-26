@@ -384,15 +384,20 @@ fn handle_sights_without_name(osm_sights: &mut Vec<OSMSight>, sight_config: &Sig
     let default_name_picnic = &sight_config.category_tag_map
         .iter().find(|&x| matches!(x.category.parse::<Category>().unwrap(), Category::PicnicBarbequeSpot)).unwrap().name_german;
 
+    let mut nature_counter = 0;
+    let mut picnic_counter = 0;
+
     //Go through all sights and retain only ones with a proper name unless they have category
     //Nature or PicnicBarbequeSpot - in that case also retain them but use default name
     osm_sights.retain_mut(|sight| if  !sight.name.eq("None") {
         true
     } else if matches!(sight.category, Category::Nature) {
-        sight.name = default_name_nature.clone();
+        nature_counter += 1;
+        sight.name = format!("{} {}", default_name_nature, nature_counter);
         true
     }else if matches!(sight.category, Category::PicnicBarbequeSpot) {
-        sight.name = default_name_picnic.clone();
+        picnic_counter += 1;
+        sight.name = format!("{} {}", default_name_picnic, picnic_counter);
         true
     }
     else {
