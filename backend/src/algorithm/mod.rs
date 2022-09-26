@@ -473,20 +473,20 @@ mod test {
 
     /// Lazily initialized vector with algorithm instances used for testing
     static ALGORITHMS: Lazy<Vec<Algorithm>> = Lazy::new(|| {
-        Algorithm::available_algorithms().iter().map(|&algo_name| {
-            let start_time = DateTime::parse_from_rfc3339(START_TIME).unwrap()
-                .with_timezone(&Utc);
-            let end_time = DateTime::parse_from_rfc3339(END_TIME).unwrap()
-                .with_timezone(&Utc);
-            let user_prefs = UserPreferences {
-                categories: CATEGORY_PREFS.to_vec(),
-                sights: vec![],
-            };
+        let start_time = DateTime::parse_from_rfc3339(START_TIME).unwrap()
+            .with_timezone(&Utc);
+        let end_time = DateTime::parse_from_rfc3339(END_TIME).unwrap()
+            .with_timezone(&Utc);
+        let user_prefs = UserPreferences {
+            categories: CATEGORY_PREFS.to_vec(),
+            sights: vec![],
+        };
+        Algorithm::available_algorithms().iter().map(|&algo_name|
             Algorithm::from_name(
                 algo_name, &test_setup::GRAPH, start_time, end_time,
-                WALKING_SPEED_MPS, RADISSON_BLU_HOTEL, user_prefs
+                WALKING_SPEED_MPS, RADISSON_BLU_HOTEL, user_prefs.clone()
             ).unwrap()
-        }).collect_vec()
+        ).collect_vec()
     });
 
     /// Run given test with each algorithm instance in `ALGORITHMS`
@@ -525,12 +525,11 @@ mod test {
 
     #[test]
     fn test_route_travel_time_within_time_budget() {
+        let start_time = DateTime::parse_from_rfc3339(START_TIME).unwrap()
+            .with_timezone(&Utc);
+        let end_time = DateTime::parse_from_rfc3339(END_TIME).unwrap()
+            .with_timezone(&Utc);
         run_test_with_each_algorithm(|algo| {
-            let start_time = DateTime::parse_from_rfc3339(START_TIME).unwrap()
-                .with_timezone(&Utc);
-            let end_time = DateTime::parse_from_rfc3339(END_TIME).unwrap()
-                .with_timezone(&Utc);
-
             let route = compute_route_with_empty_check(algo);
             let route_end_time = match &route.last().unwrap() {
                 RouteSector::End(end_sector) => end_sector.time_of_arrival,
