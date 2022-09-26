@@ -27,7 +27,8 @@ const cookieConfig:NgcCookieConsentConfig = {
     }
   },
   theme: 'edgeless',
-  type: 'opt-out'
+  type: 'opt-out',
+  position: 'bottom'
 };
 
 @NgModule({
