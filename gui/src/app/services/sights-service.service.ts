@@ -16,6 +16,19 @@ export class SightsServiceService {
   public updating = new EventEmitter();
   public updateSuccessful = new EventEmitter<boolean>();
 
+  public readonly categoryLabels = new Map<string, string>([
+    ["Sightseeing", "Sehenswürdigkeiten"],
+    ["Activities", "Aktivitäten"],
+    ["Nightlife", "Nachtleben"],
+    ["Restaurants", "Restaurants"],
+    ["Shopping", "Shopping"],
+    ["PicnicBarbequeSpot", "Picknick & Grillen"],
+    ["MuseumExhibition", "Museen"],
+    ["Nature", "Natur"],
+    ["Swimming", "Badeplätze"],
+    ["Animals", "Tiere"]
+  ]);
+
   constructor(private http: HttpClient,
               private toastService: ToastService) {
     this.backendUrl = environment.backendUrl;

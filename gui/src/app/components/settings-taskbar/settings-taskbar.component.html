@@ -90,7 +90,7 @@
                 <h4>Kategorie Präferenzen:</h4>
                 <div *ngIf="this.getLastRequest()!.user_prefs.categories.length == 0"><i>None</i></div>
                 <div *ngFor="let category of this.getLastRequest()!.user_prefs.categories">
-                  {{category.category}}: {{this.prefToString(category.pref)}}
+                  {{this.sightsService.categoryLabels.get(category.category)}}: {{this.prefToString(category.pref)}}
                 </div>
               </div>
               <div class="request-summary">

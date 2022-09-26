@@ -1,7 +1,7 @@
 <div class="row item" [ngStyle]="getImage()">
     <div class="col-13 tag">
         <button class="btn custom-btn" [class.clicked]="checked" (click)="checkedTag()">
-          <span>{{this.categoryLabels.get(category.name)}} ({{this.category.sights.length}})</span></button>
+          <span>{{sightsService.categoryLabels.get(category.name)}} ({{this.category.sights.length}})</span></button>
     </div>
     <div [hidden]="!checked" class="col rating">
       <div ngbDropdown class="d-inline-block">
