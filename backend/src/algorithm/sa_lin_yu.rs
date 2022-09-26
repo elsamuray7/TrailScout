@@ -346,36 +346,21 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
         let time_budget = end_time.signed_duration_since(start_time).num_seconds() as f64;
         let edge_radius = walking_speed_mps * time_budget / 2.0;
         let sights_radius = edge_radius.min(area.radius);
-
-        log::debug!("Start: get_reachable_sights_in_area");
-        let start = Instant::now();
         let sights = graph.get_reachable_sights_in_area(area.lat, area.lon,
-
                                                         sights_radius, edge_radius);
-        log::debug!("End: get_reachable_sights_in_area, {}ms", start.elapsed().as_millis());
         if sights.is_empty() {
             return Err(AlgorithmError::NoSightsFound)
         };
 
-        let start = Instant::now();
-        log::debug!("Start: graph.get_nearest_node");
-        let root_id = match graph.get_nearest_node_in_area(area.lat, area.lon, area.radius) {
+        let root_id = match graph.get_nearest_node_in_area(area.lat, area.lon, sights_radius) {
             Some(nearest_node) => nearest_node,
             None => return Err(AlgorithmError::NoNearestNodeFound)
         };
-        log::debug!("End: graph.get_nearest_node {}ms", start.elapsed().as_millis());
 
+        let scores = compute_scores(&sights, user_prefs);
 
-        let start = Instant::now();
-        log::debug!("Start: compute_scores");
-        let scores = compute_scores(&sights, user_prefs);        
-        log::debug!("End: compute_scores {}ms", start.elapsed().as_millis());
-
-        let start = Instant::now();
-        log::debug!("Start: build_distance_map");
         let distance_map = build_distance_map(
             graph, &area, edge_radius, &sights, root_id, &scores);
-        log::debug!("End: build_distance_map {}ms", start.elapsed().as_millis());
 
         Ok(Self {
             graph,
@@ -390,13 +375,12 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
     }
 
     fn compute_route(&self) -> Result<Route, AlgorithmError> {
-        log::debug!("Start Function: compute_route");
+        log::debug!("Starting route computation");
         let start = Instant::now();
+
         // Create a random initial route
         let mut rng = thread_rng();
 
-        let startlocal = Instant::now();
-        log::debug!("Start: randomized_sights");
         let mut randomized_sights = self.sights.iter()
             .filter(|sight| {
                 let (score, category) = self.scores[&sight.node_id];
@@ -404,8 +388,6 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
             })
             .map(|&sight| sight)
             .collect_vec();
-        log::debug!("End: randomized_sights {}ms", startlocal.elapsed().as_millis());
-
         if randomized_sights.is_empty() {
             return Err(AlgorithmError::NoPreferencesProvided);
         }
@@ -414,7 +396,6 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
 
         log::debug!("Starting simulated annealing (T_0: {}, B: {}, ALPHA: {}, MAX_TIME: {}, N_NON_IMPROVING: {})",
             T_0, B, ALPHA, MAX_TIME, N_NON_IMPROVING);
-
         let sa_start = Instant::now();
 
         let mut t = T_0;

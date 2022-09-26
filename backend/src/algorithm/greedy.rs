@@ -88,7 +88,7 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
             return Err(AlgorithmError::NoSightsFound)
         }
 
-        let root_id = match graph.get_nearest_node_in_area(area.lat, area.lon, area.radius) {
+        let root_id = match graph.get_nearest_node_in_area(area.lat, area.lon, sights_radius) {
             Some(nearest_node) => nearest_node,
             None => return Err(AlgorithmError::NoNearestNodeFound)
         };
