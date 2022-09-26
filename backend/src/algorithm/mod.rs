@@ -341,7 +341,7 @@ fn compute_wait_and_service_time(start_time: &DateTime<Utc>, end_time: &DateTime
     let curr_time = start_time.naive_utc() + Duration::seconds(used_time_budget);
     // Determine latest time such that root is still reachable
     let latest_time = end_time.naive_utc() - Duration::seconds(root_travel_time);
-    if curr_time > latest_time  {
+    if curr_time >= latest_time  {
         // Stay at sight not possible due to time restrictions
         return None;
     }
