@@ -9,11 +9,11 @@ use std::fs;
 use log::{debug, error};
 use serde_json;
 
-use trailscout_lib::algorithm::Algorithm;
+use trailscout_lib::algorithm::{Algorithm};
 use trailscout_lib::data::graph::Graph;
 use trailscout_lib::data::osm_graph_creator;
 use trailscout_lib;
-use crate::server_utils::custom_errors::TrailScoutError;
+use crate::server_utils::custom_errors::{match_error, TrailScoutError};
 use crate::server_utils::requests::{RouteProviderReq, RouteProviderRes, SightsRequest};
 
 
@@ -85,44 +85,36 @@ async fn post_route(request:  web::Json<RouteProviderReq>, data: web::Data<AppSt
 
     //get configured algorithm
     let algo_result = Algorithm::from_name(&data.config.routing_algorithm,
-                                    &data.graph,
-                                    DateTime::from(start),
-                                    DateTime::from(end),
-                                    speed_mps,
-                                    route_request.area,
-                                    route_request.user_prefs);
+                                           &data.graph,
+                                           DateTime::from(start),
+                                           DateTime::from(end),
+                                           speed_mps,
+                                           route_request.area,
+                                           route_request.user_prefs);
 
     let algo = match algo_result {
         Ok(algo) => algo,
         Err(error) => {
             //Mein intellij mekert hier wegen "doesn't implement Display". Geht aber -> intellij bug?
-            error!("Error in post_route: {}",error);
-            return Err(TrailScoutError::InternalError {message: format!("Error in post_route: {}", error)})
+            error!("Error in post_route algo_result: {}",error);
+            return Err(match_error(error));
         }
-
     };
 
     let route = match algo.compute_route() {
         Ok(route) => route,
         Err(error) => {
-            error!("Error in post_route: {}", error);
-            return Err(TrailScoutError::InternalError { message: format!("Error in post_route: {}", error) })
+            error!("Error in post_route compute_route: {}", error);
+            return Err(match_error(error));
         }
     };
-    debug!("Computed route with {}. Sending response...", &data.config.routing_algorithm);
 
+    debug!("Computed route with {}. Sending response...", &data.config.routing_algorithm);
     Ok(HttpResponse::Ok().json(RouteProviderRes {
         route,
     }))
-
-
 }
 
-/// TODO Function to kickoff a parse of a new pbf file to fmi graph
-/// TODO Should also update the appstate if possible
-async fn update_graph(){
-    unimplemented!();
-}
 
 //server main
 #[actix_web::main]
