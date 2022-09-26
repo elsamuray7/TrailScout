@@ -344,7 +344,7 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
         }
 
         let time_budget = end_time.signed_duration_since(start_time).num_seconds() as f64;
-        let edge_radius = walking_speed_mps * time_budget / std::f64::consts::PI / 2.0;
+        let edge_radius = walking_speed_mps * time_budget / 2.0;
         let sights_radius = edge_radius.min(area.radius);
 
         log::debug!("Start: get_reachable_sights_in_area");
