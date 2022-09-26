@@ -196,20 +196,16 @@ impl<'a> SimAnnealingLinYu<'a> {
             let root_travel_time = (root_travel_dist as f64 / self.walking_speed_mps) as i64 + 1;
 
             let used_time_budget = total_time_budget - left_time_budget + sight_travel_time;
-            let (wait_time, service_time) = match compute_wait_and_service_time(
-                &self.start_time, sight, used_time_budget) {
-                Some(result) => result,
+            match compute_wait_and_service_time(
+                &self.start_time, &self.end_time, sight, used_time_budget, root_travel_time) {
+                Some((wait_time, service_time)) => {
+                    let sight_total_time = sight_travel_time + wait_time + service_time;
+                    score += self.scores[&sight.node_id].0;
+                    left_time_budget -= sight_total_time;
+                    curr_node_id = sight.node_id;
+                },
                 None => break
             };
-
-            let sight_total_time = sight_travel_time + wait_time + service_time;
-            if left_time_budget >= (sight_total_time + root_travel_time) {
-                score += self.scores[&sight.node_id].0;
-                left_time_budget -= sight_total_time;
-                curr_node_id = sight.node_id;
-            } else {
-                break;
-            }
         }
 
         Ok(score)
@@ -292,25 +288,22 @@ impl<'a> SimAnnealingLinYu<'a> {
             let root_travel_time = (root_travel_dist as f64 / self.walking_speed_mps) as i64 + 1;
 
             let used_time_budget = total_time_budget - left_time_budget + sight_travel_time;
-            match compute_wait_and_service_time(&self.start_time, sight, used_time_budget) {
+            match compute_wait_and_service_time(&self.start_time, &self.end_time, sight,
+                                                used_time_budget, root_travel_time) {
                 Some((wait_time, service_time)) => {
                     let sight_total_time = sight_travel_time + wait_time + service_time;
-                    if left_time_budget >= (sight_total_time + root_travel_time) {
-                        let path = build_path(&sight.node_id, curr_distance_map)
-                            .into_iter().map(|node_id| self.graph.get_node(node_id)).collect_vec();
-                        let sector = Sector::new(
-                            &self.start_time, total_time_budget - left_time_budget,
-                            sight_travel_time, wait_time, service_time, sight, path);
-                        if route.is_empty() {
-                            route.push(RouteSector::Start(sector));
-                        } else {
-                            route.push(RouteSector::Intermediate(sector));
-                        }
-                        left_time_budget -= sight_total_time;
-                        curr_node_id = sight.node_id;
+                    let path = build_path(&sight.node_id, curr_distance_map)
+                        .into_iter().map(|node_id| self.graph.get_node(node_id)).collect_vec();
+                    let sector = Sector::new(
+                        &self.start_time, total_time_budget - left_time_budget,
+                        sight_travel_time, wait_time, service_time, sight, path);
+                    if route.is_empty() {
+                        route.push(RouteSector::Start(sector));
                     } else {
-                        break;
+                        route.push(RouteSector::Intermediate(sector));
                     }
+                    left_time_budget -= sight_total_time;
+                    curr_node_id = sight.node_id;
                 }
                 None => break
             };
