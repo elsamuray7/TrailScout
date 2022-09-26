@@ -5,8 +5,6 @@ use trailscout_lib::algorithm::AlgorithmError;
 ///Custom Error for TrailScout
 #[derive(Debug, Display, Error)]
 pub enum TrailScoutError {
-    #[display(fmt = "Unbekannter Algorithmus Fehler")]
-    UnknownErrorServer,
 
     #[display(fmt = "Unbekannter Routing Algorithmus")]
     BadAlgoServer,
@@ -34,6 +32,8 @@ pub enum TrailScoutError {
 impl ResponseError for TrailScoutError {
     fn status_code(&self) -> StatusCode {
         match *self {
+            TrailScoutError::NegativeTimeIntervalServer | TrailScoutError::NoPreferencesProvidedServer|
+            TrailScoutError::BadAlgoServer | TrailScoutError::UnknownCategoryServer => StatusCode::BAD_REQUEST,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -54,6 +54,5 @@ pub fn match_error(x: AlgorithmError) -> TrailScoutError {
         AlgorithmError::NoPreferencesProvided {..} => { TrailScoutError::NoPreferencesProvidedServer },
         AlgorithmError::NoNearestNodeFound {..} => { TrailScoutError::NoNearestNodeFoundServer },
         AlgorithmError::UnknownAlgorithm {..} => {TrailScoutError::BadAlgoServer},
-        _ => {TrailScoutError::UnknownErrorServer }
     }
 }
