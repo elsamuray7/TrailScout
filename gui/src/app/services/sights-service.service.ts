@@ -61,7 +61,11 @@ export class SightsServiceService {
       this.toastService.showSuccess('Sehenswürdigkeiten erfolgreich aktualisiert!');
       this.updateSuccessful.emit(true);
     }, (error => {
-      this.toastService.showDanger('Etwas ist schief gelaufen!');
+      if (error.status != 0) {
+        this.toastService.showDanger(error.status + " - " + error.statusText + " - " + error.error);
+      } else {
+        this.toastService.showDanger('Etwas ist schief gelaufen!');
+      }
       this.updateSuccessful.emit(false);
     }));
   }
