@@ -333,11 +333,18 @@ impl<'a> Algorithm<'a> {
 }
 
 /// Compute wait and service time for given sight based on the already used time budget
-fn compute_wait_and_service_time(start_time: &DateTime<Utc>, sight: &Sight, used_time_budget: i64) -> Option<(i64, i64)> {
+fn compute_wait_and_service_time(start_time: &DateTime<Utc>, end_time: &DateTime<Utc>, sight: &Sight,
+                                 used_time_budget: i64, root_travel_time: i64) -> Option<(i64, i64)> {
     let time_window = sight.opening_hours();
 
     // Determine current time (after given used time budget)
     let curr_time = start_time.naive_utc() + Duration::seconds(used_time_budget);
+    // Determine latest time such that root is still reachable
+    let latest_time = end_time.naive_utc() - Duration::seconds(root_travel_time);
+    if curr_time >= latest_time  {
+        // Stay at sight not possible due to time restrictions
+        return None;
+    }
 
     // Determine the sights current open state
     // TODO handle DateLimitExceeded error properly
@@ -345,8 +352,8 @@ fn compute_wait_and_service_time(start_time: &DateTime<Utc>, sight: &Sight, used
         .expect("Failed to determine open state");
 
     // Initialize closure for computing the sights service time
-    let compute_service_time = |close_time: NaiveDateTime| {
-        let possible_service_time = close_time.signed_duration_since(curr_time)
+    let compute_service_time = |service_start_time: NaiveDateTime, latest_service_end_time: NaiveDateTime| {
+        let possible_service_time = latest_service_end_time.signed_duration_since(service_start_time)
             .num_seconds();
         sight.duration_of_stay_secs().min(possible_service_time)
     };
@@ -359,37 +366,45 @@ fn compute_wait_and_service_time(start_time: &DateTime<Utc>, sight: &Sight, used
                 match time_window.next_change(next_time) {
                     Ok(close_time) => {
                         if time_window.is_closed(close_time) {
-                            break Some((0, compute_service_time(close_time)));
+                            break Some((0, compute_service_time(
+                                curr_time, close_time.min(latest_time))));
                         }
                         next_time = close_time;
+                        if next_time >= curr_time + Duration::seconds(sight.duration_of_stay_secs()) {
+                            break Some((0, compute_service_time(
+                                curr_time, next_time.min(latest_time))));
+                        }
                     }
-                    _ => break Some((0, sight.duration_of_stay_secs()))
+                    _ => break Some((0, compute_service_time(curr_time, latest_time)))
                 };
-                let diff = next_time.signed_duration_since(curr_time).num_seconds();
-                if diff >= sight.duration_of_stay_secs() {
-                    break Some((0, sight.duration_of_stay_secs()));
-                }
             }
         }
         RuleKind::Closed => {
             match time_window.next_change(curr_time) {
                 Ok(open_time) => {
-                    let wait_time = open_time.signed_duration_since(curr_time).num_seconds();
-                    let mut next_time = open_time;
-                    loop {
-                        match time_window.next_change(next_time) {
-                            Ok(close_time) => {
-                                if time_window.is_closed(close_time) {
-                                    break Some((wait_time, compute_service_time(close_time)));
+                    if open_time < latest_time {
+                        let wait_time = open_time.signed_duration_since(curr_time).num_seconds();
+                        let mut next_time = open_time;
+                        loop {
+                            match time_window.next_change(next_time) {
+                                Ok(close_time) => {
+                                    if time_window.is_closed(close_time) {
+                                        break Some((wait_time, compute_service_time(
+                                            open_time, close_time.min(latest_time))));
+                                    }
+                                    next_time = close_time;
+                                    if next_time >= open_time + Duration::seconds(sight.duration_of_stay_secs()) {
+                                        break Some((wait_time, compute_service_time(
+                                            open_time, next_time.min(latest_time))));
+                                    }
                                 }
-                                next_time = close_time;
-                            }
-                            _ => break Some((wait_time, sight.duration_of_stay_secs()))
-                        };
-                        let diff = next_time.signed_duration_since(curr_time).num_seconds();
-                        if diff >= sight.duration_of_stay_secs() {
-                            break Some((wait_time, sight.duration_of_stay_secs()));
+                                _ => break Some((wait_time, compute_service_time(
+                                    open_time, latest_time)))
+                            };
                         }
+                    } else {
+                        // Sight closed until (after) we have to leave
+                        None
                     }
                 }
                 _ => {
