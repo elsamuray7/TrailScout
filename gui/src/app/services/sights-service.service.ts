@@ -3,6 +3,7 @@ import { environment } from '../../environments/environment';
 import { HttpClient } from '@angular/common/http';
 import { Sight } from '../data/Sight';
 import { Category } from '../data/Category';
+import {ToastService} from "./toast.service";
 
 @Injectable({
   providedIn: 'root'
@@ -10,12 +11,26 @@ import { Category } from '../data/Category';
 export class SightsServiceService {
   private readonly backendUrl: String;
   private categories: Category[] = [];
-  private presetCategories = ["Sightseeing", "Other", "Nightlife", "Restaurants", "Shopping", "PicnicBarbequeSpot",
-    "MuseumExhibition", "Nature", "Swimming"];
+  private presetCategories = ["Sightseeing", "Activities", "Nightlife", "Restaurants", "Shopping", "PicnicBarbequeSpot",
+    "MuseumExhibition", "Nature", "Swimming", "Animals"];
   public updating = new EventEmitter();
   public updateSuccessful = new EventEmitter<boolean>();
 
-  constructor(private http: HttpClient) {
+  public readonly categoryLabels = new Map<string, string>([
+    ["Sightseeing", "Sehenswürdigkeiten"],
+    ["Activities", "Aktivitäten"],
+    ["Nightlife", "Nachtleben"],
+    ["Restaurants", "Restaurants"],
+    ["Shopping", "Shopping"],
+    ["PicnicBarbequeSpot", "Picknick & Grillen"],
+    ["MuseumExhibition", "Museen"],
+    ["Nature", "Natur"],
+    ["Swimming", "Badeplätze"],
+    ["Animals", "Tiere"]
+  ]);
+
+  constructor(private http: HttpClient,
+              private toastService: ToastService) {
     this.backendUrl = environment.backendUrl;
     this.presetCategories.forEach((category) => {
       this.categories.push(new Category(category));
@@ -28,6 +43,7 @@ export class SightsServiceService {
       "lon": coords["lng"],
       "radius": radius * 1000 // convert to meters
     }
+    this.toastService.showStandard('Aktualisiere Sehenswürdigkeiten...');
     this.updating.emit();
     this.http.post(this.backendUrl + "/sights", body).subscribe((sights ) => {
       for (let category of this.categories) {
@@ -42,8 +58,14 @@ export class SightsServiceService {
           }
         }
       }
+      this.toastService.showSuccess('Sehenswürdigkeiten erfolgreich aktualisiert!');
       this.updateSuccessful.emit(true);
     }, (error => {
+      if (error.status != 0) {
+        this.toastService.showDanger(error.status + " - " + error.statusText + " - " + error.error);
+      } else {
+        this.toastService.showDanger('Etwas ist schief gelaufen!');
+      }
       this.updateSuccessful.emit(false);
     }));
   }

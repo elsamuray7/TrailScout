@@ -1,23 +1,23 @@
-<div class="card text-white border-primary mb-3">
+<div class="card text-white border-primary mb-3" style="height: 92.2vh;">
     <div class="row">
         <div class="inputs">
             <div class="row justify-content-around">
                 <button class="btn-primary btn btn-lg col" type="button"
                     id="setting-btn" (click)="calculate()" [disabled]="!calculationAllowed()">
                     <span ngbTooltip="Type in radius or walking time to allow routing"
-                        [disableTooltip]="calculationAllowed()">Calculate</span></button>
-                <button type="button" class="btn btn-secondary btn-lg close col" (click)="close()">Close</button>
+                        [disableTooltip]="calculationAllowed()">Berechnen</span></button>
+                <button type="button" class="btn btn-secondary btn-lg close col" (click)="close()">Schließen</button>
             </div>
-            <ngb-accordion #acc="ngbAccordion" [closeOthers]="true" activeIds="radius">
+            <ngb-accordion #acc="ngbAccordion" [closeOthers]="true" activeIds="radius" *ngIf="!this.isRouteModeActive()">
                 <ngb-panel id="radius" [title]="radius > 0 ? 'Radius: ' + radius + 'km' : 'Radius'" [disabled]="!startPointSet"
                     [class.disabled]="!startPointSet">
                     <ng-template ngbPanelContent >
                       <div class='d-flex justify-content-between col' style='gap: 10px'>
-                        <input id='radiusInput' type="number" placeholder="Enter radius in km..." class="form-control"
+                        <input id='radiusInput' type="number" placeholder="Radius in km" class="form-control"
                                [(ngModel)]="radius" />
                         <button class="btn-primary btn" id="refresh" type="submit" [disabled]='refreshing || !radius || radius <= 0'
                                 (click)="refreshSights()" style='flex-grow:1;'>
-                          <span *ngIf='!refreshing'>Refresh</span>
+                          <span *ngIf='!refreshing'>Aktualisieren</span>
                           <div *ngIf='refreshing' class="spinner-border" role="status">
                           </div>
                         </button>
@@ -25,17 +25,37 @@
                     </ng-template>
                 </ngb-panel>
                 <ngb-panel
-                    [title]="'Hike duration: ' + getMinutesBetweenStartAndEnd() + 'mins'"
                     [disabled]="!startPointSet">
+                    <ng-template ngbPanelTitle>
+                      Dauer der Wanderung: {{getMinutesBetweenStartAndEnd()}} mins
+                      <i *ngIf="isRadiusToBig()" class="bi bi-exclamation-triangle-fill"></i>
+                    </ng-template>
                     <ng-template class="row" ngbPanelContent>
                         <div>
-                            <h5>Start Time</h5>
+                            <h5>
+                                Laufgeschwindigkeit
+                                <i *ngIf="isRadiusToBig()" class="bi bi-exclamation-triangle-fill" ngbTooltip="Der Radius ist zu groß für die angegebenen Einstellungen"></i>
+                            </h5>
+                            <div ngbDropdown class="d-inline-block">
+                                <button type="button" class="custom-btn btn btn-outline-primary" id="dropdownBasic1" ngbDropdownToggle>{{walkSpeedlabels.get(this.walkSpeed)}}</button>
+                                <div ngbDropdownMenu aria-labelledby="dropdownBasic1">
+                                    <button (click)='this.walkSpeed = 2.7;' ngbDropdownItem>Sehr Langsam</button>
+                                    <button (click)='this.walkSpeed = 3.2;' ngbDropdownItem>Langsam</button>
+                                    <button (click)='this.walkSpeed = 3.8;' ngbDropdownItem>Normal</button>
+                                    <button (click)='this.walkSpeed = 4.8;' ngbDropdownItem>Schnell</button>
+                                    <button (click)='this.walkSpeed = 6.4;' ngbDropdownItem>Sehr Schnell</button>
+                                </div>
+                            </div>
+                        </div>
+                        <br>
+                        <div>
+                            <h5>Start</h5>
                             <ngb-timepicker class="form-control"
                                 [(ngModel)]="startTime"></ngb-timepicker>
                         </div>
                         <br>
                         <div>
-                            <h5>End Time</h5>
+                            <h5>Ende</h5>
                             <ngb-timepicker class="form-control"
                                 [(ngModel)]="endTime"></ngb-timepicker>
                         </div>
@@ -43,7 +63,7 @@
                 </ngb-panel>
                 <ngb-panel [title]="'Tags'" [disabled]="!startPointSet" (hidden)="hideAllSights()">
                     <ng-template class="row" ngbPanelContent>
-                        <small *ngIf="!foundAnySights()"> No Sights were found. Please check your Settings and hit "Refresh"! </small>
+                        <small *ngIf="!foundAnySights()"> Keine Sehenswürdigkeiten gefunden. Überprüfen Sie bitte ihre Einstellungen und klicken auf "Aktualisieren" </small>
                         <div *ngFor="let category of this.getCategories()">
                             <app-settings-taskbar-tag-item *ngIf="category.sights.length > 0" [category]="category"
                                                            (showSightEvent)="this.showSightEvent.emit($event)"
@@ -54,19 +74,33 @@
                 </ngb-panel>
             </ngb-accordion>
 
-            <div class="card" style="background-color: black; height: 24vh; margin-top: 3vh; ">
-                "start": {{startTime.hour}}:{{startTime.minute}}
-                "end": {{endTime.hour}}:{{startTime.minute}}
-                <br>
-                "radius": {{mapService.getRadius()}}km
-                <br>
-                "categories":
-                <br>
-                <div *ngFor="let category of categories" style="text-align: center;">
-                    {{category.name}}: {{category.pref}}
+            <div *ngIf="this.isRouteModeActive()" style="margin-top: 3vh; ">
+              <div class="request-summary">
+                <h4>Radius</h4>
+                <div>{{this.getLastRequest()!.area.radius / 1000}} kilometer</div>
+              </div>
+              <div class="request-summary">
+                <h4>Dauer der Wanderung</h4>
+                <h5>Start:</h5>
+                <div>{{this.simplifyTime(this.getLastRequest()!.start)}}</div>
+                <h5>Ende:</h5>
+                <div>{{this.simplifyTime(this.getLastRequest()!.end)}}</div>
+              </div>
+              <div class="request-summary">
+                <h4>Kategorie Präferenzen:</h4>
+                <div *ngIf="this.getLastRequest()!.user_prefs.categories.length == 0"><i>None</i></div>
+                <div *ngFor="let category of this.getLastRequest()!.user_prefs.categories">
+                  {{this.sightsService.categoryLabels.get(category.category)}}: {{this.prefToString(category.pref)}}
                 </div>
+              </div>
+              <div class="request-summary">
+                <h4>Einzelne Präferenzen:</h4>
+                <div *ngIf="this.getLastRequest()!.user_prefs.sights.length == 0"><i>None</i></div>
+                <div *ngFor="let sight of this.getLastRequest()!.user_prefs.sights">
+                  {{sight.name}}: {{this.prefToString(sight.pref)}}
+                </div>
+              </div>
             </div>
         </div>
-
     </div>
 </div>

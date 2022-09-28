@@ -1,0 +1,7 @@
+<div class="box">
+    <div *ngFor="let section of sections">
+        <app-route-tracker-item class="item" [section]="section"
+            [currentSection]="getClosestSection() === section.routeId" (hoverEvent)="hoveredItem($event)" (clickEvent)="clickedItem($event)">
+        </app-route-tracker-item>
+    </div>
+</div>

@@ -2,25 +2,83 @@
   <div class="row" style="margin: 10px">
     <div class="col card border-primary text-center">
       <div class="card-body row">
-        <img src="assets/team-bild.jpg" class="col" alt="Ein Bild von dem Team" style="border-radius: 10px;">
+          <img  class="col" src="https://images.pexels.com/photos/691637/pexels-photo-691637.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1" alt="Ein Bild von der Main Page" style="width: 90%;">
         <div class="col">
-          <h1 class="card-title">Willkommen bei Trailscout!</h1>
+          <h1 class="card-title">Spannende Touren mit Trailscout</h1>
           <p>
-            Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et
-            dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet
-            clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet,
-            consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, s
-            ed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea t
-            akimata sanctus est Lorem ipsum dolor sit amet.
+            Zu Beginn einer Reise stellt sich das Problem der Routenwahl.
+            Für gewöhnlich möchte man so schnell wie möglich von A nach B kommen.
+            Das ist aber anders, wenn man eine Wanderung oder Stadttour planen will.
+            Dann sollen auf einer Route möglichst viele Museen, schöne Plätze in der Natur oder
+            andere Sehenswürdigkeiten besucht werden.
+            Natürlich ist es nicht möglich ewig zu wandern. Deshalb soll die Anzahl an interessanten Orten,
+            die in der begrenzten Laufzeit besucht werden, maximiert werden.
+            Statt dem bei Routen herkömmlichen Minimierungsproblem geht es jetzt um ein Maximierungsproblem.
           </p>
+          <p>
+            Mit unserem Routenplaner Trailscout ist das Erstellen einer solche Sightseeing-Tour einfach möglich.
+            Wähle aus, welche der vielen interessanten Sehenswürdigkeiten du besonders interessant findest und unsere
+            Algorithmen werden ihr Möglichstes tun, dir besten Touren nach deinen Bedürfnissen zu erstellen.
+            Ob Museen, Highlights in der Natur, Restaurants oder das Nachtleben in deiner Stadt,
+            Trailscout kennt dank Open Street Map die interessantesten Orte und führt dich zu ihnen.
+
+          </p>
+
+          <button  class="btn-primary btn btn-lg" type="button" id="start-btn"
+                   (click)='goToPage("scout")'>Jetzt Planen</button>
+
         </div>
+
       </div>
     </div>
   </div>
   <div class="row card border-secondary text-center" style="margin: 10px">
     <div class="card-body">
-      <h2 class="card-title">Die beste Tour durch die Stadt!</h2>
-      <img src="assets/app-Screenshot.png" alt="Ein Bild von der Main Page" style="width: 60%;">
+      <h2 class="card-title">Trailscout - Der Weg ist das Ziel!</h2>
+
+      <swiper
+        [slidesPerView]="1"
+        [navigation]="true"
+        [pagination]="{ type: 'bullets' }"
+        [centeredSlides]="true"
+        [keyboard]="{enabled: true}"
+        [virtual]="true"
+        class="my-swiper"
+      >
+        <ng-template swiperSlide>
+          <div>
+            <img src="assets/screenshot_1.png" alt="Ein Bild von der Main Page" style="width: 50%;" [class.mobile]="mobile">
+            <div>
+              Mit Trailscout die Perfekte Wanderroute entdecken!
+            </div>
+            <br>
+          </div>
+          
+          
+        </ng-template>
+
+        <ng-template swiperSlide>
+          <div>
+            <img src="assets/screenshot_2.png" alt="Ein Bild von der Main Page" style="width: 50%;" [class.mobile]="mobile">
+            <div>
+              Radius, Laufgeschwindigkeit, Start-und Endzeit, sowie Präferenzen eingeben und eine für sich angepasste Route bekommen!
+            </div>
+            
+          </div>
+        </ng-template>
+
+        <ng-template swiperSlide>
+          <div>
+            <img src="assets/screenshot_3.png" alt="Ein Bild von der Main Page" style="width: 12%;" [class.mobile]="mobile">
+          </div>
+          <div>
+            Auch auf mobilen Geräten benutzbar!
+          </div>
+          
+         
+        </ng-template>
+
+      </swiper>
     </div>
   </div>
 </div>

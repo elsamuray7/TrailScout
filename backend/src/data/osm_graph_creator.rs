@@ -3,14 +3,15 @@ use std::collections::{HashMap, HashSet};
 use std::fs::{create_dir_all, File};
 use std::io;
 use std::hash::{Hash, Hasher};
-use std::io::{BufWriter, Write, LineWriter};
+use std::io::{BufWriter, LineWriter, Write};
 use std::path::Path;
 use crossbeam::thread;
 use serde::{Deserialize, Serialize};
 use std::time::Instant;
-use geoutils::{Location, Distance};
+use geoutils::{Distance, Location};
 use itertools::Itertools;
-use log::{error, info, trace, debug};
+use log::{debug, info, trace};
+use log::Level::Debug;
 use osmpbf::{BlobReader, BlobType, Element, Way};
 use crate::data;
 use crate::data::graph::{Category, EdgeType, get_nearest_node, INode};
@@ -106,7 +107,7 @@ struct OSMSight {
 }
 
 /// Parse given `graph_file`. If it does not exist yet, build it from `source_file` first.
-pub fn checked_create_fmi_graph(graph_file: &str, osm_source_file: &str) -> std::io::Result<()> {
+pub fn checked_create_fmi_graph(graph_file: &str, osm_source_file: &str) -> io::Result<()> {
     if !Path::new(graph_file).exists() && Path::new(osm_source_file).exists() {
         parse_and_write_osm_data(osm_source_file, graph_file)?
     }
@@ -181,10 +182,15 @@ pub fn parse_and_write_osm_data (osmpbf_file_path: &str, fmi_file_path: &str) ->
     info!("Finished reading PBF file after {} seconds!", time_duration.as_millis() as f32 / 1000.0);
     }).ok();
 
+    //Remove more unwanted sights
+    remove_some_sights_without_name(&mut osm_sights);
+
     let nodes_before_pruning = osm_nodes.len();
     prune_nodes_without_edges(&mut osm_nodes, &osm_edges, &osm_sights);
     let time_duration = time_start.elapsed();
     info!("Finished pruning of {} nodes without edges after {} seconds!", nodes_before_pruning - osm_nodes.len(), time_duration.as_millis() as f32 / 1000.0);
+
+
 
     // HashSet to check whether a node is a sight or not
     let mut is_sight_node = HashSet::new();
@@ -211,6 +217,9 @@ pub fn parse_and_write_osm_data (osmpbf_file_path: &str, fmi_file_path: &str) ->
     });
     let time_duration = time_start.elapsed();
     info!("Finished sorting edges after {} seconds!", time_duration.as_millis() as f32 / 1000.0);
+
+
+
 
     let edges_before_pruning = osm_edges.len();
     prune_edges(&mut osm_edges);
@@ -245,7 +254,7 @@ pub fn parse_and_write_osm_data (osmpbf_file_path: &str, fmi_file_path: &str) ->
     info!("End of PBF data parsing after {} seconds!", time_duration.as_millis() as f32 / 1000.0);
 
     info!("Start writing the fmi binary file!");
-    let path = std::path::Path::new(fmi_file_path);
+    let path = Path::new(fmi_file_path);
     let prefix = path.parent().unwrap();
     create_dir_all(prefix)?;
 
@@ -257,7 +266,7 @@ pub fn parse_and_write_osm_data (osmpbf_file_path: &str, fmi_file_path: &str) ->
 
     let time_duration = time_start.elapsed();
     // remove next line after debugging
-    write_graph_file("./osm_graphs/bremen-latest.fmi", &mut osm_nodes, & mut osm_edges, & mut osm_sights);
+    write_graph_file("./osm_graphs/bremen-latest.fmidebugCLUSTER", &mut osm_nodes, & mut osm_edges, & mut osm_sights);
 
     info!("End of writing fmi binary file after {} seconds!", time_duration.as_millis() as f32 / 1000.0);
     Ok(())
@@ -275,7 +284,7 @@ fn write_graph_file(graph_file_path_out: &str, nodes: &mut Vec<OSMNode>, edges: 
         file.write(format!("{} {} {}\n", node.id, node.lat, node.lon).as_bytes())?;
     }
     for sight in sights {
-        file.write(format!("{} {} {} {} \n", sight.node_id, sight.lat, sight.lon, sight.name).as_bytes())?;//, sight.category.to_string()).as_bytes())?;//sight.category.to_string()).as_bytes())?;
+        file.write(format!("{} {} {} {} {:?} \n", sight.node_id, sight.lat, sight.lon, sight.name, sight.category).as_bytes())?;//, sight.category.to_string()).as_bytes())?;//sight.category.to_string()).as_bytes())?;
     }
     for edge in &*edges {
         file.write(format!("{} {} {}\n", edge.src, edge.tgt, edge.dist).as_bytes())?;
@@ -288,18 +297,19 @@ fn write_graph_file(graph_file_path_out: &str, nodes: &mut Vec<OSMNode>, edges: 
 /// Only creates OSMSights with a specific tag defined in the `sight_config`.
 fn create_osm_node(osm_id: usize, lat: f64, lon: f64, tags: Vec<(&str, &str)>, sight_config: &SightsConfig, result: &mut (Vec<OSMNode>, Vec<OSMEdge>, Vec<OSMSight>)) {
     // if sight has no name, osm_id is shown
-    let mut osm_name = osm_id.to_string(); // default
+    let mut osm_name = "None".to_string(); // default
     let mut osm_opening_hours = "empty".to_string(); // default
-    let mut categories: Vec<Category> = Vec::new();
+    let mut categories: HashSet<Category> = HashSet::new();
     let mut osm_wikidata_id = "empty".to_string();
     let mut is_sight = false;
     for (key, value) in tags {
         for cat_tag_map in &sight_config.category_tag_map {
+            let category = cat_tag_map.category.parse::<Category>().unwrap();
             for tag in &cat_tag_map.tags {
                 if key.eq(&tag.key) {
                     if value.eq(&tag.value) {
                         is_sight = true;
-                        categories.push(cat_tag_map.category.parse::<Category>().unwrap());
+                        categories.insert(category);
                     }
                 }
             }
@@ -388,6 +398,20 @@ fn create_osm_edges(w: Way, edge_type_config: &EdgeTypeConfig, result: &mut (Vec
     }
 }
 
+/// Remove Sights when they do not have a name, except when they are of category nature or
+/// PicnicBarbequeSpot (These types of sights rarely have names but are still cool).
+fn remove_some_sights_without_name(osm_sights: &mut Vec<OSMSight>){
+
+    info!("Nodes Before remove_some_sights_without_name: {}", osm_sights.len());
+    osm_sights.retain(
+        |sight| !sight.name.eq("None") | matches!(sight.category, Category::Nature)
+            | matches!(sight.category, Category::PicnicBarbequeSpot)
+    );
+    info!("Nodes After remove_some_sights_without_name: {}", osm_sights.len());
+
+
+}
+
 /// Removes every node from `osm_nodes` which has no edge in `osm_edges`.
 /// Iterates through `osm_edges` and saves every source node in `nodes_with_outgoing_edge`.
 /// Checks if nodes in `osm_nodes` are in `nodes_with_outgoing_edge`. Prunes them if not.
@@ -466,17 +490,19 @@ fn id_post_processing(osm_nodes: &mut Vec<OSMNode>, osm_edges: &mut Vec<OSMEdge>
 
 /// Creates one edge (`osm_edges`) for each direction from a sight (`osm_sights`) and the nearest non sight node (`osm_nodes`).
 fn integrate_sights_into_graph(osm_nodes: &Vec<OSMNode>, osm_edges: &mut Vec<OSMEdge>, osm_sights: &mut Vec<OSMSight>, is_sight_node: &HashSet<usize>) {
-    let nodes_sorted_by_lat = osm_nodes.iter()
-        .sorted_unstable_by(|n1, n2|{
-            return n1.lat.total_cmp(&n2.lat);
-        })
-        .collect_vec();
 
-        clustering_sights(osm_sights);
+    //create node list sorted by lat
+    let mut nodeIds_by_lat:Vec<usize> = (0..osm_nodes.len()).collect();
+    nodeIds_by_lat.sort_unstable_by(|x, y| 
+        osm_nodes.get(*x).unwrap().lat.total_cmp(&osm_nodes.get(*y).unwrap().lat));
+
+    debug!("Before clustering_sights: {}", osm_sights.len());
+    clustering_sights(osm_sights);
+    debug!("After clustering_sights:{}", osm_sights.len());
     let mut n = 0 as f64;
     for sight in osm_sights.iter() {
         n += 1.0;
-        let nearest_node_id = get_nearest_node(&nodes_sorted_by_lat, &is_sight_node, sight.lat, sight.lon);
+        let nearest_node_id = get_nearest_node(&osm_nodes, &nodeIds_by_lat, &is_sight_node, sight.lat, sight.lon);
         let nearest_node = &osm_nodes[nearest_node_id];
         let sight_loc = Location::new(sight.lat, sight.lon);
         let nearest_node_loc = Location::new(nearest_node.lat, nearest_node.lon);
@@ -521,52 +547,49 @@ fn prune_edges(osm_edges: &mut Vec<OSMEdge>) {
 
 // function for clustering Picnic Barbeque spots that are in a Range of 500m to one single sightNode
 fn clustering_sights(sights: &mut Vec<OSMSight>) {
-    let mut sights_to_combine: Vec<usize> = Vec::new();
-    let mut visited: HashMap<usize, usize> = HashMap::new();
-    let mut index: usize = 0;
+    let mut sights_to_combine: Vec<usize> = Vec::new(); //Sights to Flex
+    let mut sights_to_cluster_for:Vec<usize> = Vec::new(); //sight that kills others
     for sigh in &*sights{
-        if sigh.category == Category::PicnicBarbequeSpot && !sights_to_combine.contains(&sigh.osm_id){
-            let mut area:Vec<&OSMSight> = get_sights_in_area(&sights, sigh.lat, sigh.lon, 500.0);
-            visited.insert(sigh.osm_id, index);
-
-            // Search for sights for clustering 
+        if matches!(sigh.category, Category::PicnicBarbequeSpot)  && !sights_to_combine.contains(&sigh.osm_id){
+            let mut area:Vec<&OSMSight> = get_sights_in_area(&sights, sigh.lat, sigh.lon, 500.0); //also contains self
+            // Search for sights for clustering
+            let mut clustering : bool = false;
             for node in area {
-                info!("{}  ;   {}",node.category == Category::PicnicBarbequeSpot, !visited.contains_key(&node.osm_id));
-                
-                if node.category == Category::PicnicBarbequeSpot && !visited.contains_key(&node.osm_id) {
+                info!("{}  ;   {}",matches!(node.category, Category::PicnicBarbequeSpot) , !sights_to_combine.contains(&node.osm_id));
+                if matches!(node.category, Category::PicnicBarbequeSpot)
+                    && !sights_to_combine.contains(&node.osm_id)
+                    && !sights_to_cluster_for.contains(&node.osm_id)
+                    && node.osm_id != sigh.osm_id
+                {
                     info!("Combining candidates");
                     sights_to_combine.push(node.osm_id);
-                    visited.insert(sigh.osm_id, 0);
+                    clustering = true;
                 }
             }
+
+            if clustering{
+                sights_to_cluster_for.push(sigh.osm_id);
+            }
         }
-        index += 1;
     }
+    debug!("AAAAAAAAAAAA  Sights ot combine {}", sights_to_combine.len());
+
     // write a list with sights that must be deleted
-    let mut combining_indixes: Vec<&usize> = Vec::new();
-    for identifier in sights_to_combine {
-        combining_indixes.push(visited.get(&identifier).unwrap());
-        //debug!("hat einen Inhalt");
-    }
-    combining_indixes.sort();
-    let iterator:usize = 0;
-    for deleting in combining_indixes{
-        sights.remove(deleting-iterator);
-        debug!("Removing Sights")
-    }
+    sights.retain(|sight| !sights_to_combine.contains(&sight.osm_id));
+
 }
 
 /// Get all nodes to a given coordinate (latitude / longitude) in the radius.
 /// The function expects a node vector sorted by latitude.
 /// => Move to osm_graph_creator
-fn get_sights_in_area<'a>(nodes_sorted_by_lat: &'a Vec<OSMSight>, lat: f64, lon: f64, radius: f64) -> Vec<&'a OSMSight> { //) -> usize {
+fn get_sights_in_area(nodes_sorted_by_lat: &Vec<OSMSight>, lat: f64, lon: f64, radius: f64) -> Vec<&OSMSight> { //) -> usize {
     
     debug!("Computing sights in area: lat: {}, lon: {}, radius: {}", lat, lon, radius);
 
         //estimate bounding box with 111111 meters = 1 longitude degree
         //use binary search to find the range of elements that should be considered
-        let lower_bound = binary_search_sights_vector2(&nodes_sorted_by_lat, lat - radius / 111111.0);
-        let upper_bound = binary_search_sights_vector2(&nodes_sorted_by_lat, lat + radius / 111111.0);
+        let lower_bound = binary_search_sights_vector2(&nodes_sorted_by_lat, lat - 0.5);
+        let upper_bound = binary_search_sights_vector2(&nodes_sorted_by_lat, lat + 0.5);
 
         let slice = &nodes_sorted_by_lat[lower_bound..upper_bound];
 
@@ -576,12 +599,11 @@ fn get_sights_in_area<'a>(nodes_sorted_by_lat: &'a Vec<OSMSight>, lat: f64, lon:
         let sights_in_area: Vec<&OSMSight> = slice.iter()
             .filter(|sight| {
                 let location = Location::new(sight.lat, sight.lon);
-                location.is_in_circle(&center, radius)
-                    .expect("Could not determine whether sight lies in given area")
+                location.haversine_distance_to(&center).meters() <= radius.meters()
             })
             .collect();
         debug!("Found {} sights within the given area (of a total of {} sights)",
-            sights_in_area.len(), nodes_sorted_by_lat.len());
+                    sights_in_area.len(), nodes_sorted_by_lat.len());
 
         sights_in_area
 }

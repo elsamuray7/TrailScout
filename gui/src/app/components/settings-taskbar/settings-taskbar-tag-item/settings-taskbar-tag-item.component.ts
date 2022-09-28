@@ -3,6 +3,7 @@ import { NgbTypeahead } from '@ng-bootstrap/ng-bootstrap';
 import {Category} from "../../../data/Category";
 import { BehaviorSubject, debounceTime, distinctUntilChanged, filter, map, merge, Observable, OperatorFunction, Subject } from 'rxjs';
 import { Sight } from '../../../data/Sight';
+import { SightsServiceService } from 'src/app/services/sights-service.service';
 
 @Component({
   selector: 'app-settings-taskbar-tag-item',
@@ -25,26 +26,14 @@ export class SettingsTaskbarTagItemComponent implements OnInit {
   prio: number = 3;
   readonly priorityLabels = new Map<number, string>([
     [0, "Gar Nicht"],
-    [1, "Niedriger"],
+    [1, "Sehr Niedrig"],
     [2, "Niedrig"],
     [3, "Neutral"],
     [4, "Hoch"],
-    [5, "Höher"]
+    [5, "Sehr Hoch"]
   ]);
 
-  readonly categoryLabels = new Map<string, string>([
-    ["Sightseeing", "Sehenswürdigkeiten"],
-    ["Other", "Andere"],
-    ["Nightlife", "Nachtleben"],
-    ["Restaurants", "Restaurants"],
-    ["Shopping", "Shopping"],
-    ["PicnicBarbequeSpot", "Picknick & Grillen"],
-    ["MuseumExhibition", "Museen"],
-    ["Nature", "Natur"],
-    ["Swimming", "Badeplätze"]
-  ]);
-
-  constructor() {
+  constructor(public sightsService: SightsServiceService) {
    }
 
   ngOnInit(): void {

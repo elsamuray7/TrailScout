@@ -7,6 +7,11 @@ import { FormsModule } from '@angular/forms';
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 import { SettingsTaskbarTagItemComponent } from './settings-taskbar/settings-taskbar-tag-item/settings-taskbar-tag-item.component';
 import { ToastComponent } from './toast/toast.component';
+import { RouteTrackerComponent } from './route-tracker/route-tracker.component';
+import { RouteTrackerItemComponent } from './route-tracker/route-tracker-item/route-tracker-item.component';
+import { GPSService } from '../services/gps.service';
+import { WikidataHandlerService } from '../services/wikidata-handler.service';
+import {AppRoutingModule} from "../app-routing.module";
 
 
 @NgModule({
@@ -15,21 +20,29 @@ import { ToastComponent } from './toast/toast.component';
     SettingsTaskbarComponent,
     MapContainerComponent,
     SettingsTaskbarTagItemComponent,
-    ToastComponent
+    ToastComponent,
+    RouteTrackerComponent,
+    RouteTrackerItemComponent
   ],
-  imports: [
-    CommonModule,
-    FormsModule,
-    NgbModule
-  ],
+    imports: [
+        CommonModule,
+        FormsModule,
+        NgbModule,
+        AppRoutingModule
+    ],
   exports: [
     NavigationTaskbarComponent,
     SettingsTaskbarComponent,
     MapContainerComponent,
-    ToastComponent
+    ToastComponent,
+    RouteTrackerComponent
   ],
   bootstrap: [
     SettingsTaskbarComponent
+  ],
+  providers: [
+    WikidataHandlerService,
+    GPSService
   ]
 })
 export class ComponentsModule { }
