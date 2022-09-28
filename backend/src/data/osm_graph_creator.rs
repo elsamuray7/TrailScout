@@ -9,9 +9,7 @@ use crossbeam::thread;
 use serde::{Deserialize, Serialize};
 use std::time::Instant;
 use geoutils::{Distance, Location};
-use itertools::Itertools;
 use log::{debug, info, trace};
-use log::Level::Debug;
 use osmpbf::{BlobReader, BlobType, Element, Way};
 use crate::data;
 use crate::data::graph::{Category, EdgeType, get_nearest_node, INode};
@@ -247,6 +245,12 @@ pub fn parse_and_write_osm_data (osmpbf_file_path: &str, fmi_file_path: &str) ->
             Ordering::Equal
         }
     });
+
+    debug!("Before clustering_sights: {}", osm_sights.len());
+    clustering_sights(&mut osm_sights);
+    debug!("After clustering_sights:{}", osm_sights.len());
+
+
     let time_duration = time_start.elapsed();
     info!("Finished sorting sights after {} seconds!", time_duration.as_millis() as f32 / 1000.0);
 
@@ -266,7 +270,7 @@ pub fn parse_and_write_osm_data (osmpbf_file_path: &str, fmi_file_path: &str) ->
 
     let time_duration = time_start.elapsed();
     // remove next line after debugging
-    write_graph_file("./osm_graphs/bremen-latest.fmidebugCLUSTER", &mut osm_nodes, & mut osm_edges, & mut osm_sights);
+    write_graph_file("./osm_graphs/bremen-latest.fmidebugCLUSTERNew", &mut osm_nodes, & mut osm_edges, & mut osm_sights);
 
     info!("End of writing fmi binary file after {} seconds!", time_duration.as_millis() as f32 / 1000.0);
     Ok(())
@@ -496,9 +500,6 @@ fn integrate_sights_into_graph(osm_nodes: &Vec<OSMNode>, osm_edges: &mut Vec<OSM
     nodeIds_by_lat.sort_unstable_by(|x, y| 
         osm_nodes.get(*x).unwrap().lat.total_cmp(&osm_nodes.get(*y).unwrap().lat));
 
-    debug!("Before clustering_sights: {}", osm_sights.len());
-    clustering_sights(osm_sights);
-    debug!("After clustering_sights:{}", osm_sights.len());
     let mut n = 0 as f64;
     for sight in osm_sights.iter() {
         n += 1.0;
@@ -588,8 +589,8 @@ fn get_sights_in_area(nodes_sorted_by_lat: &Vec<OSMSight>, lat: f64, lon: f64, r
 
         //estimate bounding box with 111111 meters = 1 longitude degree
         //use binary search to find the range of elements that should be considered
-    let lower_bound = binary_search_sights_vector2(&nodes_sorted_by_lat, lat - 0.0074767); //Hardcoded Bound TODO 500m
-    let upper_bound = binary_search_sights_vector2(&nodes_sorted_by_lat, lat + 0.0074767); //Hardcoded Bound TODO 500m
+    let lower_bound = binary_search_sights_vector2(&nodes_sorted_by_lat, lat - 0.03); //Hardcoded Bound TODO 2000m
+    let upper_bound = binary_search_sights_vector2(&nodes_sorted_by_lat, lat + 0.03); //Hardcoded Bound TODO 2000m
 
         let slice = &nodes_sorted_by_lat[lower_bound..upper_bound];
 
