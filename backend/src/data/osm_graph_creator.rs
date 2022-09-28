@@ -588,8 +588,8 @@ fn get_sights_in_area(nodes_sorted_by_lat: &Vec<OSMSight>, lat: f64, lon: f64, r
 
         //estimate bounding box with 111111 meters = 1 longitude degree
         //use binary search to find the range of elements that should be considered
-        let lower_bound = binary_search_sights_vector2(&nodes_sorted_by_lat, lat - 0.5);
-        let upper_bound = binary_search_sights_vector2(&nodes_sorted_by_lat, lat + 0.5);
+    let lower_bound = binary_search_sights_vector2(&nodes_sorted_by_lat, lat - 0.0074767); //Hardcoded Bound TODO 500m
+    let upper_bound = binary_search_sights_vector2(&nodes_sorted_by_lat, lat + 0.0074767); //Hardcoded Bound TODO 500m
 
         let slice = &nodes_sorted_by_lat[lower_bound..upper_bound];
 
