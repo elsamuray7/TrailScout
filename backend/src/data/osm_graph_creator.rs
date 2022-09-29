@@ -9,9 +9,7 @@ use crossbeam::thread;
 use serde::{Deserialize, Serialize};
 use std::time::Instant;
 use geoutils::Location;
-use itertools::Itertools;
-use log::{debug, info, trace};
-use log::Level::Debug;
+use log::{info, trace};
 use osmpbf::{BlobReader, BlobType, Element, Way};
 use crate::data;
 use crate::data::graph::{Category, EdgeType, get_nearest_node, INode};
@@ -183,7 +181,7 @@ pub fn parse_and_write_osm_data (osmpbf_file_path: &str, fmi_file_path: &str) ->
     }).ok();
 
     //Remove more unwanted sights
-    remove_some_sights_without_name(&mut osm_sights);
+    handle_sights_without_name(&mut osm_sights, &sight_config_orig);
 
     let nodes_before_pruning = osm_nodes.len();
     prune_nodes_without_edges(&mut osm_nodes, &osm_edges, &osm_sights);
@@ -374,13 +372,36 @@ fn create_osm_edges(w: Way, edge_type_config: &EdgeTypeConfig, result: &mut (Vec
 
 /// Remove Sights when they do not have a name, except when they are of category nature or
 /// PicnicBarbequeSpot (These types of sights rarely have names but are still cool).
-fn remove_some_sights_without_name(osm_sights: &mut Vec<OSMSight>){
+fn handle_sights_without_name(osm_sights: &mut Vec<OSMSight>, sight_config: &SightsConfig){
 
     info!("Nodes Before remove_some_sights_without_name: {}", osm_sights.len());
-    osm_sights.retain(
-        |sight| !sight.name.eq("None") | matches!(sight.category, Category::Nature)
-            | matches!(sight.category, Category::PicnicBarbequeSpot)
-    );
+
+    //Get default names for Nature and PicnicBarbequeSpot once at the start, we will need them often
+    let default_name_nature = &sight_config.category_tag_map
+        .iter().find(|&x| matches!(x.category.parse::<Category>().unwrap(), Category::Nature)).unwrap().name_german;
+    let default_name_picnic = &sight_config.category_tag_map
+        .iter().find(|&x| matches!(x.category.parse::<Category>().unwrap(), Category::PicnicBarbequeSpot)).unwrap().name_german;
+
+    let mut nature_counter = 0;
+    let mut picnic_counter = 0;
+
+    //Go through all sights and retain only ones with a proper name unless they have category
+    //Nature or PicnicBarbequeSpot - in that case also retain them but use default name
+    osm_sights.retain_mut(|sight| if  !sight.name.eq("None") {
+        true
+    } else if matches!(sight.category, Category::Nature) {
+        nature_counter += 1;
+        sight.name = format!("{} {}", default_name_nature, nature_counter);
+        true
+    }else if matches!(sight.category, Category::PicnicBarbequeSpot) {
+        picnic_counter += 1;
+        sight.name = format!("{} {}", default_name_picnic, picnic_counter);
+        true
+    }
+    else {
+        false
+    });
+
     info!("Nodes After remove_some_sights_without_name: {}", osm_sights.len());
 
 

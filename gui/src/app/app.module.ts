@@ -12,6 +12,7 @@ import { HttpClientModule } from '@angular/common/http';
 import { BlockUIModule } from 'ng-block-ui';
 import { environment } from 'src/environments/environment';
 import {ComponentsModule} from "./components/components.module";
+import { SwiperModule } from 'swiper/angular';
 
 const cookieConfig:NgcCookieConsentConfig = {
   cookie: {
@@ -26,7 +27,8 @@ const cookieConfig:NgcCookieConsentConfig = {
     }
   },
   theme: 'edgeless',
-  type: 'opt-out'
+  type: 'opt-out',
+  position: 'bottom'
 };
 
 @NgModule({
@@ -45,7 +47,8 @@ const cookieConfig:NgcCookieConsentConfig = {
             delayStart: 200,
             delayStop: 500
         }),
-        ComponentsModule
+        ComponentsModule,
+        SwiperModule
     ],
   providers: [CookieService, CookieHandlerService],
   bootstrap: [AppComponent]

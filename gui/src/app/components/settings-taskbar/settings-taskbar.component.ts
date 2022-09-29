@@ -40,7 +40,7 @@ export class SettingsTaskbarComponent implements OnInit {
     [6.4, "Sehr Schnell"]
   ]);
 
-  constructor(private sightsService: SightsServiceService,
+  constructor(public sightsService: SightsServiceService,
               public mapService: MapService,
               private routeService: RouteService,
               private cookieService: CookieHandlerService,

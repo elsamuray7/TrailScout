@@ -17,4 +17,4 @@ export interface RouteTrackerSection {
     section: L.LatLng[];
     sight: Sight;
     routeId: number;
-  }
+}

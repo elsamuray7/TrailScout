@@ -12,9 +12,22 @@ export class SightsServiceService {
   private readonly backendUrl: String;
   private categories: Category[] = [];
   private presetCategories = ["Sightseeing", "Activities", "Nightlife", "Restaurants", "Shopping", "PicnicBarbequeSpot",
-    "MuseumExhibition", "Nature", "Swimming"];
+    "MuseumExhibition", "Nature", "Swimming", "Animals"];
   public updating = new EventEmitter();
   public updateSuccessful = new EventEmitter<boolean>();
+
+  public readonly categoryLabels = new Map<string, string>([
+    ["Sightseeing", "Sehenswürdigkeiten"],
+    ["Activities", "Aktivitäten"],
+    ["Nightlife", "Nachtleben"],
+    ["Restaurants", "Restaurants"],
+    ["Shopping", "Shopping"],
+    ["PicnicBarbequeSpot", "Picknick & Grillen"],
+    ["MuseumExhibition", "Museen"],
+    ["Nature", "Natur"],
+    ["Swimming", "Badeplätze"],
+    ["Animals", "Tiere"]
+  ]);
 
   constructor(private http: HttpClient,
               private toastService: ToastService) {
@@ -48,7 +61,11 @@ export class SightsServiceService {
       this.toastService.showSuccess('Sehenswürdigkeiten erfolgreich aktualisiert!');
       this.updateSuccessful.emit(true);
     }, (error => {
-      this.toastService.showDanger('Etwas ist schief gelaufen!');
+      if (error.status != 0) {
+        this.toastService.showDanger(error.status + " - " + error.statusText + " - " + error.error);
+      } else {
+        this.toastService.showDanger('Etwas ist schief gelaufen!');
+      }
       this.updateSuccessful.emit(false);
     }));
   }

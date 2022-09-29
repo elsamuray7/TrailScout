@@ -1,7 +1,7 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { LandingPageComponent } from './landing-page.component';
-
+import { SwiperModule } from 'swiper/angular';
 
 
 @NgModule({
@@ -9,7 +9,8 @@ import { LandingPageComponent } from './landing-page.component';
     LandingPageComponent
   ],
   imports: [
-    CommonModule
+    CommonModule,
+    SwiperModule
   ]
 })
 export class LandingPageModule { }

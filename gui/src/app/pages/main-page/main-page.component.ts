@@ -51,7 +51,11 @@ export class MainPageComponent implements OnInit, OnDestroy {
     this.sub = this.routeService.routeUpdated.subscribe(route => {
       this.blockUIMap.stop();
       if (route.error && !route.route) {
-        this.toastService.showDanger(route.error.message + '\n' + route.error.error ?? 'Etwas ist schiefgelaufen!');
+        if (route.error.status != 0) {
+          this.toastService.showDanger(route.error.status + " - " + route.error.statusText + " - " + route.error.error);
+        } else {
+          this.toastService.showDanger('Etwas ist schief gelaufen!');
+        }
         return;
       }
       this.toggleViewMode();

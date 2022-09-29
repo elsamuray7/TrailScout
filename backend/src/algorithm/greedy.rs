@@ -80,7 +80,7 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
         }
 
         let time_budget = end_time.signed_duration_since(start_time).num_seconds() as f64;
-        let edge_radius = walking_speed_mps * time_budget / std::f64::consts::PI / 2.0;
+        let edge_radius = walking_speed_mps * time_budget / 2.0;
         let sights_radius = edge_radius.min(area.radius);
         let sights = graph.get_reachable_sights_in_area(area.lat, area.lon,
                                                         sights_radius, edge_radius);
@@ -88,7 +88,7 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
             return Err(AlgorithmError::NoSightsFound)
         }
 
-        let root_id = match graph.get_nearest_node_in_area(area.lat, area.lon, area.radius) {
+        let root_id = match graph.get_nearest_node_in_area(area.lat, area.lon, sights_radius) {
             Some(nearest_node) => nearest_node,
             None => return Err(AlgorithmError::NoNearestNodeFound)
         };
@@ -161,42 +161,41 @@ impl<'a> _Algorithm<'a> for GreedyAlgorithm<'a> {
              for (sight, dist) in sorted_dist_vec {
                  let sight_travel_time = (dist as f64 / self.walking_speed_mps) as i64 + 1;
 
-                 let used_time_budget = total_time_budget - time_budget_left + sight_travel_time;
-                 let (wait_time, service_time) = match compute_wait_and_service_time(
-                     &self.start_time, sight, used_time_budget) {
-                     Some(result) => result,
-                     None => continue
-                 };
-
                  // Works because graph is undirected
                  match result_from_root.dist_to(sight.node_id) {
                      Some(dist_to_root) => {
-                         let sight_total_time = sight_travel_time + wait_time + service_time;
                          let root_travel_time = (dist_to_root as f64 / self.walking_speed_mps) as i64 + 1;
 
-                         if sight_total_time + root_travel_time <= time_budget_left {
-                             log::trace!("Appending sight {} (secs to include sight: {} <= left time budget: {}) with score: {}",
-                                 sight.node_id, sight_total_time + root_travel_time, time_budget_left, self.scores[&sight.node_id].0);
+                         let used_time_budget = total_time_budget - time_budget_left + sight_travel_time;
+                         match compute_wait_and_service_time(
+                             &self.start_time, &self.end_time, sight, used_time_budget, root_travel_time) {
+                             Some((wait_time, service_time)) => {
+                                 let sight_total_time = sight_travel_time + wait_time + service_time;
 
-                             // add sector containing sight and all intermediate nodes to route
-                             let path = result_to_sights.build_path(self.graph,
-                                                                    sight.node_id);
-                             let sector = Sector::new(
-                                 &self.start_time, total_time_budget - time_budget_left,
-                                 sight_travel_time, wait_time, service_time, sight, path);
-                             route.push(if curr_node_id == self.root_id {
-                                 RouteSector::Start(sector)
-                             } else {
-                                 RouteSector::Intermediate(sector)
-                             });
+                                 log::trace!("Appending sight {} (secs to include sight: {} <= left time budget: {}) with score: {}",
+                                     sight.node_id, sight_total_time + root_travel_time, time_budget_left, self.scores[&sight.node_id].0);
 
-                             time_budget_left -= sight_total_time;
-                             unvisited_sights.remove(&sight.node_id);
-                             curr_node_id = sight.node_id;
-                             break;
-                         }
+                                 // add sector containing sight and all intermediate nodes to route
+                                 let path = result_to_sights.build_path(self.graph,
+                                                                        sight.node_id);
+                                 let sector = Sector::new(
+                                     &self.start_time, total_time_budget - time_budget_left,
+                                     sight_travel_time, wait_time, service_time, sight, path);
+                                 route.push(if curr_node_id == self.root_id {
+                                     RouteSector::Start(sector)
+                                 } else {
+                                     RouteSector::Intermediate(sector)
+                                 });
+
+                                 time_budget_left -= sight_total_time;
+                                 unvisited_sights.remove(&sight.node_id);
+                                 curr_node_id = sight.node_id;
+                                 break;
+                             },
+                             None => ()
+                         };
                      }
-                     None => continue // No path from sight to root found. Continue.
+                     None => () // No path from sight to root found
                  };
              }
 
