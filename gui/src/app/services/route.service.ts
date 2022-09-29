@@ -124,7 +124,6 @@ export class RouteService {
     gpxData.setSegmentPoints(trackPoints);
 
     let gpxXmlString = buildGPX(gpxData.toObject());
-    //console.log(gpxXmlString);
     return buildGPX(gpxData.toObject()) ? gpxXmlString : null;
   }
 }
