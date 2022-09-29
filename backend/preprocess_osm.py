@@ -38,9 +38,11 @@ file.close()
 
 source =  str(sys.argv[1])
 name = os.path.basename(source)
+output = str(sys.argv[2])
 
+"""
 docker = "/var/lib/docker/volumes/enprofmi2022_data/_data/osm_graphs"
-
+"""
 #Only supposed to run on unix shells
-cmd = f"osmium tags-filter {source} --overwrite --expressions filter.txt -o {docker}/{name}"
+cmd = f"osmium tags-filter {source} --overwrite --expressions filter.txt -o {output}/{name}"
 a = subprocess.run([cmd], shell=True) 
