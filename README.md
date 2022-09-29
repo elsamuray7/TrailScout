@@ -1,13 +1,15 @@
 # EnProFMI2022
-Entwicklungsprojekt am FMI 2022
+Entwicklungsprojekt am FMI 2022.
+Im weiteren folgt eine Kurze Anleitung um Trailscout zu verwenden.
+Weitergehende Fragen werden im [Wiki](https://github.tik.uni-stuttgart.de/st149207/EnProFMI2022/wiki) oder in der Ausarbeitung behandelt.
 
-## Deployment über Docker
+## Installation über Docker
 
 Hierfür muss Docker installiert werden:
 * Windows: https://docs.docker.com/desktop/windows/install/
 * Linux: https://docs.docker.com/engine/install/#server (select your installed Linux distribution)
 
-### Development Build 
+### Local Build 
 
 Ist Docker installiert kann das Projekt in dev modus gestartet werden über: 
 
@@ -28,6 +30,9 @@ Es lassen sich die images auch einzeln starten, hierzu sollte man sich aber an d
 Download Repository:
 
 `git clone https://github.tik.uni-stuttgart.de/st149207/EnProFMI2022.git`
+
+**Die URL über die das Frontend erreicht werden soll muss in `gui/src/environments/environment.prod.ts` eingetragen werden.
+Per Default ist die für Produktion auf Seewalze eingestellt!**
 
 Um das Projekt in Production Environment auszuführen:
 
