@@ -100,6 +100,11 @@
                   {{sight.name}}: {{this.prefToString(sight.pref)}}
                 </div>
               </div>
+              <div class="request-summary">
+                <h4>GPX Download:</h4>
+                <button  class="btn-primary btn btn" type="button" id="start-btn"
+                         (click)='getFile()' >Download</button>
+              </div>
             </div>
         </div>
     </div>
