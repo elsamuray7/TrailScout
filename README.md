@@ -38,11 +38,16 @@ bzw. um es auch neu zu bauen `sudo docker compose -f docker-compose.yml -f produ
 
 ## Graph Erstellung
 
+Alle Befehle werden aus dem "backend" Verzeichnis ausgeführt.
+Um das osmium preprocessing tool auszuführen mit source file für Bremen und output im Docker:
+```
+python3 preprocess_osm.py osm_graphs/bremen31-8-22.osm.pbf osm_graphs/bremen-compact.osm.pbf
+```
 Um den Graph Creator auszuführen mit source file für z.B. Bremen:
-
 ```
-cargo run --bin osm_graph_creator ./osm_graphs/bremen-latest.osm.pbf ./osm_graphs/bremen-latest.fmi
+export i=./osm_graphs/bremen-compact.osm.pbf
+export o=./osm_graphs/bremen-compact.fmi.bin
+cargo run --bin osm_graph_creator
 ```
-
 Input File Parameter, danach Output File Parameter.
 Beim Umbenennen darauf achten was in der Server Conifg steht.

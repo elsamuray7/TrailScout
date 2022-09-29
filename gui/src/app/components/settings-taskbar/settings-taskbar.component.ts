@@ -218,4 +218,18 @@ export class SettingsTaskbarComponent implements OnInit {
   isRadiusToBig(): boolean {
     return this.startRadius ? this.startRadius * 2 > this.walkSpeed / 60 * this.getMinutesBetweenStartAndEnd() : false;
   }
+
+  getFile() {
+    let data = this.routeService.getRouteAsGpx();
+    if (data){
+      let blob = new Blob([data as BlobPart], { type: 'application/octet-stream' })
+      let fileUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a')
+      a.href = fileUrl.toString()
+      a.download = "route.gpx"
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+    }
+  }
 }

@@ -20,6 +20,7 @@ pub struct SightsConfig {
 #[derive(Deserialize)]
 pub struct CategoryTagMap {
     category: String,
+    name_german : String,
     opening_hours: String,
     duration_of_stay_minutes : i64,
     tags: Vec<Tag>

@@ -3,7 +3,8 @@ import {HttpClient} from "@angular/common/http";
 import {environment} from "../../environments/environment";
 import { catchError, of, Subject, timeout } from 'rxjs';
 import { Sight } from '../data/Sight';
-
+import {BaseBuilder, buildGPX} from 'gpx-builder';
+import {Point} from "gpx-builder/dist/builder/BaseBuilder/models";
 
 interface latlng {
   lat: number;
@@ -87,5 +88,42 @@ export class RouteService {
 
   public getLastRequest(): RouteRequest | null {
     return this.lastRequest ? this.lastRequest : null;
+  }
+
+
+  public getRouteAsGpx():String | null{
+    /**
+     * Returns an XML string in GPX format from this.route
+     * Returns null if things don't work out
+     */
+
+    if (this.route?.route === undefined) {
+      return null;
+    }
+    const gpxData = new BaseBuilder();
+
+    let trackPoints : Point[] = [];
+    let wayPoints : Point[] = [];
+    this.route.route.forEach(
+      segment => {
+        //if we have a sight add to waypoints
+        if (segment.sight?.lon != undefined && segment.sight?.lat != undefined){
+          wayPoints.push(new Point(<number>segment.sight?.lat, <number>segment.sight?.lon, {
+            name :segment.sight.name
+          }))
+        }
+        //all segment nodes for points in track
+        segment.nodes.forEach(
+          node =>{
+            trackPoints.push(new Point(node.lat, node.lon));
+          }
+        )
+      }
+    )
+    gpxData.setWayPoints(wayPoints);
+    gpxData.setSegmentPoints(trackPoints);
+
+    let gpxXmlString = buildGPX(gpxData.toObject());
+    return buildGPX(gpxData.toObject()) ? gpxXmlString : null;
   }
 }
