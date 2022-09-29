@@ -13,39 +13,11 @@
                 },
                 {
                     "key": "sport",
-                    "value": "9pin"
-                },
-                {
-                    "key": "sport",
                     "value": "10pin"
                 },
                 {
                     "key": "sport",
-                    "value": "american_football"
-                },
-                {
-                    "key": "sport",
-                    "value": "baseball"
-                },
-                {
-                    "key": "sport",
-                    "value": "basketball"
-                },
-                {
-                    "key": "sport",
                     "value": "beachvolleyball"
-                },
-                {
-                    "key": "sport",
-                    "value": "billiards"
-                },
-                {
-                    "key": "sport",
-                    "value": "boules"
-                },
-                {
-                    "key": "sport",
-                    "value": "bowls"
                 },
                 {
                     "key": "sport",
@@ -57,27 +29,11 @@
                 },
                 {
                     "key": "sport",
-                    "value": "crossfit"
-                },
-                {
-                    "key": "sport",
-                    "value": "darts"
-                },
-                {
-                    "key": "sport",
-                    "value": "fitness"
-                },
-                {
-                    "key": "sport",
                     "value": "golf"
                 },
                 {
                     "key": "sport",
                     "value": "ice_skating"
-                },
-                {
-                    "key": "sport",
-                    "value": "ice_stock"
                 },
                 {
                     "key": "sport",
@@ -97,43 +53,11 @@
                 },
                 {
                     "key": "sport",
-                    "value": "parkour"
-                },
-                {
-                    "key": "sport",
-                    "value": "roller_skating"
-                },
-                {
-                    "key": "sport",
-                    "value": "running"
-                },
-                {
-                    "key": "sport",
                     "value": "sailing"
                 },
                 {
                     "key": "sport",
-                    "value": "skateboard"
-                },
-                {
-                    "key": "sport",
-                    "value": "soccer"
-                },
-                {
-                    "key": "sport",
                     "value": "surfing"
-                },
-                {
-                    "key": "sport",
-                    "value": "table_tennis"
-                },
-                {
-                    "key": "sport",
-                    "value": "table_soccer"
-                },
-                {
-                    "key": "sport",
-                    "value": "ultimate"
                 },
                 {
                     "key": "sport",
@@ -142,18 +66,6 @@
                 {
                     "key": "sport",
                     "value": "water_ski"
-                },
-                {
-                    "key": "leisure",
-                    "value": "fitness_centre"
-                },
-                {
-                    "key": "leisure",
-                    "value": "fitnes_station"
-                },
-                {
-                    "key": "leisure",
-                    "value": "sports_centre"
                 }
             ]
         },
@@ -190,10 +102,6 @@
                 {
                     "key": "amenity", 
                     "value": "bbq"
-                },
-                {
-                    "key": "leisure", 
-                    "value": "picnic_table"
                 },
                 {
                     "key": "tourism", 
@@ -329,7 +237,7 @@
                 },
                 {
                     "key": "man_made", 
-                    "value": "communications_towerl"
+                    "value": "communications_tower"
                 },
                 {
                     "key": "man_made", 
@@ -338,10 +246,6 @@
                 {
                     "key": "tourism", 
                     "value": "attraction"
-                },
-                {
-                    "key": "tourism", 
-                    "value": "artwork"
                 }
             ]
         },
@@ -351,14 +255,6 @@
             "duration_of_stay_minutes": 60,
             "name_german" : "Shopping",
             "tags": [
-                {
-                    "key": "shop", 
-                    "value": "department_store"
-                },
-                {
-                    "key": "shop", 
-                    "value": "general"
-                },
                 {
                     "key": "shop", 
                     "value": "mall"
