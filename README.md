@@ -40,7 +40,7 @@ bzw. um es auch neu zu bauen `sudo docker compose -f docker-compose.yml -f produ
 
 Um das osmium preprocessing tool auszuführen mit source file für Bremen und output im Docker:
 ```
-preprocess_osm.py osm_graphs/bremen31-8-22.osm.pbf osm_graphs/bremen.fmi.bin
+python3 preprocess_osm.py osm_graphs/bremen31-8-22.osm.pbf osm_graphs/bremen31-8-22.fmi.bin
 ```
 Um den Graph Creator auszuführen mit source file für z.B. Bremen:
 
