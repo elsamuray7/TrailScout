@@ -196,7 +196,7 @@ pub fn parse_and_write_osm_data (osmpbf_file_path: &str, fmi_file_path: &str) ->
     let time_duration = time_start.elapsed();
     info!("Finished id post processing after {} seconds!", time_duration.as_millis() as f32 / 1000.0);
 
-    integrate_sights_into_graph(&osm_nodes, &mut osm_edges, &mut osm_sights, &is_sight_node);
+    integrate_sights_into_graph(&osm_nodes, &mut osm_edges, &osm_sights, &is_sight_node);
     let time_duration = time_start.elapsed();
     info!("Finished mapping sights into graph after {} seconds!", time_duration.as_millis() as f32 / 1000.0);
 
@@ -215,9 +215,6 @@ pub fn parse_and_write_osm_data (osmpbf_file_path: &str, fmi_file_path: &str) ->
     });
     let time_duration = time_start.elapsed();
     info!("Finished sorting edges after {} seconds!", time_duration.as_millis() as f32 / 1000.0);
-
-
-
 
     let edges_before_pruning = osm_edges.len();
     prune_edges(&mut osm_edges);
@@ -269,7 +266,6 @@ pub fn parse_and_write_osm_data (osmpbf_file_path: &str, fmi_file_path: &str) ->
     bincode::serialize_into(&mut file, &osm_edges).expect("Error serializing edges");
 
     let time_duration = time_start.elapsed();
-    // remove next line after debugging
 
     info!("End of writing fmi binary file after {} seconds!", time_duration.as_millis() as f32 / 1000.0);
     Ok(())
@@ -495,7 +491,7 @@ fn id_post_processing(osm_nodes: &mut Vec<OSMNode>, osm_edges: &mut Vec<OSMEdge>
 }
 
 /// Creates one edge (`osm_edges`) for each direction from a sight (`osm_sights`) and the nearest non sight node (`osm_nodes`).
-fn integrate_sights_into_graph(osm_nodes: &Vec<OSMNode>, osm_edges: &mut Vec<OSMEdge>, osm_sights: &mut Vec<OSMSight>, is_sight_node: &HashSet<usize>) {
+fn integrate_sights_into_graph(osm_nodes: &Vec<OSMNode>, osm_edges: &mut Vec<OSMEdge>, osm_sights: &Vec<OSMSight>, is_sight_node: &HashSet<usize>) {
 
     //create node list sorted by lat
     let mut nodeIds_by_lat:Vec<usize> = (0..osm_nodes.len()).collect();

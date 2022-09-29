@@ -507,7 +507,6 @@ fn get_nearest_node_naive(nodes: &Vec<impl INode>, id_filter: &HashSet<usize>, l
     min_id
 }
 
-
 #[derive(Debug)]
 pub enum ParseError {
     IO(std::io::Error),
