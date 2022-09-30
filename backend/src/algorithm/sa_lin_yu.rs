@@ -6,6 +6,7 @@ use rand::prelude::*;
 use crate::algorithm::{_Algorithm, AlgorithmError, Area, compute_wait_and_service_time, EndSector, Route, RouteSector, ScoreMap, Sector, USER_PREF_MAX, UserPreferences};
 use crate::data::graph::{Graph, Sight};
 use std::time::Instant;
+use crate::utils::dijkstra::run_ota_dijkstra_in_area;
 
 /// Simulated Annealing internal user preference to score mapping
 const USER_PREF_TO_SCORE: [usize; USER_PREF_MAX + 1] = [0, 1, 2, 4, 8, 16];
@@ -339,11 +340,11 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
         let time_budget = end_time.signed_duration_since(start_time).num_seconds() as f64;
         let edge_radius = walking_speed_mps * time_budget / 2.0;
         let sights_radius = edge_radius.min(area.radius);
-        let sights = graph.get_reachable_sights_in_area(area.lat, area.lon,
+        let mut sights = graph.get_reachable_sights_in_area(area.lat, area.lon,
                                                         sights_radius, edge_radius);
         if sights.is_empty() {
-            return Err(AlgorithmError::NoSightsFound)
-        };
+            return Err(AlgorithmError::NoSightsFound);
+        }
 
         let root_id = match graph.get_nearest_node_in_area(area.lat, area.lon, sights_radius) {
             Some(nearest_node) => nearest_node,
@@ -351,6 +352,21 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
         };
 
         let scores = compute_scores(&sights, user_prefs);
+
+        // Drop certain number of sights based on their score and distance to root
+        let result_from_root = run_ota_dijkstra_in_area(graph, root_id,
+                                                        area.lat, area.lon, edge_radius);
+        sights.sort_unstable_by(|sight1, sight2| {
+            let score1 = scores[&sight1.node_id].0 as f64;
+            let score2 = scores[&sight2.node_id].0 as f64;
+            // unwrap safety: get_reachable_sights_in_area ensures all sights are reachable
+            let dist1 = result_from_root.dist_to(sight1.node_id).unwrap() as f64;
+            let dist2 = result_from_root.dist_to(sight2.node_id).unwrap() as f64;
+            let metric1 = score1 / dist1.max(1.0);
+            let metric2 = score2 / dist2.max(1.0);
+            metric2.total_cmp(&metric1)
+        });
+        sights.truncate(200);
 
         let distance_map = build_distance_map(
             graph, &area, edge_radius, &sights, root_id, &scores);
