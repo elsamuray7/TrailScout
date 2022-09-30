@@ -21,12 +21,5 @@ pub fn main() -> Result<(), io::Error> {
     println!("Output file is {}.", &out_graph);
 
     parse_and_write_osm_data(&in_graph, &out_graph)?;
-
-    let graph = Graph::parse_from_file(&out_graph).unwrap();
-
-    info!("Nodes: {}", graph.num_nodes);
-    info!("Sights: {}", graph.num_sights);
-    info!("Edges: {}", graph.num_edges);
-
     Ok(())
 }
