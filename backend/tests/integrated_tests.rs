@@ -16,7 +16,7 @@ fn test_parsing_process_to_produce_graph_with_proper_number_of_elements() {
     if test_setup::GRAPH_PATH.0.contains("bremen") {
 
         assert_eq!(graph.num_nodes, 234744, "nodes");
-        assert_eq!(graph.num_sights, 935, "sights");
+        assert_eq!(graph.num_sights, 889, "sights");
         assert_eq!(graph.num_edges, 520884, "edges");
 
     } else if test_setup::GRAPH_PATH.0.contains("stg") {

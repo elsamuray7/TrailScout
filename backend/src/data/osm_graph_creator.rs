@@ -3,13 +3,13 @@ use std::collections::{HashMap, HashSet};
 use std::fs::{create_dir_all, File};
 use std::io;
 use std::hash::{Hash, Hasher};
-use std::io::BufWriter;
+use std::io::{BufWriter, LineWriter, Write};
 use std::path::Path;
 use crossbeam::thread;
 use serde::{Deserialize, Serialize};
 use std::time::Instant;
-use geoutils::Location;
-use log::{info, trace};
+use geoutils::{Distance, Location};
+use log::{debug, info, trace};
 use osmpbf::{BlobReader, BlobType, Element, Way};
 use crate::data;
 use crate::data::graph::{Category, EdgeType, get_nearest_node, INode};
@@ -242,6 +242,12 @@ pub fn parse_and_write_osm_data (osmpbf_file_path: &str, fmi_file_path: &str) ->
             Ordering::Equal
         }
     });
+
+    debug!("Before clustering_sights: {}", osm_sights.len());
+    clustering_sights(&mut osm_sights);
+    debug!("After clustering_sights:{}", osm_sights.len());
+
+
     let time_duration = time_start.elapsed();
     info!("Finished sorting sights after {} seconds!", time_duration.as_millis() as f32 / 1000.0);
 
@@ -260,6 +266,7 @@ pub fn parse_and_write_osm_data (osmpbf_file_path: &str, fmi_file_path: &str) ->
     bincode::serialize_into(&mut file, &osm_edges).expect("Error serializing edges");
 
     let time_duration = time_start.elapsed();
+
     info!("End of writing fmi binary file after {} seconds!", time_duration.as_millis() as f32 / 1000.0);
     Ok(())
 }
@@ -535,4 +542,75 @@ fn prune_edges(osm_edges: &mut Vec<OSMEdge>) {
         }
         i -= 1;
     }
+}
+
+/// function for clustering Picnic Barbeque spots that are in a Range of 500m to one single sightNode
+fn clustering_sights(sights: &mut Vec<OSMSight>) {
+    let mut sights_to_combine: Vec<usize> = Vec::new(); //Sights to Flex
+    let mut sights_to_cluster_for:Vec<usize> = Vec::new(); //sight that kills others
+    for sigh in &*sights{
+        if matches!(sigh.category, Category::PicnicBarbequeSpot)  && !sights_to_combine.contains(&sigh.osm_id){
+            let mut area:Vec<&OSMSight> = get_sights_in_area_osm(&sights, sigh.lat, sigh.lon, 500.0); //also contains self
+            // Search for sights for clustering
+            let mut clustering : bool = false;
+            for node in area {
+                info!("{}  ;   {}",matches!(node.category, Category::PicnicBarbequeSpot) , !sights_to_combine.contains(&node.osm_id));
+                if matches!(node.category, Category::PicnicBarbequeSpot)
+                    && !sights_to_combine.contains(&node.osm_id)
+                    && !sights_to_cluster_for.contains(&node.osm_id)
+                    && node.osm_id != sigh.osm_id
+                {
+                    info!("Combining candidates");
+                    sights_to_combine.push(node.osm_id);
+                    clustering = true;
+                }
+            }
+
+            if clustering{
+                sights_to_cluster_for.push(sigh.osm_id);
+            }
+        }
+    }
+    debug!("Sights ot combine in clustering {}", sights_to_combine.len());
+
+    // write a list with sights that must be deleted
+    sights.retain(|sight| !sights_to_combine.contains(&sight.osm_id));
+
+}
+
+/// Get all nodes to a given coordinate (latitude / longitude) in the radius.
+/// The function expects a node vector sorted by latitude.
+/// More accurate but slower than get_sights_in_area_osm
+fn get_sights_in_area_osm(nodes_sorted_by_lat: &Vec<OSMSight>, lat: f64, lon: f64, radius: f64) -> Vec<&OSMSight> {
+    
+    debug!("Computing sights in area: lat: {}, lon: {}, radius: {}", lat, lon, radius);
+
+        //estimate bounding box with 111111 meters = 1 longitude degree
+        //use binary search to find the range of elements that should be considered
+    let lower_bound = binary_search_sights_vector_osm(&nodes_sorted_by_lat, lat - 0.03);
+    let upper_bound = binary_search_sights_vector_osm(&nodes_sorted_by_lat, lat + 0.03);
+
+        let slice = &nodes_sorted_by_lat[lower_bound..upper_bound];
+
+        let center = Location::new(lat, lon);
+        let radius = Distance::from_meters(radius);
+        //iterate through the slice and check every sight whether it's in the target circle
+        let sights_in_area: Vec<&OSMSight> = slice.iter()
+            .filter(|sight| {
+                let location = Location::new(sight.lat, sight.lon);
+                location.haversine_distance_to(&center).meters() <= radius.meters()
+            })
+            .collect();
+        debug!("Found {} sights within the given area (of a total of {} sights)",
+                    sights_in_area.len(), nodes_sorted_by_lat.len());
+
+        sights_in_area
+}
+
+/// Helper method to estimate index bounds within the sights vector for latitude coordinates
+/// Works on OSMSight
+fn binary_search_sights_vector_osm(sights: &Vec<OSMSight>, target_latitude: f64) -> usize {
+    let result = sights.binary_search_by(|sight|
+        sight.lat.total_cmp(&target_latitude));
+    result.unwrap_or_else(|index| index)
 }
