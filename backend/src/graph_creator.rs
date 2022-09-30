@@ -14,8 +14,8 @@ pub fn main() -> Result<(), io::Error> {
     env_logger::init_from_env(env_logger);
     info!("starting up");
 
-    let in_graph = env::var("i").unwrap_or("./osm_graphs/bremen-latest.osm.pbf".to_string());
-    let out_graph = env::var("o").unwrap_or("./osm_graphs/bremen-latest.fmibin".to_string());
+    let in_graph = env::var("i").unwrap_or("./osm_graphs/bremen31-8-22.osm.pbf".to_string());
+    let out_graph = env::var("o").unwrap_or("./osm_graphs/bremen31-8-22.fmibin".to_string());
 
     println!("Input file is {}.", &in_graph);
     println!("Output file is {}.", &out_graph);

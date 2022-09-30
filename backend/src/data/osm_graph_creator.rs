@@ -554,13 +554,13 @@ fn clustering_sights(sights: &mut Vec<OSMSight>) {
             // Search for sights for clustering
             let mut clustering : bool = false;
             for node in area {
-                info!("{}  ;   {}",matches!(node.category, Category::PicnicBarbequeSpot) , !sights_to_combine.contains(&node.osm_id));
+                trace!("{}  ;   {}",matches!(node.category, Category::PicnicBarbequeSpot) , !sights_to_combine.contains(&node.osm_id));
                 if matches!(node.category, Category::PicnicBarbequeSpot)
                     && !sights_to_combine.contains(&node.osm_id)
                     && !sights_to_cluster_for.contains(&node.osm_id)
                     && node.osm_id != sigh.osm_id
                 {
-                    info!("Combining candidates");
+                    trace!("Combining candidates");
                     sights_to_combine.push(node.osm_id);
                     clustering = true;
                 }
