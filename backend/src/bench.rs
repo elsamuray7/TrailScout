@@ -237,7 +237,6 @@ fn bench_nearest_node(seed: u64, graph_file: &str, which_impl: &str, iter_warmup
 
 fn main() {
     init_logging();
-    log::info!("Average run time:");
 
     let args = env::args().collect_vec();
 
@@ -285,7 +284,7 @@ fn main() {
             let iter_measure: usize = args[6].parse().unwrap();
             bench_nearest_node(seed, graph_file, which_impl, iter_warmup, iter_measure);
         }
-        "load" => {
+        "load_graph" => {
             let path = args[2].as_str();
             log::info!("Starting to parsed graph from: {}", &path);
             let graph = Graph::parse_from_file(&path).expect("Error parsing graph from file");
