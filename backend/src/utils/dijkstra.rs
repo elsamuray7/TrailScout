@@ -59,6 +59,12 @@ impl DijkstraResult {
         }
     }
 
+    /// Returns the maximum distance between the source node and any other node
+    pub fn max_dist(&self) -> usize {
+        *self.dists.iter().filter(|&&dist| dist < usize::MAX).max()
+            .expect("Empty dists vector")
+    }
+
     /// Build the path from the source node to the node with id `tgt_id`.
     /// This method assumes that the target can be reached from the source, otherwise it will
     /// output a path that solely consists of the target.
