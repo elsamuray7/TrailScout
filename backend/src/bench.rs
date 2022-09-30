@@ -69,6 +69,65 @@ fn bench_dijkstra(seed: u64, graph_file: &str, dijkstra: &str, iter_warmup: usiz
     log::info!("Average run time: {avg} ms");
 }
 
+/// Benchmarks a dijkstra implementation. Either the Trailscout implementation
+/// (`dijkstra == "self"`) or the one of the `pathfinding` crate (`dijkstra == "pathfinding"`).
+fn bench_dijkstra_in_area(seed: u64, graph_file: &str, dijkstra: &str, iter_warmup: usize,
+                          iter_measure: usize, radius: f64) {
+    let graph = Graph::parse_from_file(graph_file)
+        .expect("Failed to parse graph file");
+
+    log::info!("Benchmarking dijkstra implementation {dijkstra} \n\
+        on graph {graph_file} \n\
+        with seed {seed}, \n\
+        {iter_warmup} warm up and \n\
+        {iter_measure} measured iterations");
+
+    let mut rng: StdRng = SeedableRng::seed_from_u64(seed);
+    let mut do_iteration = || {
+        let src_id = rng.gen_range(0..graph.num_nodes);
+        let src_node = graph.get_node(src_id);
+
+        match dijkstra {
+            "self" => {
+                // Trailscout one-to-all dijkstra
+                let start = Instant::now();
+                dijkstra::run_ota_dijkstra_in_area(&graph, src_id, src_node.lat, src_node.lon, radius);
+                start
+            }
+            "pathfinding" => {
+                // pathfinding one-to-all dijkstra
+                let successors = |node_id: usize|
+                    graph.get_outgoing_edges_in_area(node_id, src_node.lat, src_node.lon, radius)
+                        .into_iter()
+                        .map(|edge| (edge.tgt, edge.dist))
+                        .collect::<Vec<(usize, usize)>>();
+                let start = Instant::now();
+                dijkstra_all(&src_id,
+                             |&node_id| successors(node_id));
+                start
+            }
+            _ => panic!("Unknown dijkstra impl.")
+        }.elapsed().as_millis()
+    };
+
+    // first iter_warmup rounds system warm up
+    for i in 0..iter_warmup {
+        do_iteration();
+        log::trace!("Finished {} of {} warmup rounds", i + 1, iter_warmup);
+    }
+
+    // iter_measure measured rounds
+    let mut measurements = vec![0; iter_measure];
+    for i in 0..iter_measure {
+        let elapsed = do_iteration();
+        measurements[i] = elapsed;
+        log::trace!("Finished {} of {} measured rounds", i + 1, iter_measure);
+    }
+
+    let avg = measurements.iter().sum::<u128>() / iter_measure as u128;
+    log::info!("Average run time: {avg} ms");
+}
+
 /// Benchmarks the score and runtime of given algorithm under the given parameters
 fn bench_algo(graph_file: &str, algo_name: &str, iter_warmup: usize, iter_measure: usize,
               radius: f64, walking_time: i64, category_prefs: Vec<SightCategoryPref>) {
@@ -190,6 +249,15 @@ fn main() {
             let iter_warmup: usize = args[5].parse().unwrap();
             let iter_measure: usize = args[6].parse().unwrap();
             bench_dijkstra(seed, graph_file, dijkstra, iter_warmup, iter_measure);
+        }
+        "dijkstra_area" => {
+            let seed: u64 = args[2].parse().unwrap();
+            let graph_file = args[3].as_str();
+            let dijkstra = args[4].as_str();
+            let iter_warmup: usize = args[5].parse().unwrap();
+            let iter_measure: usize = args[6].parse().unwrap();
+            let radius: f64 = args[7].parse().unwrap();
+            bench_dijkstra_in_area(seed, graph_file, dijkstra, iter_warmup, iter_measure, radius);
         }
         "algo" => {
             let graph_file = args[2].as_str();
