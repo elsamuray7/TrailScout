@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use std::fs::{create_dir_all, File};
 use std::io;
 use std::hash::{Hash, Hasher};
-use std::io::{BufWriter, LineWriter, Write};
+use std::io::{BufWriter};
 use std::path::Path;
 use crossbeam::thread;
 use serde::{Deserialize, Serialize};
@@ -494,14 +494,14 @@ fn id_post_processing(osm_nodes: &mut Vec<OSMNode>, osm_edges: &mut Vec<OSMEdge>
 fn integrate_sights_into_graph(osm_nodes: &Vec<OSMNode>, osm_edges: &mut Vec<OSMEdge>, osm_sights: &Vec<OSMSight>, is_sight_node: &HashSet<usize>) {
 
     //create node list sorted by lat
-    let mut nodeIds_by_lat:Vec<usize> = (0..osm_nodes.len()).collect();
-    nodeIds_by_lat.sort_unstable_by(|x, y| 
+    let mut nodeids_by_lat:Vec<usize> = (0..osm_nodes.len()).collect();
+    nodeids_by_lat.sort_unstable_by(|x, y| 
         osm_nodes.get(*x).unwrap().lat.total_cmp(&osm_nodes.get(*y).unwrap().lat));
 
     let mut n = 0 as f64;
     for sight in osm_sights.iter() {
         n += 1.0;
-        let nearest_node_id = get_nearest_node(&osm_nodes, &nodeIds_by_lat, &is_sight_node, sight.lat, sight.lon);
+        let nearest_node_id = get_nearest_node(&osm_nodes, &nodeids_by_lat, &is_sight_node, sight.lat, sight.lon);
         let nearest_node = &osm_nodes[nearest_node_id];
         let sight_loc = Location::new(sight.lat, sight.lon);
         let nearest_node_loc = Location::new(nearest_node.lat, nearest_node.lon);
@@ -550,7 +550,7 @@ fn clustering_sights(sights: &mut Vec<OSMSight>) {
     let mut sights_to_cluster_for:Vec<usize> = Vec::new(); //sight that kills others
     for sigh in &*sights{
         if matches!(sigh.category, Category::PicnicBarbequeSpot)  && !sights_to_combine.contains(&sigh.osm_id){
-            let mut area:Vec<&OSMSight> = get_sights_in_area_osm(&sights, sigh.lat, sigh.lon, 500.0); //also contains self
+            let area:Vec<&OSMSight> = get_sights_in_area_osm(&sights, sigh.lat, sigh.lon, 500.0); //also contains self
             // Search for sights for clustering
             let mut clustering : bool = false;
             for node in area {

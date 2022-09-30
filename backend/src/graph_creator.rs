@@ -1,7 +1,6 @@
 use std::io;
 use env_logger::Env;
 use std::env;
-use trailscout_lib::data::graph::Graph;
 use trailscout_lib::data::osm_graph_creator::{parse_and_write_osm_data};
 #[macro_use]
 extern crate log;
