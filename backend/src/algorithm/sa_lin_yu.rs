@@ -15,7 +15,7 @@ const USER_PREF_TO_SCORE: [usize; USER_PREF_MAX + 1] = [0, 1, 2, 4, 8, 16];
 /// Initial temperature
 const T_0: f64 = 0.7;
 /// Multiplier for iterations on a temperature
-const B: usize = 100;
+const B: usize = 300;
 /// Factor by which the temperature is cooled down
 const ALPHA: f64 = 0.7;
 /// Maximum allowed computation time
@@ -23,8 +23,11 @@ const MAX_TIME: u128 = 60_000;
 /// Number of cooldowns that do not improve the result
 const N_NON_IMPROVING: usize = 5;
 
-/// Maximum number of iterations on a temperature
-const MAX_ITER_PER_TEMP: usize = 100 * B;
+/// Maximum number of sights to consider
+const MAX_NUM_SIGHTS: usize = 100;
+
+const SCORE_WEIGHT: f64 = 1.;
+const DIST_WEIGHT: f64 = 1.;
 
 /// Compute scores for tourist attractions based on user preferences for categories or specific
 /// tourist attractions, respectively
@@ -338,7 +341,7 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
         }
 
         let time_budget = end_time.signed_duration_since(start_time).num_seconds() as f64;
-        let edge_radius = walking_speed_mps * time_budget / 2.0;
+        let edge_radius = walking_speed_mps * time_budget / std::f64::consts::PI / 2.0;
         let sights_radius = edge_radius.min(area.radius);
         let mut sights = graph.get_reachable_sights_in_area(area.lat, area.lon,
                                                         sights_radius, edge_radius);
@@ -353,20 +356,26 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
 
         let scores = compute_scores(&sights, user_prefs);
 
-        // Drop certain number of sights based on their score and distance to root
-        let result_from_root = run_ota_dijkstra_in_area(graph, root_id,
-                                                        area.lat, area.lon, edge_radius);
-        sights.sort_unstable_by(|sight1, sight2| {
-            let score1 = scores[&sight1.node_id].0 as f64;
-            let score2 = scores[&sight2.node_id].0 as f64;
-            // unwrap safety: get_reachable_sights_in_area ensures all sights are reachable
-            let dist1 = result_from_root.dist_to(sight1.node_id).unwrap() as f64;
-            let dist2 = result_from_root.dist_to(sight2.node_id).unwrap() as f64;
-            let metric1 = score1 / dist1.max(1.0);
-            let metric2 = score2 / dist2.max(1.0);
-            metric2.total_cmp(&metric1)
-        });
-        sights.truncate(200);
+        if sights.len() > MAX_NUM_SIGHTS {
+            // Keep best `MAX_NUM_SIGHTS` sights based on their score and distance to root
+            let result_from_root = run_ota_dijkstra_in_area(graph, root_id,
+                                                            area.lat, area.lon, edge_radius);
+            let max_score = USER_PREF_TO_SCORE[USER_PREF_MAX] as f64;
+            let max_dist = result_from_root.max_dist() as f64;
+            sights.sort_unstable_by(|sight1, sight2| {
+                let norm_score1 = scores[&sight1.node_id].0 as f64 / max_score;
+                let norm_score2 = scores[&sight2.node_id].0 as f64 / max_score;
+                // unwrap safety: get_reachable_sights_in_area ensures all sights are reachable
+                let norm_dist1 = 1.0 - result_from_root.dist_to(sight1.node_id).unwrap() as f64 / max_dist;
+                let norm_dist2 = 1.0 - result_from_root.dist_to(sight2.node_id).unwrap() as f64 / max_dist;
+                let metric1 = (SCORE_WEIGHT * norm_score1 + DIST_WEIGHT * norm_dist1)
+                    / (SCORE_WEIGHT + DIST_WEIGHT);
+                let metric2 = (SCORE_WEIGHT * norm_score2 + DIST_WEIGHT * norm_dist2)
+                    / (SCORE_WEIGHT + DIST_WEIGHT);
+                metric2.total_cmp(&metric1)
+            });
+            sights.truncate(MAX_NUM_SIGHTS);
+        }
 
         let distance_map = build_distance_map(
             graph, &area, edge_radius, &sights, root_id, &scores);
@@ -408,7 +417,7 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
         let sa_start = Instant::now();
 
         let mut t = T_0;
-        let i_iter = (randomized_sights.len() * B).min(MAX_ITER_PER_TEMP);
+        let i_iter = randomized_sights.len() * B;
         let mut i = 0;
 
         let mut x = randomized_sights;
@@ -509,7 +518,7 @@ impl<'a> _Algorithm<'a> for SimAnnealingLinYu<'a> {
 mod test {
     use chrono::{DateTime, Utc};
     use once_cell::sync::Lazy;
-    use crate::algorithm::{_Algorithm, Area, RouteSector, Sector, SightCategoryPref, UserPreferences};
+    use crate::algorithm::{_Algorithm, Area, RouteSector, Sector, SightCategoryPref, USER_PREF_MAX, UserPreferences};
     use crate::algorithm::sa_lin_yu::{SimAnnealingLinYu, USER_PREF_TO_SCORE};
     use crate::algorithm::test::{END_TIME, START_TIME, WALKING_SPEED_MPS};
     use crate::data::graph::{Category, Graph};
@@ -547,7 +556,7 @@ mod test {
             if sight.node_id == last.node_id
                 && (sight.category == Category::Nightlife || sight.category == Category::Activities) {
                 let (score, category) = algo.scores[&sight.node_id];
-                assert_eq!(score, USER_PREF_TO_SCORE[5], "Sight {} got smaller score", sight.node_id);
+                assert_eq!(score, USER_PREF_TO_SCORE[USER_PREF_MAX], "Sight {} got smaller score", sight.node_id);
                 assert_eq!(category, Category::Activities,
                            "Sight {} associated with category with smaller preference", sight.node_id);
                 last = sight;
