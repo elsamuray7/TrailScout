@@ -42,7 +42,7 @@ impl Area {
 const USER_PREF_MAX: usize = 5;
 
 /// User preference for a sight category
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct SightCategoryPref {
     category: Category,
     pref: usize,
